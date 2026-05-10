@@ -1,0 +1,12 @@
+{
+  "name": "pope-bot-new",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "thepopebot setup",
+    "reset-auth": "thepopebot reset-auth"
+  },
+  "dependencies": {
+    "thepopebot": "^1.0.0"
+  }
+}

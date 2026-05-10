@@ -1,0 +1,100 @@
+# Custom Docker Compose — SSL with Let's Encrypt wildcard cert
+# This file is NOT managed by thepopebot and won't be overwritten on upgrade.
+#
+# Activate: set COMPOSE_FILE=docker-compose.custom.yml in .env
+# Setup:    npx thepopebot setup-ssl
+#
+# Requires these .env vars (set by setup-ssl):
+#   SSL_DOMAIN          — your domain (e.g., bot.example.com)
+#   SSL_EMAIL           — email for Let's Encrypt notifications
+#   SSL_DNS_PROVIDER    — Traefik DNS provider name (e.g., cloudflare)
+#
+# DNS provider API credentials are stored in .env.traefik (created by setup-ssl).
+# Only this file is passed to the Traefik container — not the main .env.
+#
+# DNS: *.${SSL_DOMAIN} must resolve to this server (A record or CNAME).
+# The setup-ssl command can create this record for you.
+
+services:
+  traefik:
+    image: traefik:v3
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.file.directory=/traefik-config/
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.email=${SSL_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=${SSL_DNS_PROVIDER}
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=8.8.8.8:53,8.8.4.4:53
+    env_file: .env.traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-config:/traefik-config:ro
+      - traefik_certs:/letsencrypt
+    restart: unless-stopped
+
+  event-handler:
+    container_name: thepopebot-event-handler
+    image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION:-latest}}
+    volumes:
+      - .:/project
+      - ./agent-job:/app/agent-job
+      - ./agents:/app/agents
+      - ./event-handler:/app/event-handler
+      - ./skills:/app/skills
+      - ./.env:/app/.env
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./traefik-config:/traefik-config
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TRAEFIK_CONFIG_DIR=/traefik-config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.event-handler.rule=Host(`${APP_HOSTNAME}`)
+      - traefik.http.routers.event-handler.entrypoints=websecure
+      - traefik.http.routers.event-handler.tls.certresolver=letsencrypt
+      - traefik.http.routers.event-handler.tls.domains[0].main=${SSL_DOMAIN}
+      - traefik.http.routers.event-handler.tls.domains[0].sans=*.${SSL_DOMAIN}
+      - traefik.http.services.event-handler.loadbalancer.server.port=80
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: --config /litellm/main.yaml --port 4000
+    volumes:
+      - ./event-handler/litellm:/litellm:ro
+    restart: unless-stopped
+
+  runner:
+    image: myoung34/github-runner:latest
+    deploy:
+      replicas: ${RUNNER_REPLICAS:-1}
+    environment:
+      REPO_URL: https://github.com/${GH_OWNER}/${GH_REPO}
+      ACCESS_TOKEN: ${GH_TOKEN}
+      RUNNER_SCOPE: repo
+      LABELS: self-hosted
+      EPHEMERAL: "1"
+      DISABLE_AUTO_UPDATE: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
+    restart: unless-stopped
+
+volumes:
+  traefik_certs:

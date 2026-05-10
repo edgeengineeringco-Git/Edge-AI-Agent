@@ -1,0 +1,74 @@
+[
+  {
+    "name": "on-github-event",
+    "watch_path": "/github/webhook",
+    "actions": [
+      { "type": "command", "command": "echo 'github webhook fired'" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "on-webhook-log",
+    "watch_path": "/webhook",
+    "actions": [
+      { "type": "command", "command": "echo 'webhook received: {{body}}'" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "review-github-event",
+    "watch_path": "/github/webhook",
+    "actions": [
+      { "type": "agent", "job": "A GitHub event occurred. Review the payload and summarize what happened:\n{{body}}" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "react-to-webhook",
+    "watch_path": "/webhook",
+    "actions": [
+      { "type": "agent", "job": "A webhook was received. Analyze the payload and decide if any action is needed:\n{{body}}" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "forward-github",
+    "watch_path": "/github/webhook",
+    "actions": [
+      { "type": "webhook", "url": "https://example.com/hook", "method": "POST", "vars": { "source": "github" } }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "forward-webhook",
+    "watch_path": "/webhook",
+    "actions": [
+      { "type": "webhook", "url": "https://example.com/hook", "method": "POST", "vars": { "source": "webhook" } }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "review-with-model-override",
+    "watch_path": "/github/webhook",
+    "actions": [
+      { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_model": "claude-opus-4-7" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "review-with-codex",
+    "watch_path": "/github/webhook",
+    "actions": [
+      { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "agent_backend": "codex-cli" }
+    ],
+    "enabled": false
+  },
+  {
+    "name": "scoped-webhook-agent",
+    "watch_path": "/webhook",
+    "actions": [
+      { "type": "agent", "job": "A webhook was received. Read jobs/handle-webhook.md and complete it using the payload:\n{{body}}", "scope": "agents/my-agent" }
+    ],
+    "enabled": false
+  }
+]

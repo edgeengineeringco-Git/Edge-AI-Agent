@@ -1,0 +1,47 @@
+# Credentials - NEVER commit these
+.env
+.env.local
+.env.traefik
+*.pem
+*.key
+
+# Claude Code
+.claude/*
+
+# Playwright MCP
+.playwright-mcp/
+
+# Pi system prompt (generated at runtime)
+.pi/SYSTEM.md
+
+
+# Database
+/data/
+
+# Node
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Backups from thepopebot upgrades
+.backups/

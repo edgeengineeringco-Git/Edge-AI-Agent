@@ -1,0 +1,67 @@
+services:
+  traefik:
+    image: traefik:v3
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.file.directory=/traefik-config/
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-config:/traefik-config:ro
+    restart: unless-stopped
+
+  event-handler:
+    container_name: thepopebot-event-handler
+    image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION:-latest}}
+    volumes:
+      - .:/project
+      - ./agent-job:/app/agent-job
+      - ./agents:/app/agents
+      - ./event-handler:/app/event-handler
+      - ./skills:/app/skills
+      - ./.env:/app/.env
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./traefik-config:/traefik-config
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TRAEFIK_CONFIG_DIR=/traefik-config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.event-handler.rule=Host(`${APP_HOSTNAME}`)
+      - traefik.http.routers.event-handler.entrypoints=web
+      - traefik.http.services.event-handler.loadbalancer.server.port=80
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: --config /litellm/main.yaml --port 4000
+    volumes:
+      - ./event-handler/litellm:/litellm:ro
+    restart: unless-stopped
+
+  runner:
+    image: myoung34/github-runner:latest
+    deploy:
+      replicas: ${RUNNER_REPLICAS:-1}
+    environment:
+      REPO_URL: https://github.com/${GH_OWNER}/${GH_REPO}
+      ACCESS_TOKEN: ${GH_TOKEN}
+      RUNNER_SCOPE: repo
+      LABELS: self-hosted
+      EPHEMERAL: "1"
+      DISABLE_AUTO_UPDATE: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
+    restart: unless-stopped

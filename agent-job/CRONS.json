@@ -1,0 +1,32 @@
+[
+  {
+    "name": "heartbeat",
+    "schedule": "*/30 * * * *",
+    "type": "agent",
+    "job": "Read the file at agent-job/HEARTBEAT.md and complete the tasks described there.",
+    "enabled": false
+  },
+  {
+    "name": "ping",
+    "schedule": "*/1 * * * *",
+    "type": "command",
+    "command": "echo \"pong!\"",
+    "enabled": true
+  },
+  {
+    "name": "scoped-agent-example",
+    "schedule": "0 9 * * *",
+    "type": "agent",
+    "job": "Read jobs/daily-check.md and complete it.",
+    "scope": "agents/my-agent",
+    "enabled": false
+  },
+  {
+    "name": "agent-backend-override-example",
+    "schedule": "0 10 * * *",
+    "type": "agent",
+    "job": "Summarize open pull requests.",
+    "agent_backend": "codex-cli",
+    "enabled": false
+  }
+]

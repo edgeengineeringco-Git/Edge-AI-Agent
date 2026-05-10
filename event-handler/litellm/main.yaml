@@ -1,0 +1,6 @@
+# Managed by thepopebot — do not edit manually.
+# LiteLLM proxy config. Docs: https://docs.litellm.ai/docs/
+# API keys and model entries are written here automatically when
+# a non-Anthropic provider is selected as the Claude Code backend.
+
+model_list: []
