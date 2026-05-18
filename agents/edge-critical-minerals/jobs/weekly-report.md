@@ -1,82 +1,259 @@
-# EDGE Critical Minerals Intel — Weekly Report Pipeline
+# EDGE Weekly Critical Minerals Intel — Pipeline Execution
 
-Execute the following pipeline sequentially. Each phase builds on the previous.
+Execute every step in order. Do not stop or ask for input. If something fails, retry once with a different approach, then report the error clearly via the Telegram notification.
 
-## Phase 1: Web Intelligence Gathering
+---
 
-Search for the latest news and developments across these domains. Use web search for each:
+## Step 1 — Research the Intelligence Report
 
-1. **Lithium** — Price trends, production announcements, demand forecasts
-2. **Rare Earth Elements (REEs)** — China export controls, separation tech, non-China supply
-3. **Cobalt & Nickel** — Congo/Indonesia supply, EV battery demand, price movements
-4. **Copper** — Supply deficit/gap, major project updates, electrification demand
-5. **Graphite & other battery minerals** — Anode supply, synthetic vs natural, new sources
-6. **Critical Minerals Policy** — US (IRA, DOE loans, Defense Production Act), EU (CRMA), Australia/Canada strategies
-7. **Geopolitics** — China/Sino-US trade tensions, Russia sanctions, Africa/Latin America resource nationalism
-8. **Technology** — Recycling, substitution, new exploration technologies, processing breakthroughs
+Using your WebSearch tool, research and compile a comprehensive weekly briefing covering all 7 sections below. Be thorough — verify dates, deadlines, and amounts with live sources. Priority regions: Ireland, EU, Scandinavia, UK, then US/Canada/Australia.
 
-## Phase 2: Analysis & Synthesis
+### Research approach
 
-Analyze the gathered intelligence for:
-- **Price trends** — Week-over-week movement for key minerals
-- **Supply risks** — Concentration risk, mine disruptions, processing bottlenecks
-- **Policy impact** — How recent policy changes affect supply chains
-- **Emerging themes** — Patterns across sectors
+1. First, check if there are any previous reports in this repo by running `ls agents/edge-critical-minerals/reports/ 2>/dev/null` or checking the Google Drive folder. Read the most recent report so you know what was covered before. This allows you to prioritise genuinely new or changed items and avoid repeating stale ones.
+2. For each of the 7 sections below, run focused web searches to find current opportunities, events, and policy developments.
+3. Verify every date, deadline, and funding amount by cross-referencing multiple sources.
+4. Every single item MUST include a real, working URL.
 
-## Phase 3: Report Generation
+### ⚠️ CRITICAL FRESHNESS RULE
 
-Produce a structured markdown report at `reports/YYYY-MM-DD-weekly-report.md` with these sections:
+This report must be 100% self-contained and genuinely current. Do NOT reference "last week", "the previous report", "as mentioned before", "continuing from last week", or any similar phrase. Every item you include must be presented as if it is being discovered and reported for the first time. Write entirely in the present tense. Do not use labels like [UPDATED], [STILL HIGH PRIORITY] — omit those entirely.
 
-```markdown
-# EDGE Critical Minerals Intel — Weekly Brief
-**Date:** YYYY-MM-DD
+### Section 1 — Funding, Grants, and Investment Opportunities
 
-## Executive Summary
-(3-5 bullet points covering the most important developments)
+For each item include: Title, Funding Body, Stage, Ticket Size, Why it fits EDGE's REE / K–Th–U prospecting platform, Eligibility, Deadline, URL.
+Highlight 3–5 highest-priority picks for EDGE with 2–3 sentence justification each.
 
-## 1. Market Movements
-- Lithium: [summary with key data]
-- Rare Earths: [summary with key data]
-- Cobalt & Nickel: [summary with key data]
-- Copper: [summary with key data]
-- Graphite & Battery Minerals: [summary with key data]
+### Section 2 — Scale-Up, Accelerator and Commercialisation Programmes
 
-## 2. Geopolitical Developments
-- Trade policy shifts
-- Sanctions/export controls
-- Resource nationalism
-- Strategic partnerships
+For each: Programme name, Organiser, Focus, Cohort timing, What they offer, URL.
+Include ESA, EIT RawMaterials, EIC, national schemes, notable private accelerators.
 
-## 3. Policy & Regulation
-- US policy developments
-- EU/UK policy
-- Asia-Pacific policy
-- Other regions
+### Section 3 — Training, Workshops and Courses
 
-## 4. Supply Chain Intelligence
-- Production announcements
-- Processing bottlenecks
-- Logistics disruptions
-- Company news (major miners, processors, refiners)
+Short courses, summer schools, workshops in: critical minerals/REE, geoscience AI/ML, mineral exploration technology, geo-data science, deep-tech entrepreneurship.
+For each: Title, Organiser, Location/Online, Dates, Level, Cost, Scholarship options, URL.
 
-## 5. Technology Watch
-- Recycling innovations
-- Substitution developments
-- Exploration tech
-- Processing breakthroughs
+### Section 4 — Conferences, Events and Partnering Opportunities
 
-## 6. Outlook & Risk Assessment
-- Key risks to monitor next week
-- Price forecast signals
-- Geopolitical flashpoints
+Events in the next 12–18 months where EDGE can present, meet investors, form R&D consortia, or meet government stakeholders.
+For each: Name, Organiser, City/Country, Dates, Audience, URL.
+Mark 3–5 must-attend with one sentence reason each.
 
-## Sources
-- [Link 1]
-- [Link 2]
+### Section 5 — Research, R&D and Collaboration Calls
+
+Horizon Europe, EIC, EIT RawMaterials, national councils — calls for critical raw materials, AI/ML for geoscience, remote sensing, drone surveys.
+For each: Call title, Programme, TRL range, Lead type, Budget, Deadline, URL.
+Highlight top 5 fits for EDGE.
+
+### Section 6 — Policy, Regulation and Strategic Context
+
+Current and active policies: EU Critical Raw Materials Act, national strategies, US/Canada/Australia initiatives, ESG rules, defence/dual-use interest.
+For each: Jurisdiction, 2–4 sentence summary, authoritative URL.
+Present all items as current facts — do not describe them as "new" relative to a previous report.
+
+### Section 7 — Action List for This Week
+
+5–10 concrete actions for EDGE in the next 1–4 weeks.
+Mark each as [HIGH] or [MEDIUM] priority.
+Make them specific with deadlines where known.
+Write each action as a standalone task — do not refer to any previous action list.
+
+### Research output format
+
+Format everything as clean Markdown:
+
+- Use `##` for section headings, `###` for sub-headings
+- Use `*` bullet points for all list items
+- Every single item MUST end with a real, working URL on its own bullet: `* **URL:** [Full title of link](https://actual-url.com)`
+- Use `**bold**` for field labels like **Title:**, **Deadline:**, **URL:** etc.
+- Do NOT use tables. Use bullets only.
+- Do NOT add any footer, signature, or "this message was sent" text.
+
+Store the complete research output in a variable for use in Step 3.
+
+---
+
+## Step 2 — Compute Metadata Fields
+
+Compute these values from the current timestamp:
+
+| Field | How to compute | Example |
+|-------|---------------|---------|
+| report_date | Current date in "DD MMMM YYYY" format | "19 May 2026" |
+| week_number | ISO week number, zero-padded to 2 digits | "21" |
+| year | 4-digit year | "2026" |
+| month | 2-digit month | "05" |
+| day | 2-digit day | "19" |
+| filename | `EDGE_CriticalMinerals_Week{week_number}_{YYYY-MM-DD}.html` | `EDGE_CriticalMinerals_Week21_2026-05-19.html` |
+
+---
+
+## Step 3 — Build the Styled HTML Report
+
+Take the Markdown research output from Step 1 and convert it into a full, standalone styled HTML document saved to `/tmp/{filename}`.
+
+### HTML template
+
+The report must use this structure and styling:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDGE Critical Minerals Intel – Week {week_number} / {year}</title>
+<style>
+  /* Use this exact styling */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#eef1f5;color:#1f2937;padding:24px 12px;font-size:15px;line-height:1.75}
+  .wrap{max-width:980px;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.12)}
+  .hdr{background:linear-gradient(135deg,#0f766e 0%,#1d4ed8 100%);color:#fff;padding:36px 44px 30px}
+  .hdr .pill{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 14px;margin-bottom:16px}
+  .hdr h1{font-size:27px;font-weight:800;line-height:1.22;margin-bottom:14px}
+  .hdr .meta{display:flex;flex-wrap:wrap;gap:18px;font-size:13.5px;opacity:.93}
+  .body{padding:36px 44px}
+  .body h2{font-size:18px;font-weight:800;color:#0f766e;border-left:4px solid #0f766e;padding-left:14px;margin:36px 0 14px;line-height:1.3}
+  .body h3{font-size:15px;font-weight:700;color:#1f2937;margin:22px 0 8px;padding-left:4px}
+  .body p{margin-bottom:10px;max-width:840px}
+  .body hr{border:none;border-top:2px solid #e5e7eb;margin:30px 0}
+  .body ol{margin:8px 0 16px 22px}
+  .body ol li{margin-bottom:10px;padding-left:6px}
+  .body ul{list-style:none;padding:0;margin:6px 0 16px}
+  .body ul li{padding:7px 8px 7px 26px;position:relative;border-bottom:1px solid #f3f4f6;max-width:840px}
+  .body ul li:last-child{border-bottom:none}
+  .body ul li::before{content:"▸";color:#0f766e;position:absolute;left:6px;top:9px;font-size:12px}
+  .body a{color:#1d4ed8;text-decoration:none;font-weight:500;border-bottom:1px solid rgba(29,78,216,.22);transition:border-color .15s}
+  .body a:hover{border-color:#1d4ed8}
+  .ext{font-size:11px;opacity:.65;margin-left:2px}
+  strong{color:#111827}
+  code{background:#f1f5f9;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:13px}
+  .ftr{background:#f8fafc;border-top:1px solid #e5e7eb;padding:16px 44px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:#6b7280}
+  @media(max-width:640px){.hdr,.body,.ftr{padding-left:18px;padding-right:18px}.hdr h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="pill">🌍 Weekly Intelligence Report</div>
+    <h1>EDGE Critical Minerals GeoIntel<br>Week {week_number} &nbsp;·&nbsp; {year}</h1>
+    <div class="meta">
+      <span>📅 {report_date}</span>
+      <span>📊 REE · K-Th-U Prospecting</span>
+      <span>🌐 Web Researched</span>
+      <span>🇮🇪 Ireland · EU · Scandinavia · UK · Global</span>
+    </div>
+  </div>
+  <div class="body">
+    {CONVERTED MARKDOWN CONTENT}
+  </div>
+  <div class="ftr">
+    <span>EDGE GeoIntelligence · Automated Weekly Report · {report_date}</span>
+    <span class="fn">{filename}</span>
+  </div>
+</div>
+</body>
+</html>
 ```
 
-## Phase 4: Save & Deliver
+### Markdown conversion rules
 
-1. Save the report to `reports/YYYY-MM-DD-weekly-report.md`
-2. Ensure the report is comprehensive (1000-2000 words)
-3. Verify all sections are populated with current, specific information
+Convert the research output to HTML inline:
+- `## heading` → `<h2>heading</h2>`
+- `### heading` → `<h3>heading</h3>`
+- `* bullet` → `<ul><li>bullet</li></ul>`
+- `1. list` → `<ol><li>list</li></ol>`
+- `[text](url)` → `<a href="url" target="_blank">text ↗</a>`
+- `**bold**` → `<strong>bold</strong>`
+- Backtick code → `<code>code</code>`
+- Blank lines separate paragraphs
+
+### Save the file
+
+Write the complete HTML to `/tmp/{filename}`. Verify the file was written correctly by reading the first and last few lines.
+
+---
+
+## Step 4 — Upload to Google Drive
+
+Before uploading, check if the `GOOGLE_DRIVE_CREDENTIALS` secret is available using the `agent-job-secrets` skill:
+
+```bash
+node skills/agent-job-secrets/agent-job-secrets.js list
+```
+
+If Google Drive credentials are available, upload the HTML file using the `google-drive-upload` skill:
+
+```bash
+skills/google-drive-upload/upload.sh /tmp/{filename} 1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T
+```
+
+The folder ID `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T` is the EDGE reports folder on Google Drive.
+
+If the upload fails (e.g. no credentials configured), note the failure clearly so it can be included in the Telegram notification. Do NOT block the pipeline — proceed to Step 5 regardless.
+
+---
+
+## Step 5 — Send Telegram Notification
+
+Send a notification to all subscribed admins using the `agent-job-dm` skill:
+
+```bash
+node skills/agent-job-dm/agent-job-dm.js send "<message>" --broadcast
+```
+
+### Message format
+
+Use HTML formatting with this structure:
+
+```
+🌍 <b>EDGE Weekly Critical Minerals Intel</b>
+
+📅 {report_date} · Week {week_number}
+📄 {filename}
+
+✅ Report generated and uploaded to Google Drive.
+   Folder: EDGE Critical Minerals Reports
+
+🔗 <a href="https://drive.google.com/drive/folders/1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T">Open Reports Folder ↗</a>
+
+───
+EDGE GeoIntelligence · Automated Report
+```
+
+If the Google Drive upload failed, adjust the message:
+```
+🌍 <b>EDGE Weekly Critical Minerals Intel</b>
+
+📅 {report_date} · Week {week_number}
+📄 {filename}
+
+⚠️ Report generated but Google Drive upload failed.
+   Reason: {brief error reason}
+   The HTML file is saved in the workspace archive.
+```
+
+---
+
+## Step 6 — Archive the Report in the Workspace
+
+Save a copy of the report in the workspace for git archival:
+
+```bash
+mkdir -p agents/edge-critical-minerals/reports/
+cp /tmp/{filename} agents/edge-critical-minerals/reports/{filename}
+```
+
+This ensures each week's report is committed and pushed automatically when the job finishes.
+
+---
+
+## Self-Correction Rules
+
+- **Web search fails to find a section**: Include a note in the report "Unable to verify from live sources this week" and move on. Do not block the entire pipeline.
+- **Google Drive upload fails**: Log the error, include it in the Telegram notification, continue to Step 5.
+- **Telegram notification fails (DM broadcast fails)**: Try `echo`-ing the message to stdout as a fallback so it appears in the job log.
+- **HTML file write fails**: Retry once with a simpler template. If still fails, write the plain Markdown as the report body.
+
+**Never stop and ask for human input.** If the entire pipeline fails, the job log will contain the error details.

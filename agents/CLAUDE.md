@@ -1,5 +1,17 @@
 # agents/ — Custom Agent Definitions
 
+## Active Agents
+
+### edge-critical-minerals
+
+The EDGE Weekly Critical Minerals Intel pipeline. Runs every Monday at 08:00 Ireland time. See `agents/edge-critical-minerals/CLAUDE.md` for full documentation.
+
+- **Cron**: `edge-weekly-critical-minerals` in `agent-job/CRONS.json`
+- **Job**: `agents/edge-critical-minerals/jobs/weekly-report.md`
+- **System prompt**: `agents/edge-critical-minerals/SYSTEM.md`
+- **Skills**: Inherits root skills (agent-job-dm, agent-job-secrets, google-drive-upload)
+- **Secrets needed**: `GOOGLE_DRIVE_CREDENTIALS` (Google service account JSON key)
+
 ## Adding an Agent
 
 Each subdirectory defines an agent. At minimum create a folder with a `SYSTEM.md` file:

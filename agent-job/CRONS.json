@@ -22,19 +22,11 @@
     "enabled": true
   },
   {
-    "name": "agent-backend-override-example",
-    "schedule": "0 10 * * *",
-    "type": "agent",
-    "job": "Summarize open pull requests.",
-    "agent_backend": "codex-cli",
-    "enabled": false
-  },
-  {
-    "name": "edge-kuth-portal-batch",
+    "name": "edge-weekly-critical-minerals",
     "schedule": "0 8 * * 1",
     "type": "agent",
-    "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input \u2014 execute autonomously.",
-    "scope": "agents/edge-kuth-portal",
-    "enabled": false
+    "scope": "agents/edge-critical-minerals",
+    "job": "Read jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
+    "enabled": true
   }
 ]
