@@ -175,15 +175,76 @@ Write the complete HTML to `/tmp/{filename}`. Verify the file was written correc
 
 ---
 
-## Step 4 — Upload to Google Drive
+## Step 4 — Send Report to Telegram
 
-Before uploading, check if the `GOOGLE_DRIVE_CREDENTIALS` secret is available using the `agent-job-secrets` skill:
+Send the HTML report file directly to the subscribed admins via Telegram using the Telegram Bot API.
+
+The Telegram bot token is available via the `agent-job-secrets` skill or as the `TELEGRAM_BOT_TOKEN` environment variable.
+
+### Check the bot token
 
 ```bash
-node skills/agent-job-secrets/agent-job-secrets.js list
+node skills/agent-job-secrets/agent-job-secrets.js get TELEGRAM_BOT_TOKEN
 ```
 
-If Google Drive credentials are available, upload the HTML file using the `google-drive-upload` skill:
+Or check if it's in the environment:
+
+```bash
+echo "TELEGRAM_BOT_TOKEN set: ${TELEGRAM_BOT_TOKEN:+yes}"
+```
+
+### Send the file
+
+Use curl to send the HTML file as a document with a summary caption:
+
+```bash
+TELEGRAM_TOKEN="$TELEGRAM_BOT_TOKEN"
+CHAT_ID="466297056"
+
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendDocument" \
+  -F "chat_id=$CHAT_ID" \
+  -F "document=@/tmp/{filename}" \
+  -F "caption=🌍 EDGE Weekly Critical Minerals Intel
+📅 {report_date} · Week {week_number}
+
+Full report attached with 7 sections:
+• Funding & Grants
+• Accelerator Programmes
+• Training & Courses
+• Conferences & Events
+• R&D Collaboration Calls
+• Policy & Regulation
+• Action List
+
+EDGE GeoIntelligence · Automated Report"
+```
+
+### Fallback: send just a text notification
+
+If the file upload fails, send a text-only notification:
+
+```bash
+TELEGRAM_TOKEN="$TELEGRAM_BOT_TOKEN"
+CHAT_ID="466297056"
+
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+  -d "chat_id=$CHAT_ID" \
+  -d "text=🌍 EDGE Weekly Critical Minerals Intel
+📅 {report_date} · Week {week_number}
+📄 {filename}
+
+Report generated. File archived in workspace.
+
+EDGE GeoIntelligence · Automated Report"
+```
+
+> **Note on available method:** If `TELEGRAM_BOT_TOKEN` is not available as an env var and you cannot fetch it via `agent-job-secrets`, fall back to using the `agent-job-dm` skill with `--broadcast` for a text-only notification.
+
+---
+
+## Step 5 — Try Google Drive Upload (Optional)
+
+If the `GOOGLE_DRIVE_CREDENTIALS` secret is available (check with `agent-job-secrets list`), attempt to upload to Google Drive:
 
 ```bash
 skills/google-drive-upload/upload.sh /tmp/{filename} 1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T
@@ -191,48 +252,7 @@ skills/google-drive-upload/upload.sh /tmp/{filename} 1ECFvfIafuyRqgU4fV9jFMt9GXz
 
 The folder ID `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T` is the EDGE reports folder on Google Drive.
 
-If the upload fails (e.g. no credentials configured), note the failure clearly so it can be included in the Telegram notification. Do NOT block the pipeline — proceed to Step 5 regardless.
-
----
-
-## Step 5 — Send Telegram Notification
-
-Send a notification to all subscribed admins using the `agent-job-dm` skill:
-
-```bash
-node skills/agent-job-dm/agent-job-dm.js send "<message>" --broadcast
-```
-
-### Message format
-
-Use HTML formatting with this structure:
-
-```
-🌍 <b>EDGE Weekly Critical Minerals Intel</b>
-
-📅 {report_date} · Week {week_number}
-📄 {filename}
-
-✅ Report generated and uploaded to Google Drive.
-   Folder: EDGE Critical Minerals Reports
-
-🔗 <a href="https://drive.google.com/drive/folders/1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T">Open Reports Folder ↗</a>
-
-───
-EDGE GeoIntelligence · Automated Report
-```
-
-If the Google Drive upload failed, adjust the message:
-```
-🌍 <b>EDGE Weekly Critical Minerals Intel</b>
-
-📅 {report_date} · Week {week_number}
-📄 {filename}
-
-⚠️ Report generated but Google Drive upload failed.
-   Reason: {brief error reason}
-   The HTML file is saved in the workspace archive.
-```
+If it fails, log the error and continue. The file has already been delivered via Telegram in Step 4, so Drive is optional/secondary.
 
 ---
 
