@@ -55,4 +55,22 @@ agents/
 
 ## Agents
 
-(No agents configured yet.)
+### edge-critical-minerals
+
+EDGE (Extraction, Development, Geopolitics & Economics) Critical Minerals Intelligence agent. Produces weekly intelligence briefs on the global critical minerals landscape including lithium, rare earths, cobalt, nickel, copper, and graphite.
+
+- **Scope:** `agents/edge-critical-minerals`
+- **Schedule:** Mondays at 9:00 AM (cron: `0 9 * * 1`)
+- **System prompt:** `agents/edge-critical-minerals/SYSTEM.md`
+- **Jobs:** `agents/edge-critical-minerals/jobs/weekly-report.md`
+- **Reports:** `agents/edge-critical-minerals/reports/`
+
+```
+agents/edge-critical-minerals/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── weekly-report.md
+└── reports/
+    └── YYYY-MM-DD-weekly-report.md
+```

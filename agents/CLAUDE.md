@@ -49,6 +49,11 @@ Add a cron entry in `agent-job/CRONS.json` with a `scope` field pointing at the 
 
 For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.md` and reference it from `job` — the agent's working directory is the scoped folder, so the relative path resolves. For one-off tasks, write the prompt inline.
 
+## Current Agents
+
+### edge-critical-minerals
+EDGE Critical Minerals Intel agent — produces weekly intelligence briefs on lithium, rare earths, cobalt, nickel, copper, graphite, policy, and geopolitics. Runs every Monday at 9:00 AM.
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.
