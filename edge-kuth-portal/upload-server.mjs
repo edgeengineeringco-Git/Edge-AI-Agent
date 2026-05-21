@@ -120,8 +120,8 @@ async function sendConfirmationEmail(metadata, fileCount) {
     return;
   }
 
-  const fromEmail = process.env.FROM_EMAIL || "edgeengineering.co@gmail.com";
-  const fromName = process.env.FROM_NAME || "Earthwise Dynamics Geo Environs (EDGE)";
+  const fromEmail = process.env.FROM_EMAIL || "info@edgeengineers.net";
+  const fromName = process.env.FROM_NAME || "EDGE K/U/Th Portal";
   const project = metadata.project || metadata.client_name || "Unnamed";
 
   const body = `Dear Client,

@@ -19,13 +19,14 @@
 # Environment:
 #   BREVO_API_KEY     — Brevo API key (recommended, free)
 #   SENDGRID_API_KEY  — SendGrid API key (alternative)
-#   FROM_EMAIL        — sender address (default: noreply@edgeengineers.net)
+#   FROM_EMAIL        — sender address (default: info@edgeengineers.net)
 #   FROM_NAME         — sender display name (default: EDGE K/U/Th Portal)
+#                       Requires sender verification in Brevo before use.
 
 set -euo pipefail
 
-FROM_EMAIL="${FROM_EMAIL:-edgeengineering.co@gmail.com}"
-FROM_NAME="${FROM_NAME:-Earthwise Dynamics Geo Environs (EDGE)}"
+FROM_EMAIL="${FROM_EMAIL:-info@edgeengineers.net}"
+FROM_NAME="${FROM_NAME:-EDGE K/U/Th Portal}"
 
 # ── Parse args ──────────────────────────────────────────────────────────────
 
