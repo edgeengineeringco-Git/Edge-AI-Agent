@@ -155,13 +155,75 @@ else
     exit 1
 fi
 
+# ── Normalize all spectra to uniform total counts ──────────────────────────
+# Every spectrum (PAD + sample) is rescaled so its total counts = 100000.
+# This prevents PAD weights from being inflated by arbitrary count-scale
+# differences between short-sample and long-PAD acquisitions.
+# Live time is set to 1s in normalized files so --normalize-live-time is a
+# no-op (divide by 1s = no change) — avoiding double normalization.
+# This is always-on internal preprocessing, not a user option.
+NORM_DIR="$JOB_OUTPUT/normalized"
+mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
+echo "[NORM] Normalizing all spectra to uniform total counts..."
+python3 -c "
+import numpy as np
+from pathlib import Path
+target_total = 100000.0
+pad_dir = Path('$PAD_DIR')
+sample_dir = Path('$JOB_INCOMING')
+norm_pad_dir = Path('$NORM_DIR/pads')
+norm_sample_dir = Path('$NORM_DIR/samples')
+for spc in sorted(pad_dir.glob('*.spc')):
+    with open(spc) as f:
+        lines = [l.rstrip() for l in f]
+    counts = []
+    for raw in lines[2:2+1024]:
+        try:
+            counts.append(float(raw.split()[0]))
+        except (ValueError, IndexError):
+            counts.append(0.0)
+    counts = np.array(counts)
+    total = counts.sum()
+    scale = target_total / total if total > 0 else 1.0
+    norm_counts = counts * scale
+    out_path = norm_pad_dir / spc.name
+    with open(out_path, 'w') as f:
+        f.write('1000000\n1000000\n')
+        for c in norm_counts:
+            f.write(f'{int(round(c))}\n')
+    print(f'  PAD {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
+for spc in sorted(sample_dir.glob('*.spc')):
+    with open(spc) as f:
+        lines = [l.rstrip() for l in f]
+    counts = []
+    for raw in lines[2:2+1024]:
+        try:
+            counts.append(float(raw.split()[0]))
+        except (ValueError, IndexError):
+            counts.append(0.0)
+    counts = np.array(counts)
+    total = counts.sum()
+    scale = target_total / total if total > 0 else 1.0
+    norm_counts = counts * scale
+    out_path = norm_sample_dir / spc.name
+    with open(out_path, 'w') as f:
+        f.write('1000000\n1000000\n')
+        for c in norm_counts:
+            f.write(f'{int(round(c))}\n')
+    print(f'  sample {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
+" 2>&1
+
+PAD_DIR="$NORM_DIR/pads"
+JOB_INCOMING="$NORM_DIR/samples"
+
 # ── Preprocessing mode ──────────────────────────────────────────────────────
-# Normalization is handled by the Python engine:
-#   neither flag set       = raw counts
-#   --normalize-live-time  = divide counts by live time (counts/s)
+# All spectra are always normalized to 100k total counts (above). The only
+# user-facing normalization option is --normalize-live-time (counts/s), which
+# is a no-op on 1s-normalized files. This matches the C_PAD calibration.
 
 PROVENANCE_NOTES=()
 PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
+PROVENANCE_NOTES+=("total_count_normalized:yes")
 PROVENANCE_NOTES+=("live_time_normalized:$([ -n "$NORMALIZE_LT" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
