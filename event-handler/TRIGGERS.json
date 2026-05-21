@@ -75,7 +75,7 @@
     "name": "edge-kuth-upload-notification",
     "watch_path": "/edge-kuth/upload",
     "actions": [
-      { "type": "agent", "job": "A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:\n\njob_id={{body.job_id}}\nclient_name={{body.client_name}}\nemail={{body.email}}\nproject={{body.project}}\nroi_half_width={{body.roi_half_width}}\nnormalize_live_time={{body.normalize_live_time}}\nmeasurement_id_column={{body.measurement_id_column}}\nspectra_files={{body.spectra_files}}\ndose_csv_file={{body.dose_csv_file}}\n\nThe .spc files are already saved to edge-kuth-portal/jobs/{{body.job_id}}/spectra/ by the upload server. Do not ask for input — execute all steps autonomously.", "scope": "agents/edge-kuth-portal" }
+      { "type": "agent", "job": "A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:\n\njob_id={{body.job_id}}\nclient_name={{body.client_name}}\nemail={{body.email}}\nproject={{body.project}}\nroi_half_width={{body.roi_half_width}}\nnormalize_live_time={{body.normalize_live_time}}\nnormalize_total_counts={{body.normalize_total_counts}}\nmeasurement_id_column={{body.measurement_id_column}}\nspectra_files={{body.spectra_files}}\ndose_csv_file={{body.dose_csv_file}}\n\nThe .spc files are already saved to edge-kuth-portal/jobs/{{body.job_id}}/spectra/ by the upload server. Do not ask for input — execute all steps autonomously.", "scope": "agents/edge-kuth-portal" }
     ],
     "enabled": true
   }

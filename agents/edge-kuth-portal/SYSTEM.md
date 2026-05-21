@@ -50,9 +50,15 @@ When triggered:
      NORM_LT_FLAG="--normalize-live-time"
    fi
 
+   # Read normalize_total_counts from webhook payload
+   NORM_TC_FLAG=""
+   if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_total_counts') else 1)" 2>/dev/null; then
+     NORM_TC_FLAG="--normalize-total-counts"
+   fi
+
    bash ../../edge-kuth-portal/handle-upload.sh \
      --job-id {job_id} --client {client_name} --email {email} \
-     --roi-half-width {roi_half_width} $NORM_LT_FLAG
+     --roi-half-width {roi_half_width} $NORM_LT_FLAG $NORM_TC_FLAG
    ```
    When neither flag is set, **raw counts** are used with no preprocessing.
    When `--normalize-live-time` is set, Python divides counts by live time (counts/s).

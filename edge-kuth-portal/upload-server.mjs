@@ -288,6 +288,7 @@ const server = http.createServer(async (req, res) => {
       email: fields.email || "",
       roi_half_width: parseFloat(fields.roi_half_width) || 20,
       normalize_live_time: fields.normalize_live_time === "true",
+      normalize_total_counts: fields.normalize_total_counts === "true",
       measurement_id_column: fields.measurement_id_column || "measurement_id",
       spectra_files: savedFiles,
       dose_csv_file: doseCsv ? doseCsv.filename : null,
@@ -335,6 +336,7 @@ email=${metadata.email}
 project=${metadata.project}
 roi_half_width=${metadata.roi_half_width}
 normalize_live_time=${metadata.normalize_live_time}
+normalize_total_counts=${metadata.normalize_total_counts}
 measurement_id_column=${metadata.measurement_id_column}
 spectra_files=${JSON.stringify(metadata.spectra_files)}
 dose_csv_file=${metadata.dose_csv_file ?? "null"}
