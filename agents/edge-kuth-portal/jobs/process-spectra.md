@@ -57,7 +57,7 @@ Read the webhook payload flags and pass the corresponding CLI flags:
 |-----------|----------|--------|
 | `normalize_live_time` | `--normalize-live-time` | Python divides counts by live time (counts/s) |
 
-When `--normalize-live-time` is not set, **raw counts** are used with no preprocessing.
+When `--normalize-live-time` is not set, only 100k total-count normalization is applied (built-in). When set, Python also divides by live time (counts/s).
 
 ```bash
 # Build flags from webhook payload
@@ -177,7 +177,7 @@ The output will look like:
 
 Job: {job_id}
 Spectra: {N} files processed
-Mode: PAD_source:embedded_pad_data.py,live_time_normalized:no,roi_half_width_kev:20,engine:estimate_k_u_th_matrix.py
+Mode: PAD_source:embedded_pad_data.py,total_count_normalized:yes,live_time_normalized:no,roi_half_width_kev:20,engine:estimate_k_u_th_matrix.py
 
 K:  0.00–1.84%  (avg 1.42)
 U:  0.0–19.7 ppm  (avg 15.5)

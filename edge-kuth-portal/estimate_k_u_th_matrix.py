@@ -42,6 +42,13 @@ C_PAD = np.array([
     [2.54, 4.42, 111.59],   # Th (ppm)
 ], dtype=float)
 
+def normalize_to_100k(counts: np.ndarray) -> np.ndarray:
+    """Rescale spectrum so total counts = 100k. C_PAD matrix is calibrated for this."""
+    total = counts.sum()
+    if total > 0:
+        return counts * 100000.0 / total
+    return counts
+
 def first_numeric_token_or_none(line: str):
     for tok in line.strip().split():
         try:
@@ -115,11 +122,12 @@ def main():
     channels = np.arange(n_channels, dtype=float)
     (_, _, _), energy_keV = calibrate_energy_quadratic(channels, ANCHORS_CH, ANCHORS_KEV)
 
-    # Read PAD spectra (rate-normalized if requested)
+    # Read PAD spectra (rate-normalized if requested, then always total-count normalized)
     def read_pad(fname: str):
         counts, live_us = read_spc_counts_and_times(pad_dir / fname)
         if args.normalize_live_time and live_us and live_us > 0:
             counts = counts / (live_us * 1e-6)  # counts per second
+        counts = normalize_to_100k(counts)  # always — C_PAD matrix requires this
         return counts
 
     pad_k_counts = read_pad("PAD_K_A.spc")
@@ -147,6 +155,7 @@ def main():
                 counts, live_us = read_spc_counts_and_times(spc)
                 if args.normalize_live_time and live_us and live_us > 0:
                     counts = counts / (live_us * 1e-6)
+                counts = normalize_to_100k(counts)  # always — C_PAD matrix requires this
                 y_feats = build_feature_vector(energy_keV, counts, hw)
                 w_hat, r2 = fit_pad_weights(y_feats, M_ref)
 

@@ -156,12 +156,13 @@ else
 fi
 
 # ── Preprocessing mode ──────────────────────────────────────────────────────
-# Normalization is handled by the Python engine:
-#   neither flag set       = raw counts
-#   --normalize-live-time  = divide counts by live time (counts/s)
+# The Python engine ALWAYS normalizes to 100k total counts internally — the
+# C_PAD composition matrix is calibrated for this. No user option.
+# --normalize-live-time additionally divides by live time (counts/s).
 
 PROVENANCE_NOTES=()
 PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
+PROVENANCE_NOTES+=("total_count_normalized:yes")
 PROVENANCE_NOTES+=("live_time_normalized:$([ -n "$NORMALIZE_LT" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
