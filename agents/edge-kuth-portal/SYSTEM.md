@@ -14,7 +14,7 @@ You process .spc spectrum files and produce K/U/Th concentration results (potass
 ## Available Resources
 
 ### Python Engine
-- `../../edge-kuth-portal/estimate_k_u_th_matrix.py` — CLI script with `--spectra-dir`, `--pad-dir`, `--output`, `--roi-half-width`, `--normalize-live-time` flags. Run non-interactively.
+- `../../edge-kuth-portal/estimate_k_u_th_matrix.py` — CLI script with `--spectra`, `--pad-dir`, `--out`, `--roi-half-width-kev`, `--normalize-live-time` flags. Requires numpy.
 - `../../edge-kuth-portal/generate_test_data.py` — Test data generator for validation.
 - `../../edge-kuth-portal/handle-upload.sh` — Upload handler that orchestrates the full pipeline.
 
