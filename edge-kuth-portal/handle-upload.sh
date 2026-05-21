@@ -132,10 +132,14 @@ if [[ ! -d "$PAD_DIR" ]]; then
     fi
 fi
 
-# Normalize all spectra (PAD + sample) to the same total counts
+# Normalize all spectra (PAD + sample) to the same total counts.
 # This prevents PAD weights from being inflated by arbitrary count-scale differences.
 # Both PAD and sample .spc files are normalized so the least-squares fit gives
 # meaningful fractional weights instead of scale-driven inflated values.
+# Live time is set to 1,000,000 us (=1 second) in normalized files so that
+# --normalize-live-time in the Python engine becomes a no-op (divide by 1s).
+# This avoids double-normalization issues when PADs and samples have very
+# different acquisition times (e.g. PADs at ~600s, samples at ~259us).
 NORM_DIR="$JOB_OUTPUT/normalized"
 mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
 echo "[NORM] Normalizing all spectra to uniform total counts..."
@@ -167,7 +171,7 @@ for spc in sorted(pad_dir.glob('*.spc')):
     norm_counts = counts * scale
     out_path = norm_pad_dir / spc.name
     with open(out_path, 'w') as f:
-        f.write(f'{live_us}\n{clock_us}\n')
+        f.write(f'1000000\n1000000\n')  # 1s live+clock so --normalize-live-time is no-op
         for c in norm_counts:
             f.write(f'{int(round(c))}\n')
     print(f'  PAD {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
@@ -190,7 +194,7 @@ for spc in sorted(sample_dir.glob('*.spc')):
     norm_counts = counts * scale
     out_path = norm_sample_dir / spc.name
     with open(out_path, 'w') as f:
-        f.write(f'{live_us}\n{clock_us}\n')
+        f.write(f'1000000\n1000000\n')  # 1s live+clock so --normalize-live-time is no-op
         for c in norm_counts:
             f.write(f'{int(round(c))}\n')
     print(f'  sample {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
