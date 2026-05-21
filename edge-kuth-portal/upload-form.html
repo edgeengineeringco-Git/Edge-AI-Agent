@@ -86,7 +86,8 @@
     input[type="password"],
     input[type="file"],
     input[type="number"],
-    input[type="email"] {
+    input[type="email"],
+    select {
       width: 100%;
       box-sizing: border-box;
       padding: 9px 11px;
@@ -94,6 +95,9 @@
       border: 1px solid #ccc;
       font-size: 0.95rem;
       background: #fafafa;
+    }
+    select {
+      cursor: pointer;
     }
     input[type="file"] {
       padding: 6px 4px;
@@ -273,39 +277,30 @@
           </div>
 
           <div class="field-group">
-            <label>Normalization options</label>
-            <div class="checkbox-group">
-              <div class="checkbox-row">
-                <input type="checkbox" id="normalize_live_time" name="normalize_live_time" value="true" />
-                <label for="normalize_live_time">Normalize by live time <span class="badge badge-default">counts/s</span></label>
-              </div>
-              <div class="checkbox-desc">
-                Divide channel counts by acquisition live time. Accounts for varying measurement
-                durations between spectra. Recommended when survey data was collected with
-                inconsistent counting times.
-              </div>
-            </div>
-            <div class="checkbox-row">
-              <input type="checkbox" id="normalize_total_counts" name="normalize_total_counts" value="true" />
-              <label for="normalize_total_counts">Normalize by total counts <span class="badge badge-default">100k</span></label>
-            </div>
-            <div class="checkbox-desc">
-              Normalize both PAD references and sample spectra to 100k total counts before
-              fitting. Compares spectral shapes rather than absolute intensities. Recommended
-              when sample counts differ significantly from PAD calibration counts.
-            </div>
+            <label for="normalize_live_time">Normalize by live time <span class="badge badge-default">counts/s</span></label>
+            <select id="normalize_live_time" name="normalize_live_time">
+              <option value="false" selected>Do not normalize</option>
+              <option value="true">Divide counts by live time</option>
+            </select>
+            <div class="helper">Accounts for varying measurement durations between spectra.</div>
+          </div>
+
+          <div class="field-group">
+            <label for="normalize_total_counts">Normalize by total counts <span class="badge badge-default">100k</span></label>
+            <select id="normalize_total_counts" name="normalize_total_counts">
+              <option value="false" selected>Do not normalize</option>
+              <option value="true">Rescale to 100k total counts</option>
+            </select>
+            <div class="helper">Compares spectral shapes rather than absolute intensities. Recommended when sample counts differ from PAD calibration counts.</div>
+          </div>
+
+          <div class="field-group">
+            <label>Continuum subtraction <span class="badge badge-default">shoulder</span></label>
             <div class="checkbox-row">
               <input type="checkbox" id="subtract_continuum" name="subtract_continuum" value="true" />
-              <label for="subtract_continuum">Subtract continuum <span class="badge badge-default">shoulder</span></label>
+              <label for="subtract_continuum">Subtract continuum background</label>
             </div>
-            <div class="checkbox-desc">
-              Estimate and subtract a linear continuum background from each ROI using
-              shoulder windows. Compensates for scattering continuum differences between
-              lab PAD references and field samples. Recommended for field survey data.
-            </div>
-            <div class="helper" style="margin-top:6px">
-              When unchecked, raw counts pass through unchanged (recommended for standard surveys).
-            </div>
+            <div class="helper">Estimates and subtracts linear continuum from each ROI using shoulder windows. Recommended for field survey data.</div>
           </div>
         </div>
 
