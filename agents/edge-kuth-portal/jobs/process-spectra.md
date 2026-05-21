@@ -32,15 +32,18 @@ If no .spc files found, stop and notify via Telegram broadcast.
 The webhook payload is at `../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json` (created by upload server).
 
 ### Step 2: Ensure PAD Reference Files
-PAD files (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) must be available in `../../edge-kuth-portal/pad_reference/`.
+PAD files (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) are embedded in `../../edge-kuth-portal/pad_data.py` as the authoritative source.
 
-If they don't exist locally:
-- Try to fetch from Google Drive using `drive-utils.sh` (requires GDRIVE_TOKEN)
-- Or generate test data as fallback:
-  ```bash
-  python3 ../../edge-kuth-portal/generate_test_data.py --output-dir /tmp/kuth_pads
-  ```
-- If no PAD files available, stop and send Telegram broadcast with error
+The `handle-upload.sh` script automatically generates PAD files from this module on first run. Processing stops with an error if PAD generation or validation fails — no synthetic fallback, no Drive download for PADs.
+
+To explicitly regenerate from embedded data:
+```bash
+python3 -c "
+from pad_data import ensure_pad_dir, validate_pad_dir
+ensure_pad_dir('../../edge-kuth-portal/pad_drive')
+validate_pad_dir('../../edge-kuth-portal/pad_drive')
+"
+```
 
 ### Step 3: Install numpy if needed
 ```bash
@@ -48,24 +51,41 @@ python3 -m pip install numpy 2>/dev/null || true
 ```
 
 ### Step 4: Run Estimation Immediately
-Read `normalize_live_time` from the webhook payload and pass `--normalize-live-time` if true:
+Read the webhook payload flags and pass the corresponding CLI flags:
+
+| Form field | CLI flag | Effect |
+|-----------|----------|--------|
+| `normalize_live_time` | `--normalize-live-time` | Python divides counts by live time (counts/s) |
+| *(not in form)* | `--normalize-total-counts` | Bash rescales all spectra to 100k total counts |
+
+When neither flag is set, **raw counts** are used with no preprocessing whatsoever — PADs and samples pass through unchanged.
+
 ```bash
-NORM_FLAG=""
+# Build flags from webhook payload
+NORM_LT_FLAG=""
 if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
-  NORM_FLAG="--normalize-live-time"
+  NORM_LT_FLAG="--normalize-live-time"
 fi
+
+# NOTE: --normalize-total-counts is NOT set from the form by default.
+# Add it here only if explicitly required for a specific job configuration.
+# Without it, the pipeline runs on raw counts.
 
 bash ../../edge-kuth-portal/handle-upload.sh \
   --job-id {job_id} \
   --client {client_name} \
   --email {email} \
   --roi-half-width {roi_half_width} \
-  $NORM_FLAG
+  $NORM_LT_FLAG
 ```
+
+> **Important:** When `normalize_live_time = false`, the pipeline uses truly raw spectra. No rescaling, no live-time modification. The `--normalize-total-counts` flag is independent and must be explicitly added if total-count normalization is desired.
 
 ### Step 5: Read Results
 Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
 Columns: `file, [lat, lon, [elevation,]] K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
+
+Processing metadata at: `../../edge-kuth-portal/jobs/{job_id}/processing-metadata.json`
 
 R² is included for every spectrum — no review or filtering, include everything.
 
@@ -118,7 +138,7 @@ bash ../../edge-kuth-portal/send-email.sh \
 If `SENDGRID_API_KEY` is not configured, this step skips gracefully.
 
 ### Step 7: Google Drive Integration (execute fully if configured)
-Use the `drive-utils.sh` helper. All three operations below share the same OAuth token.
+Use the `drive-utils.sh` helper. PAD files come from the embedded `pad_data.py` module — no Drive download needed. Results upload and job logging use Drive if configured.
 
 ```bash
 # Get OAuth token from agent-job-secrets
@@ -130,13 +150,7 @@ else
   GDRIVE_TOKEN=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
   export GDRIVE_TOKEN
 
-  # 6a. Download PAD files if needed
-  if [[ ! -f ../../edge-kuth-portal/pad_reference/PAD_K_A.spc ]]; then
-    bash ../../edge-kuth-portal/drive-utils.sh download-pads \
-      --output-dir ../../edge-kuth-portal/pad_reference
-  fi
-
-  # 6b. Upload results CSV to Drive job folder
+  # 7a. Upload results CSV to Drive job folder
   READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
     --job-id {job_id} \
     --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
@@ -144,7 +158,7 @@ else
   FOLDER_ID=$(echo "$READS" | awk '{print $1}')
   CSV_LINK=$(echo "$READS" | awk '{print $2}')
 
-  # 6c. Log job details to spreadsheet (Google Sheets)
+  # 7b. Log job details to spreadsheet (Google Sheets)
   bash ../../edge-kuth-portal/drive-utils.sh log-job \
     --job-id {job_id} \
     --client {client_name} \
@@ -170,6 +184,12 @@ The output will look like:
 
 Job: {job_id}
 Spectra: {N} files processed
+Mode: PAD_source:embedded_pad_data.py,total_count_normalized:no,live_time_normalized:no,roi_half_width_kev:20,engine:estimate_k_u_th_matrix.py
+
+K:  0.00–1.84%  (avg 1.42)
+U:  0.0–19.7 ppm  (avg 15.5)
+Th: 0.0–32.2 ppm  (avg 24.5)
+R²: 0.917–1.000
 
 Full CSV has been saved. Email delivery pending Brevo sender verification.
 ```

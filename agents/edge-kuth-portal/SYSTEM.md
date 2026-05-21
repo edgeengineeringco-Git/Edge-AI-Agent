@@ -23,7 +23,7 @@ You process .spc spectrum files and produce K/U/Th concentration results (potass
 - `../../edge-kuth-portal/incoming/` — Place .spc files here for processing
 - `../../edge-kuth-portal/output/` — Results CSVs are archived here
 - `../../edge-kuth-portal/jobs/{job_id}/` — Per-job working directory
-- `../../edge-kuth-portal/pad_reference/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) — used for the 3×3 PAD composition matrix concentration estimation
+- `../../edge-kuth-portal/embedded_pads/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) generated from embedded `pad_data.py` module — this is the authoritative source, no Drive download needed
 - Use `/tmp` for temporary data
 
 ### Scripts
@@ -41,12 +41,23 @@ When triggered:
 
 1. **Receive metadata** — Parse client_name, email, job_id, roi_half_width from the webhook
 2. **Job directory exists** — The upload server already created `../../edge-kuth-portal/jobs/{job_id}/spectra/` with .spc files and `webhook-payload.json`
-3. **Get PAD files** — Check `../../edge-kuth-portal/pad_reference/` for PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc. If missing, fetch from Google Drive using `drive-utils.sh` (see Google Drive section below)
-4. **Run estimation** — Call the Python CLI immediately:
+3. **Get PAD files** — `../../edge-kuth-portal/pad_data.py` has all three PAD spectra embedded. The `handle-upload.sh` script generates them automatically. Do NOT download PADs from Drive.
+4. **Run estimation** — Call the CLI with normalization flags from the webhook:
    ```bash
+   # Read normalize_live_time from webhook payload
+   NORM_LT_FLAG=""
+   if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
+     NORM_LT_FLAG="--normalize-live-time"
+   fi
+
    bash ../../edge-kuth-portal/handle-upload.sh \
-     --job-id {job_id} --client {client_name} --email {email}
+     --job-id {job_id} --client {client_name} --email {email} \
+     --roi-half-width {roi_half_width} $NORM_LT_FLAG
    ```
+   When neither flag is set, **raw counts** are used with no preprocessing.
+   When `--normalize-live-time` is set, Python divides counts by live time (counts/s).
+   When `--normalize-total-counts` is set, Bash rescales all spectra to 100k total counts.
+   These flags are independent — any combination is valid.
 5. **Email results CSV** — Send the full CSV to the client via SendGrid (using `send-email.sh`). The upload server already sent a confirmation email when files were received.
 6. **Upload to Google Drive** — Upload results CSV and log job to spreadsheet (see Google Drive section below)
 7. **Send Telegram** — Broadcast the full CSV via `agent-job-dm` skill
@@ -57,8 +68,10 @@ When triggered:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | ROI half-width | 20 keV | Integration window around reference lines |
-| Live-time normalization | Off | Divide counts by live time |
-| PAD files | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc | Reference spectra (local or Google Drive) |
+| Live-time normalization | Off | `--normalize-live-time` — Python divides by live time (counts/s) |
+| Total-count normalization | Off | `--normalize-total-counts` — Bash rescales all spectra to 100k total counts |
+| Both off (raw) | Default | No preprocessing — true raw counts pass through unchanged |
+| PAD files | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc | Embedded in `pad_data.py` (no Drive download) |
 
 ## Telegram CSV Delivery
 
@@ -73,7 +86,7 @@ The system connects to three Google Drive resources (hardcoded):
 
 | Resource | ID | Purpose |
 |----------|-----|---------|
-| PAD calibration folder | `1Eg04frfuGOFYbtqd-o4IMCpOaW6xoNc4` | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc |
+| PAD calibration folder | `1Eg04frfuGOFYbtqd-o4IMCpOaW6xoNc4` | Not used for PAD source (embedded in `pad_data.py`) |
 | Jobs storage folder | `1INUTv6WYdmhRLKpNZlEX5L8Zmdw6Rx8d` | Per-job subfolder with results |
 | Job log spreadsheet | `1vV3mjhTcjFt0kf4Tk0ovDcL_NtrzyGxDtmFf6wv9iQ8` (tab GID: 2138085800) | One row per job |
 
@@ -95,13 +108,7 @@ else
   GDRIVE_TOKEN=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
   export GDRIVE_TOKEN
 
-  # 2. Download PAD files from Drive (if not already local)
-  if [[ ! -f ../../edge-kuth-portal/pad_reference/PAD_K_A.spc ]]; then
-    bash ../../edge-kuth-portal/drive-utils.sh download-pads \
-      --output-dir ../../edge-kuth-portal/pad_reference
-  fi
-
-  # 3. Upload results CSV to Drive job folder
+  # 2. Upload results CSV to Drive job folder
   READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
     --job-id {job_id} --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
     --client {client_name})
@@ -119,7 +126,7 @@ fi
 ### Degraded mode
 
 If Google Drive is not configured:
-- PAD files are expected at `../../edge-kuth-portal/pad_reference/` (stored locally or generated as test data)
+- PAD files are always available from the embedded `pad_data.py` module (no Drive needed)
 - Results are sent via Telegram only (no Drive upload, no spreadsheet log)
 
 ## Important

@@ -41,7 +41,8 @@ CLIENT_NAME=""
 EMAIL=""
 ROI_HALF_WIDTH=20
 NORMALIZE_LT=""
-PAD_DIR="$SCRIPT_DIR/pad_reference"
+NORMALIZE_TOTAL=""
+PAD_DIR="$SCRIPT_DIR/embedded_pads"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -51,6 +52,7 @@ while [[ $# -gt 0 ]]; do
         --email) EMAIL="$2"; shift 2 ;;
         --roi-half-width) ROI_HALF_WIDTH="$2"; shift 2 ;;
         --normalize-live-time) NORMALIZE_LT="--normalize-live-time"; shift ;;
+        --normalize-total-counts) NORMALIZE_TOTAL="yes"; shift ;;
         --pad-dir) PAD_DIR="$2"; shift 2 ;;
         --json) JSON_FILE="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -78,8 +80,9 @@ echo "=== EDGE K/U/Th Portal — Processing Job ==="
 echo "Job ID:      $JOB_ID"
 echo "Client:      ${CLIENT_NAME:-anonymous}"
 echo "Email:       ${EMAIL:-none}"
-echo "ROI half:    $ROI_HALF_WIDTH keV"
-echo "Normalize:   ${NORMALIZE_LT:+yes}"
+echo "ROI half:          $ROI_HALF_WIDTH keV"
+echo "Live-time norm:    $([ -n "$NORMALIZE_LT" ] && echo yes || echo no)"
+echo "Total-count norm:  ${NORMALIZE_TOTAL:-no}"
 echo ""
 
 # Find .spc files: first check job directory, then incoming
@@ -120,45 +123,74 @@ if [[ ! -f "$PYTHON_SCRIPT" ]]; then
     PYTHON_SCRIPT="$WORKSPACE_ROOT/edge-kuth-portal/estimate_k_u_th_matrix.py"
 fi
 
-# Check PAD reference directory
-if [[ ! -d "$PAD_DIR" ]]; then
-    # Use synthetic test PADs if no real ones
-    PAD_DIR="$JOB_OUTPUT/test_pads"
-    echo "[INFO] No PAD reference directory found. Generating test PAD spectra..."
-    python3 "$SCRIPT_DIR/generate_test_data.py" --output-dir "$PAD_DIR" 2>/dev/null || \
-    python3 "$WORKSPACE_ROOT/edge-kuth-portal/generate_test_data.py" --output-dir "$PAD_DIR" 2>/dev/null || true
-    if [[ -d "$PAD_DIR/pads" ]]; then
-        PAD_DIR="$PAD_DIR/pads"
-    fi
+# Ensure PAD files are available from the embedded data module
+# This is the authoritative source — no Drive download, no synthetic fallback.
+PAD_DATA_SCRIPT="$SCRIPT_DIR/pad_data.py"
+if [[ ! -f "$PAD_DATA_SCRIPT" ]]; then
+    PAD_DATA_SCRIPT="$WORKSPACE_ROOT/edge-kuth-portal/pad_data.py"
 fi
 
-# Normalize all spectra (PAD + sample) to the same total counts.
-# This prevents PAD weights from being inflated by arbitrary count-scale differences.
-# Both PAD and sample .spc files are normalized so the least-squares fit gives
-# meaningful fractional weights instead of scale-driven inflated values.
-# Live time is set to 1,000,000 us (=1 second) in normalized files so that
-# --normalize-live-time in the Python engine becomes a no-op (divide by 1s).
-# This avoids double-normalization issues when PADs and samples have very
-# different acquisition times (e.g. PADs at ~600s, samples at ~259us).
-NORM_DIR="$JOB_OUTPUT/normalized"
-mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
-echo "[NORM] Normalizing all spectra to uniform total counts..."
-python3 -c "
+if [[ ! -d "$PAD_DIR" ]]; then
+    echo "[PAD] Generating PAD files from embedded data..."
+    python3 -c "
+import sys
+sys.path.insert(0, '$SCRIPT_DIR')
+sys.path.insert(0, '$WORKSPACE_ROOT/edge-kuth-portal')
+from pad_data import ensure_pad_dir, validate_pad_dir
+ensure_pad_dir('$PAD_DIR')
+print('PAD files written to $PAD_DIR')
+" 2>&1
+fi
+
+# Validate PAD files — exit on failure
+if [[ -d "$PAD_DIR" ]]; then
+    echo "[PAD] Validating PAD files..."
+    python3 -c "
+import sys
+sys.path.insert(0, '$SCRIPT_DIR')
+sys.path.insert(0, '$WORKSPACE_ROOT/edge-kuth-portal')
+from pad_data import validate_pad_dir
+validate_pad_dir('$PAD_DIR')
+print('PAD validation OK')
+" 2>&1 || { echo "[ERROR] PAD validation failed"; exit 1; }
+else
+    echo "[ERROR] PAD directory not found and could not be created: $PAD_DIR"
+    exit 1
+fi
+
+# ── Preprocessing mode ──────────────────────────────────────────────────────
+# Three independent modes, controlled by CLI flags:
+#   neither flag set       = raw counts (no modification to PADs or samples)
+#   --normalize-live-time  = Python divides counts by live time (counts/s)
+#   --normalize-total-counts = Bash rescales all spectra to 100k total counts
+#
+# When --normalize-total-counts is set, live_time is written as 1,000,000 us
+# in the normalized headers, making --normalize-live-time a no-op if both
+# flags are set (division by 1s).
+#
+# PADs and samples always use identical preprocessing.
+
+PROVENANCE_NOTES=()
+PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
+
+if [[ -n "$NORMALIZE_TOTAL" ]]; then
+    PROVENANCE_NOTES+=("total_count_normalized:100k")
+    NORM_DIR="$JOB_OUTPUT/normalized"
+    mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
+    echo "[NORM] Normalizing all spectra to uniform total counts..."
+    python3 -c "
 import numpy as np
 from pathlib import Path
 
-target_total = 100000.0  # arbitrary uniform target for all spectra
+target_total = 100000.0
 pad_dir = Path('$PAD_DIR')
 sample_dir = Path('$JOB_INCOMING')
 norm_pad_dir = Path('$NORM_DIR/pads')
 norm_sample_dir = Path('$NORM_DIR/samples')
 
-# Normalize PAD files
 for spc in sorted(pad_dir.glob('*.spc')):
     with open(spc) as f:
         lines = [l.rstrip() for l in f]
-    live_us = float(lines[0].split()[0]) if lines[0].strip() else 0
-    clock_us = float(lines[1].split()[0]) if len(lines) > 1 and lines[1].strip() else 0
     counts = []
     for raw in lines[2:2+1024]:
         try:
@@ -171,17 +203,14 @@ for spc in sorted(pad_dir.glob('*.spc')):
     norm_counts = counts * scale
     out_path = norm_pad_dir / spc.name
     with open(out_path, 'w') as f:
-        f.write(f'1000000\n1000000\n')  # 1s live+clock so --normalize-live-time is no-op
+        f.write('1000000\n1000000\n')
         for c in norm_counts:
             f.write(f'{int(round(c))}\n')
     print(f'  PAD {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
 
-# Normalize sample files
 for spc in sorted(sample_dir.glob('*.spc')):
     with open(spc) as f:
         lines = [l.rstrip() for l in f]
-    live_us = float(lines[0].split()[0]) if lines[0].strip() else 0
-    clock_us = float(lines[1].split()[0]) if len(lines) > 1 and lines[1].strip() else 0
     counts = []
     for raw in lines[2:2+1024]:
         try:
@@ -194,14 +223,27 @@ for spc in sorted(sample_dir.glob('*.spc')):
     norm_counts = counts * scale
     out_path = norm_sample_dir / spc.name
     with open(out_path, 'w') as f:
-        f.write(f'1000000\n1000000\n')  # 1s live+clock so --normalize-live-time is no-op
+        f.write('1000000\n1000000\n')
         for c in norm_counts:
             f.write(f'{int(round(c))}\n')
     print(f'  sample {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
 " 2>&1
 
-PAD_DIR="$NORM_DIR/pads"
-JOB_INCOMING="$NORM_DIR/samples"
+    PAD_DIR="$NORM_DIR/pads"
+    JOB_INCOMING="$NORM_DIR/samples"
+else
+    echo "[NORM] Using raw counts (no total-count normalization)"
+    PROVENANCE_NOTES+=("total_count_normalized:no")
+fi
+
+if [[ -n "$NORMALIZE_LT" ]]; then
+    PROVENANCE_NOTES+=("live_time_normalized:yes")
+else
+    PROVENANCE_NOTES+=("live_time_normalized:no")
+fi
+
+PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
+PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
 
 # Run the Python estimation
 echo ""
@@ -212,6 +254,26 @@ python3 "$PYTHON_SCRIPT" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
     ${NORMALIZE_LT:-}
+
+# Write processing metadata
+META_JSON="$JOB_OUTPUT/processing-metadata.json"
+python3 -c "
+import json
+notes = [l for l in '''$(printf "%s\n" "${PROVENANCE_NOTES[@]}")'''.strip().split('\n') if l]
+meta = {}
+for n in notes:
+    if ':' in n:
+        k, v = n.split(':', 1)
+        meta[k] = v
+meta['job_id'] = '$JOB_ID'
+meta['client_name'] = '${CLIENT_NAME:-anonymous}'
+meta['email'] = '${EMAIL:-none}'
+meta['total_count_normalized'] = '${NORMALIZE_TOTAL:+yes}' or 'no'
+meta['live_time_normalized'] = '${NORMALIZE_LT:+yes}' or 'no'
+with open('$META_JSON', 'w') as f:
+    json.dump(meta, f, indent=2)
+print(f'[META] Processing metadata written to $META_JSON')
+" 2>&1 || true
 
 echo ""
 echo "=== Results ==="
@@ -231,6 +293,8 @@ print(len(rows))
     echo ""
     echo "Job: $JOB_ID"
     echo "Spectra: ${N} files processed"
+    MODE_LINE=$(IFS=,; echo "${PROVENANCE_NOTES[*]}")
+    echo "Mode: $MODE_LINE"
     echo ""
     python3 -c "
 import csv, sys

@@ -103,12 +103,12 @@ agents/edge-kuth-portal/
 - `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core Python engine (CLI with args)
 - `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)
 - `edge-kuth-portal/handle-upload.sh` — Upload handler orchestrator
+- `edge-kuth-portal/pad_data.py` — Embedded PAD reference spectra (authoritative source, no Drive download)
 - `edge-kuth-portal/drive-utils.sh` — Google Drive & Sheets helper (PAD fetch, results upload, job logging)
 - `edge-kuth-portal/send-email.sh` — SendGrid email helper (confirmation + results)
 - `edge-kuth-portal/incoming/` — Drop .spc files here for processing
 - `edge-kuth-portal/output/` — Results CSVs archived here
 - `edge-kuth-portal/jobs/{job_id}/` — Per-job working directory
-- `edge-kuth-portal/pad_reference/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc)
 
 ## Skills
 
