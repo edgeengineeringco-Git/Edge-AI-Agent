@@ -56,9 +56,8 @@ Read the webhook payload flags and pass the corresponding CLI flags:
 | Form field | CLI flag | Effect |
 |-----------|----------|--------|
 | `normalize_live_time` | `--normalize-live-time` | Python divides counts by live time (counts/s) |
-| `normalize_total_counts` | `--normalize-total-counts` | Python scales counts to 100k total per spectrum |
 
-When neither flag is set, **raw counts** are used with no preprocessing whatsoever — PADs and samples pass through unchanged.
+When `--normalize-live-time` is not set, **raw counts** are used with no preprocessing.
 
 ```bash
 # Build flags from webhook payload
@@ -67,21 +66,13 @@ if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_i
   NORM_LT_FLAG="--normalize-live-time"
 fi
 
-NORM_TC_FLAG=""
-if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_total_counts') else 1)" 2>/dev/null; then
-  NORM_TC_FLAG="--normalize-total-counts"
-fi
-
 bash ../../edge-kuth-portal/handle-upload.sh \
   --job-id {job_id} \
   --client {client_name} \
   --email {email} \
   --roi-half-width {roi_half_width} \
-  $NORM_LT_FLAG \
-  $NORM_TC_FLAG
+  $NORM_LT_FLAG
 ```
-
-> **Important:** When `normalize_live_time = false`, the pipeline uses truly raw spectra. No rescaling, no live-time modification. The `--normalize-total-counts` flag is independent and must be explicitly added if total-count normalization is desired.
 
 ### Step 5: Read Results
 Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
@@ -186,7 +177,7 @@ The output will look like:
 
 Job: {job_id}
 Spectra: {N} files processed
-Mode: PAD_source:embedded_pad_data.py,total_count_normalized:no,live_time_normalized:no,roi_half_width_kev:20,engine:estimate_k_u_th_matrix.py
+Mode: PAD_source:embedded_pad_data.py,live_time_normalized:no,roi_half_width_kev:20,engine:estimate_k_u_th_matrix.py
 
 K:  0.00–1.84%  (avg 1.42)
 U:  0.0–19.7 ppm  (avg 15.5)

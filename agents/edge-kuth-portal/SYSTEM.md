@@ -50,20 +50,13 @@ When triggered:
      NORM_LT_FLAG="--normalize-live-time"
    fi
 
-   # Read normalize_total_counts from webhook payload
-   NORM_TC_FLAG=""
-   if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_total_counts') else 1)" 2>/dev/null; then
-     NORM_TC_FLAG="--normalize-total-counts"
-   fi
 
    bash ../../edge-kuth-portal/handle-upload.sh \
      --job-id {job_id} --client {client_name} --email {email} \
-     --roi-half-width {roi_half_width} $NORM_LT_FLAG $NORM_TC_FLAG
+     --roi-half-width {roi_half_width} $NORM_LT_FLAG
    ```
-   When neither flag is set, **raw counts** are used with no preprocessing.
+   When `--normalize-live-time` is not set, **raw counts** are used with no preprocessing.
    When `--normalize-live-time` is set, Python divides counts by live time (counts/s).
-   When `--normalize-total-counts` is set, Bash rescales all spectra to 100k total counts.
-   These flags are independent — any combination is valid.
 5. **Email results CSV** — Send the full CSV to the client via SendGrid (using `send-email.sh`). The upload server already sent a confirmation email when files were received.
 6. **Upload to Google Drive** — Upload results CSV and log job to spreadsheet (see Google Drive section below)
 7. **Send Telegram** — Broadcast the full CSV via `agent-job-dm` skill
@@ -75,8 +68,7 @@ When triggered:
 |-----------|---------|-------------|
 | ROI half-width | 20 keV | Integration window around reference lines |
 | Live-time normalization | Off | `--normalize-live-time` — Python divides by live time (counts/s) |
-| Total-count normalization | Off | `--normalize-total-counts` — Bash rescales all spectra to 100k total counts |
-| Both off (raw) | Default | No preprocessing — true raw counts pass through unchanged |
+| Raw counts (default) | Default | No preprocessing — true raw counts pass through unchanged |
 | PAD files | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc | Embedded in `pad_data.py` (no Drive download) |
 
 ## Telegram CSV Delivery

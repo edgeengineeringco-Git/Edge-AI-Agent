@@ -284,19 +284,9 @@
                 durations between spectra. Recommended when survey data was collected with
                 inconsistent counting times.
               </div>
-              <div class="checkbox-row">
-                <input type="checkbox" id="normalize_total_counts" name="normalize_total_counts" value="true" />
-                <label for="normalize_total_counts">Normalize to uniform total counts <span class="badge badge-default">100k</span></label>
-              </div>
-              <div class="checkbox-desc">
-                Rescale each spectrum so its total counts equal 100,000. Useful when comparing
-                spectra with vastly different total count rates. Independent of live-time
-                normalization — both can be selected together.
-              </div>
             </div>
             <div class="helper" style="margin-top:6px">
-              Neither selected = raw counts pass through unchanged (recommended for standard surveys).
-              Both flags are independent — any combination is valid.
+              When unchecked, raw counts pass through unchanged (recommended for standard surveys).
             </div>
           </div>
         </div>

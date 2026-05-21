@@ -41,7 +41,6 @@ CLIENT_NAME=""
 EMAIL=""
 ROI_HALF_WIDTH=20
 NORMALIZE_LT=""
-NORMALIZE_TOTAL=""
 PAD_DIR="$SCRIPT_DIR/embedded_pads"
 
 # Parse arguments
@@ -52,7 +51,6 @@ while [[ $# -gt 0 ]]; do
         --email) EMAIL="$2"; shift 2 ;;
         --roi-half-width) ROI_HALF_WIDTH="$2"; shift 2 ;;
         --normalize-live-time) NORMALIZE_LT="--normalize-live-time"; shift ;;
-        --normalize-total-counts) NORMALIZE_TOTAL="--normalize-total-counts"; shift ;;
         --pad-dir) PAD_DIR="$2"; shift 2 ;;
         --json) JSON_FILE="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -82,7 +80,6 @@ echo "Client:      ${CLIENT_NAME:-anonymous}"
 echo "Email:       ${EMAIL:-none}"
 echo "ROI half:          $ROI_HALF_WIDTH keV"
 echo "Live-time norm:    $([ -n "$NORMALIZE_LT" ] && echo yes || echo no)"
-echo "Total-count norm:  $([ -n "$NORMALIZE_TOTAL" ] && echo yes || echo no)"
 echo ""
 
 # Find .spc files: first check job directory, then incoming
@@ -162,11 +159,9 @@ fi
 # Normalization is handled by the Python engine:
 #   neither flag set       = raw counts
 #   --normalize-live-time  = divide counts by live time (counts/s)
-#   --normalize-total-counts = scale counts to 100k total per spectrum
 
 PROVENANCE_NOTES=()
 PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
-PROVENANCE_NOTES+=("total_count_normalized:$([ -n "$NORMALIZE_TOTAL" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("live_time_normalized:$([ -n "$NORMALIZE_LT" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
@@ -238,7 +233,6 @@ python3 "$PYTHON_SCRIPT" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
     ${NORMALIZE_LT:-} \
-    ${NORMALIZE_TOTAL:-}
 
 # ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.
@@ -285,7 +279,6 @@ for n in notes:
 meta['job_id'] = '$JOB_ID'
 meta['client_name'] = '${CLIENT_NAME:-anonymous}'
 meta['email'] = '${EMAIL:-none}'
-meta['total_count_normalized'] = '${NORMALIZE_TOTAL:+yes}' or 'no'
 meta['live_time_normalized'] = '${NORMALIZE_LT:+yes}' or 'no'
 with open('$META_JSON', 'w') as f:
     json.dump(meta, f, indent=2)
