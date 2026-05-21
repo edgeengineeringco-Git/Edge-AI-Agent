@@ -14,6 +14,21 @@
 
 set -euo pipefail
 
+# Ensure numpy is available (needed by estimate_k_u_th_matrix.py)
+if ! python3 -c "import numpy" 2>/dev/null; then
+    echo "[SETUP] numpy not found, installing..."
+    if command -v apt-get &>/dev/null; then
+        apt-get update -qq && apt-get install -y -qq python3-numpy 2>/dev/null && echo "[SETUP] numpy installed via apt" || \
+        { python3 -m pip install numpy -q 2>/dev/null && echo "[SETUP] numpy installed via pip"; } || \
+        { curl -sS https://bootstrap.pypa.io/get-pip.py | python3 -q 2>/dev/null && pip3 install numpy -q 2>/dev/null && echo "[SETUP] numpy installed via pip (bootstrap)"; } || \
+        echo "[WARN] Could not install numpy — estimation will fail"
+    elif command -v pip3 &>/dev/null; then
+        pip3 install numpy -q && echo "[SETUP] numpy installed via pip" || echo "[WARN] Could not install numpy"
+    else
+        echo "[WARN] No package manager found — estimation may fail if numpy is missing"
+    fi
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INCOMING_DIR="$SCRIPT_DIR/incoming"
