@@ -16,7 +16,8 @@
  *   EVENT_HANDLER_URL — override full event-handler URL
  *   UPLOAD_DIR        — where to save incoming files (default: edge-kuth-portal/incoming)
  *   JOBS_DIR          — where to write job metadata (default: edge-kuth-portal/jobs)
- *   SENDGRID_API_KEY  — SendGrid API key for confirmation email (optional)
+ *   BREVO_API_KEY    — Brevo API key for confirmation email (free, no DNS needed)
+ *   SENDGRID_API_KEY — SendGrid API key (alternative to Brevo)
  *   FROM_EMAIL        — sender email address (default: noreply@edgeengineers.net)
  *   FROM_NAME         — sender display name (default: EDGE K/U/Th Portal)
  */
@@ -103,12 +104,14 @@ function parseMultipart(buffer, boundary) {
   return parts;
 }
 
-// ── Email notification ───────────────────────────────────────────────────────
+// ── Email notification (Brevo or SendGrid) ──────────────────────────────────
 
 async function sendConfirmationEmail(metadata, fileCount) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) {
-    console.log("[email] SENDGRID_API_KEY not set — skipping confirmation");
+  const apiKey = process.env.BREVO_API_KEY || process.env.SENDGRID_API_KEY;
+  const provider = process.env.BREVO_API_KEY ? "brevo" : process.env.SENDGRID_API_KEY ? "sendgrid" : null;
+
+  if (!apiKey || !provider) {
+    console.log("[email] No API key (BREVO_API_KEY or SENDGRID_API_KEY) — skipping confirmation");
     return;
   }
   const to = metadata.email;
@@ -137,24 +140,44 @@ Best regards,
 EDGE Geointelligence`;
 
   try {
-    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: fromEmail, name: fromName },
-        subject: `EDGE K/U/Th Portal — Files Received (${metadata.job_id})`,
-        content: [{ type: "text/plain", value: body }],
-      }),
-    });
-    if (response.status === 202) {
-      console.log(`[email] Confirmation sent to ${to}`);
+    if (provider === "brevo") {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: to }],
+          subject: `EDGE K/U/Th Portal — Files Received (${metadata.job_id})`,
+          textContent: body,
+        }),
+      });
+      if (response.status === 201 || response.status === 200) {
+        console.log(`[email] Confirmation sent to ${to} via Brevo`);
+      } else {
+        const text = await response.text();
+        console.error(`[email] Brevo returned ${response.status}: ${text}`);
+      }
     } else {
-      const text = await response.text();
-      console.error(`[email] SendGrid returned ${response.status}: ${text}`);
+      // SendGrid
+      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: to }] }],
+          from: { email: fromEmail, name: fromName },
+          subject: `EDGE K/U/Th Portal — Files Received (${metadata.job_id})`,
+          content: [{ type: "text/plain", value: body }],
+        }),
+      });
+      if (response.status === 202) {
+        console.log(`[email] Confirmation sent to ${to} via SendGrid`);
+      } else {
+        const text = await response.text();
+        console.error(`[email] SendGrid returned ${response.status}: ${text}`);
+      }
     }
   } catch (err) {
     console.error(`[email] Confirmation failed: ${err.message}`);

@@ -83,6 +83,7 @@ services:
       - PORT=3001
       - EVENT_HANDLER_URL=http://event-handler/edge-kuth/upload
       - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-Edge12345}
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - FROM_EMAIL=${FROM_EMAIL:-noreply@edgeengineers.net}
     labels:
