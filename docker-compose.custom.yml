@@ -73,6 +73,28 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  upload-server:
+    image: node:22-alpine
+    container_name: thepopebot-upload-server
+    command: node /project/edge-kuth-portal/upload-server.mjs
+    volumes:
+      - .:/project
+    environment:
+      - PORT=3001
+      - EVENT_HANDLER_URL=http://event-handler/edge-kuth/upload
+      - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-Edge12345}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - FROM_EMAIL=${FROM_EMAIL:-noreply@edgeengineers.net}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.upload-server.rule=Host(`${APP_HOSTNAME}`) && Path(`/edge-kuth/upload-page`)
+      - traefik.http.routers.upload-server.entrypoints=websecure
+      - traefik.http.routers.upload-server.tls.certresolver=letsencrypt
+      - traefik.http.routers.upload-server.tls.domains[0].main=${SSL_DOMAIN}
+      - traefik.http.routers.upload-server.tls.domains[0].sans=*.${SSL_DOMAIN}
+      - traefik.http.services.upload-server.loadbalancer.server.port=3001
+    restart: unless-stopped
+
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
     command: --config /litellm/main.yaml --port 4000

@@ -1,0 +1,348 @@
+#!/usr/bin/env node
+/**
+ * EDGE K/U/Th Portal — Multipart Upload Receiver
+ *
+ * A lightweight Node.js HTTP endpoint that receives the client form POST
+ * with .spc files, saves them, and triggers the agent for processing.
+ *
+ * Uses ONLY Node.js built-in modules — zero npm dependencies.
+ *
+ * Usage:
+ *   node edge-kuth-portal/upload-server.mjs
+ *
+ * Environment:
+ *   PORT              — listen port (default: 3001)
+ *   APP_HOSTNAME      — thepopebot host for agent trigger (default: localhost)
+ *   EVENT_HANDLER_URL — override full event-handler URL
+ *   UPLOAD_DIR        — where to save incoming files (default: edge-kuth-portal/incoming)
+ *   JOBS_DIR          — where to write job metadata (default: edge-kuth-portal/jobs)
+ *   SENDGRID_API_KEY  — SendGrid API key for confirmation email (optional)
+ *   FROM_EMAIL        — sender email address (default: noreply@edgeengineers.net)
+ *   FROM_NAME         — sender display name (default: EDGE K/U/Th Portal)
+ */
+
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
+
+const PORT = parseInt(process.env.PORT || "3001", 10);
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "incoming");
+const JOBS_DIR = process.env.JOBS_DIR || path.join(__dirname, "jobs");
+
+// Password — matches client form (set via env or default)
+const UPLOAD_PASSWORD = process.env.UPLOAD_PASSWORD || "Edge12345";
+
+// Ensure directories exist
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+// ── Multipart/form-data parser (zero-dependency) ──────────────────────────
+
+function parseMultipart(buffer, boundary) {
+  const parts = [];
+  const delimiter = `--${boundary}`;
+  const delimiterBuf = Buffer.from(delimiter);
+  const endDelimiter = `--${boundary}--`;
+
+  let start = 0;
+  while (start < buffer.length) {
+    // Find the next delimiter
+    const delimStart = buffer.indexOf(delimiterBuf, start);
+    if (delimStart === -1) break;
+
+    // Skip past the delimiter + \r\n
+    let partStart = delimStart + delimiterBuf.length;
+    // Skip past optional \r\n
+    if (buffer[partStart] === 0x0d && buffer[partStart + 1] === 0x0a) partStart += 2;
+    if (buffer[partStart] === 0x0d && buffer[partStart + 1] === 0x0a) partStart += 2;
+
+    // Find next delimiter to get end of this part
+    const nextDelim = buffer.indexOf(Buffer.from(`\r\n${delimiter}`), partStart);
+    if (nextDelim === -1) break;
+
+    let partEnd = nextDelim;
+    // Trim trailing \r\n from part content
+    if (buffer[partEnd - 2] === 0x0d && buffer[partEnd - 1] === 0x0a) partEnd -= 2;
+
+    const rawPart = buffer.subarray(partStart, partEnd);
+    if (rawPart.length === 0) break;
+
+    // Parse headers and body
+    const headerEnd = rawPart.indexOf("\r\n\r\n");
+    if (headerEnd === -1) break;
+
+    const headerBlock = rawPart.subarray(0, headerEnd).toString("utf-8");
+    const bodyStart = headerEnd + 4;  // skip \r\n\r\n
+    const body = rawPart.subarray(bodyStart);
+
+    const headers = {};
+    for (const line of headerBlock.split("\r\n")) {
+      const colon = line.indexOf(":");
+      if (colon === -1) continue;
+      headers[line.slice(0, colon).trim().toLowerCase()] = line.slice(colon + 1).trim();
+    }
+
+    const cd = headers["content-disposition"] || "";
+    const nameMatch = cd.match(/name="([^"]*)"/);
+    const filenameMatch = cd.match(/filename="([^"]*)"/);
+
+    parts.push({
+      name: nameMatch ? nameMatch[1] : null,
+      filename: filenameMatch ? filenameMatch[1] : null,
+      contentType: headers["content-type"] || null,
+      body,
+    });
+
+    start = nextDelim + 2; // skip \r\n before next delimiter
+  }
+
+  return parts;
+}
+
+// ── Email notification ───────────────────────────────────────────────────────
+
+async function sendConfirmationEmail(metadata, fileCount) {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    console.log("[email] SENDGRID_API_KEY not set — skipping confirmation");
+    return;
+  }
+  const to = metadata.email;
+  if (!to) {
+    console.log("[email] No client email — skipping confirmation");
+    return;
+  }
+
+  const fromEmail = process.env.FROM_EMAIL || "noreply@edgeengineers.net";
+  const fromName = process.env.FROM_NAME || "EDGE K/U/Th Portal";
+  const project = metadata.project || metadata.client_name || "Unnamed";
+
+  const body = `Dear Client,
+
+Your gamma spectrum files have been received successfully by the EDGE K/U/Th Portal.
+
+  Job ID:      ${metadata.job_id}
+  Project:     ${project}
+  Files:       ${fileCount} .spc file(s)
+
+Your results CSV containing K (%), U (ppm) and Th (ppm) estimates
+for all measurement points will be sent to this email automatically
+once processing is complete.
+
+Best regards,
+EDGE Geointelligence`;
+
+  try {
+    const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: fromEmail, name: fromName },
+        subject: `EDGE K/U/Th Portal — Files Received (${metadata.job_id})`,
+        content: [{ type: "text/plain", value: body }],
+      }),
+    });
+    if (response.status === 202) {
+      console.log(`[email] Confirmation sent to ${to}`);
+    } else {
+      const text = await response.text();
+      console.error(`[email] SendGrid returned ${response.status}: ${text}`);
+    }
+  } catch (err) {
+    console.error(`[email] Confirmation failed: ${err.message}`);
+  }
+}
+
+// ── HTTP Server ───────────────────────────────────────────────────────────
+
+const server = http.createServer(async (req, res) => {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.writeHead(405, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const contentType = req.headers["content-type"] || "";
+  const boundaryMatch = contentType.match(/boundary=([^;]+)/);
+  if (!boundaryMatch) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Expected multipart/form-data with boundary" }));
+    return;
+  }
+
+  try {
+    // Read the entire request body
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+
+    // Parse multipart parts
+    const parts = parseMultipart(buffer, boundaryMatch[1]);
+
+    // Extract form fields and files
+    const fields = {};
+    const files = [];
+    let doseCsv = null;
+
+    for (const part of parts) {
+      if (part.filename) {
+        // It's a file
+        const entry = { field: part.name, filename: part.filename, data: part.body };
+        if (part.filename.endsWith(".spc")) {
+          files.push(entry);
+        } else if (part.filename.endsWith(".csv")) {
+          doseCsv = entry;
+        }
+      } else if (part.name) {
+        fields[part.name] = part.body.toString("utf-8").trim();
+      }
+    }
+
+    // Validate password
+    if (fields.password !== UPLOAD_PASSWORD) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid access password" }));
+      return;
+    }
+
+    // Validate files
+    if (files.length === 0) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "No .spc files found in upload" }));
+      return;
+    }
+
+    // Generate job ID
+    const ts = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 15);
+    const clientSafe = (fields.project || "client").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const jobId = `${clientSafe}_${ts}`;
+
+    // Create job directory
+    const jobDir = path.join(JOBS_DIR, jobId, "spectra");
+    fs.mkdirSync(jobDir, { recursive: true });
+
+    // Save .spc files
+    const savedFiles = [];
+    for (const f of files) {
+      const dest = path.join(jobDir, f.filename);
+      fs.writeFileSync(dest, f.data);
+      savedFiles.push(f.filename);
+    }
+
+    // Save dose CSV if provided
+    if (doseCsv) {
+      const doseDir = path.join(JOBS_DIR, jobId);
+      fs.writeFileSync(path.join(doseDir, doseCsv.filename), doseCsv.data);
+    }
+
+    // Save metadata as JSON
+    const metadata = {
+      job_id: jobId,
+      client_name: clientSafe,
+      project: fields.project || "",
+      email: fields.email || "",
+      roi_half_width: parseFloat(fields.roi_half_width) || 20,
+      normalize_live_time: fields.normalize_live_time === "true",
+      measurement_id_column: fields.measurement_id_column || "measurement_id",
+      spectra_files: savedFiles,
+      dose_csv_file: doseCsv ? doseCsv.filename : null,
+      timestamp: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(
+      path.join(JOBS_DIR, jobId, "webhook-payload.json"),
+      JSON.stringify(metadata, null, 2),
+    );
+
+    // Also save .spc files to incoming/ as fallback (for backward compat)
+    for (const f of files) {
+      const dest = path.join(UPLOAD_DIR, f.filename);
+      if (!fs.existsSync(dest)) {
+        fs.writeFileSync(dest, f.data);
+      }
+    }
+
+    console.log(`[upload] Job ${jobId}: ${savedFiles.length} files from ${fields.project || "anonymous"}`);
+
+    // Send confirmation email (fire-and-forget, non-blocking)
+    sendConfirmationEmail(metadata, savedFiles.length);
+
+    // Respond to client
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      status: "received",
+      job_id: jobId,
+      files: savedFiles.length,
+      message: `Job ${jobId} received. Processing results will be sent to ${fields.email || "the registered email"}.`,
+    }));
+
+    // Trigger the thepopebot agent via event-handler
+    const eventHandlerUrl = process.env.EVENT_HANDLER_URL
+      || `http://${process.env.APP_HOSTNAME || "localhost"}/edge-kuth/upload`;
+
+    try {
+      const triggerBody = JSON.stringify(metadata);
+      const url = new URL(eventHandlerUrl);
+      const options = {
+        hostname: url.hostname,
+        port: url.port || 80,
+        path: url.pathname,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(triggerBody),
+        },
+      };
+
+      const triggerReq = http.request(options, (triggerRes) => {
+        let body = "";
+        triggerRes.on("data", (chunk) => (body += chunk));
+        triggerRes.on("end", () => {
+          console.log(`[upload] Agent triggered: ${triggerRes.statusCode}`);
+        });
+      });
+      triggerReq.on("error", (err) => {
+        console.error(`[upload] Trigger failed: ${err.message}`);
+      });
+      triggerReq.write(triggerBody);
+      triggerReq.end();
+    } catch (err) {
+      console.error(`[upload] Trigger error: ${err.message}`);
+    }
+
+  } catch (err) {
+    console.error(`[upload] Error: ${err.message}`);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: err.message }));
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`[upload] EDGE K/U/Th upload receiver on port ${PORT}`);
+  console.log(`[upload] Upload dir: ${UPLOAD_DIR}`);
+});
+
+// Handle graceful shutdown
+process.on("SIGINT", () => { console.log("\n[upload] Shutting down"); server.close(); process.exit(0); });
+process.on("SIGTERM", () => { server.close(); process.exit(0); });

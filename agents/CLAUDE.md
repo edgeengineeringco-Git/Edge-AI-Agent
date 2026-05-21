@@ -54,6 +54,9 @@ For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.m
 ### edge-critical-minerals
 EDGE Critical Minerals Intel agent — produces weekly intelligence briefs on lithium, rare earths, cobalt, nickel, copper, graphite, policy, and geopolitics. Runs every Monday at 9:00 AM.
 
+### edge-kuth-portal
+EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.
