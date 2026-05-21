@@ -8,7 +8,7 @@
 #   bash drive-utils.sh log-job --job-id <id> --client <name> --drive-folder <id> --result-link <url> --status <text>
 #
 # Dependencies: curl, jq (optional but recommended)
-# Authentication: Get token via: node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_CREDENTIALS
+# Authentication: Get token via: node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH
 #   Then export GDRIVE_TOKEN from the access_token field in the JSON response.
 #
 # Google Drive Folder IDs (hardcoded per user specification):
@@ -38,7 +38,7 @@ usage() {
 check_auth() {
   if [[ -z "${GDRIVE_TOKEN:-}" ]]; then
     echo "[ERROR] GDRIVE_TOKEN is not set."
-    echo "  Run: node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_CREDENTIALS"
+    echo "  Run: node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH"
     echo "  Then: export GDRIVE_TOKEN=\"<access_token>\""
     exit 1
   fi

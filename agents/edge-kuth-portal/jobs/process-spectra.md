@@ -115,7 +115,7 @@ Use the `drive-utils.sh` helper. All three operations below share the same OAuth
 
 ```bash
 # Get OAuth token from agent-job-secrets
-CREDENTIALS=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_CREDENTIALS 2>/dev/null || echo "")
+CREDENTIALS=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH 2>/dev/null || echo "")
 if [[ -z "$CREDENTIALS" ]]; then
   echo "Google Drive not configured — skipping"
 else

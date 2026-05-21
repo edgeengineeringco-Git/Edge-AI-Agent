@@ -78,7 +78,7 @@ The system connects to three Google Drive resources (hardcoded):
 
 ### Prerequisites
 
-The user must configure `GOOGLE_DRIVE_CREDENTIALS` as an OAuth credential in thepopebot Admin > Settings > Agent Jobs > Secrets. Without this, all Drive steps are skipped and the system operates in degraded mode (local PADs, Telegram-only results).
+The user must configure `GOOGLE_DRIVE_OAUTH` as an OAuth credential in thepopebot Admin > Settings > Agent Jobs > Secrets. Without this, all Drive steps are skipped and the system operates in degraded mode (local PADs, Telegram-only results).
 
 ### Step-by-step Drive workflow
 
@@ -86,7 +86,7 @@ Run these AFTER estimation completes. If any step fails, log the error but do NO
 
 ```bash
 # 1. Get OAuth access token
-CREDENTIALS=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_CREDENTIALS 2>/dev/null || echo "")
+CREDENTIALS=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH 2>/dev/null || echo "")
 if [[ -z "$CREDENTIALS" ]]; then
   echo "[WARN] No Google Drive credentials — skipping Drive steps"
 else
