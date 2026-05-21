@@ -120,8 +120,8 @@ async function sendConfirmationEmail(metadata, fileCount) {
     return;
   }
 
-  const fromEmail = process.env.FROM_EMAIL || "noreply@edgeengineers.net";
-  const fromName = process.env.FROM_NAME || "EDGE K/U/Th Portal";
+  const fromEmail = process.env.FROM_EMAIL || "edgeengineering.co@gmail.com";
+  const fromName = process.env.FROM_NAME || "Earthwise Dynamics Geo Environs (EDGE)";
   const project = metadata.project || metadata.client_name || "Unnamed";
 
   const body = `Dear Client,
@@ -320,27 +320,47 @@ const server = http.createServer(async (req, res) => {
       message: `Job ${jobId} received. Processing results will be sent to ${fields.email || "the registered email"}.`,
     }));
 
-    // Trigger the thepopebot agent via event-handler (uses fetch which follows redirects)
-    const eventHandlerUrl = process.env.EVENT_HANDLER_URL
-      || `http://${process.env.APP_HOSTNAME || "localhost"}/edge-kuth/upload`;
+    // Trigger agent job creation via create-agent-job API (bypasses broken trigger mechanism)
+    const createJobUrl = process.env.CREATE_AGENT_JOB_URL
+      || `http://${process.env.APP_HOSTNAME || "event-handler"}/api/create-agent-job`;
+    const apiKey = process.env.UPLOAD_API_KEY || "";
 
     try {
-      const triggerBody = JSON.stringify(metadata);
-      const response = await fetch(eventHandlerUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: triggerBody,
-        // Follow redirects (Node 22 default: 20 redirects)
+      const jobDesc = `A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:
+
+job_id=${metadata.job_id}
+client_name=${metadata.client_name}
+email=${metadata.email}
+project=${metadata.project}
+roi_half_width=${metadata.roi_half_width}
+normalize_live_time=${metadata.normalize_live_time}
+measurement_id_column=${metadata.measurement_id_column}
+spectra_files=${JSON.stringify(metadata.spectra_files)}
+dose_csv_file=${metadata.dose_csv_file ?? "null"}
+
+The .spc files are already saved to edge-kuth-portal/jobs/${metadata.job_id}/spectra/ by the upload server. Do not ask for input — execute all steps autonomously.`;
+
+      const body = JSON.stringify({
+        agent_job: jobDesc,
+        scope: "agents/edge-kuth-portal",
       });
-      console.log(`[upload] Agent triggered: ${response.status}`);
-      if (!response.ok) {
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) headers["x-api-key"] = apiKey;
+      const response = await fetch(createJobUrl, {
+        method: "POST",
+        headers,
+        body,
+      });
+      console.log(`[upload] Agent job created: ${response.status}`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`[upload] Agent job ID: ${result.agent_job_id} branch: ${result.branch}`);
+      } else {
         const text = await response.text().catch(() => "");
-        console.error(`[upload] Trigger response: ${text.slice(0, 200)}`);
+        console.error(`[upload] Create job response: ${text.slice(0, 200)}`);
       }
     } catch (err) {
-      console.error(`[upload] Trigger failed: ${err.message}`);
+      console.error(`[upload] Create agent job failed: ${err.message}`);
     }
 
   } catch (err) {

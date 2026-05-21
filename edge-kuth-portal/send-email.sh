@@ -24,8 +24,8 @@
 
 set -euo pipefail
 
-FROM_EMAIL="${FROM_EMAIL:-noreply@edgeengineers.net}"
-FROM_NAME="${FROM_NAME:-EDGE K/U/Th Portal}"
+FROM_EMAIL="${FROM_EMAIL:-edgeengineering.co@gmail.com}"
+FROM_NAME="${FROM_NAME:-Earthwise Dynamics Geo Environs (EDGE)}"
 
 # ── Parse args ──────────────────────────────────────────────────────────────
 
