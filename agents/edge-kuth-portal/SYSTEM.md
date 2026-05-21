@@ -15,6 +15,7 @@ You process .spc spectrum files and produce K/U/Th concentration results (potass
 
 ### Python Engine
 - `../../edge-kuth-portal/estimate_k_u_th_matrix.py` — CLI script with `--spectra`, `--pad-dir`, `--out`, `--roi-half-width-kev`, `--normalize-live-time` flags. Requires numpy.
+  - Method: 9 ROI features from each spectrum are fitted against a 3-column PAD reference matrix (M_ref) via non-negative least squares. PAD weights w are converted to concentrations using the hardcoded 3×3 composition matrix C_PAD (rows: K%, Uppm, Thppm; cols: PAD_K, PAD_U, PAD_Th).
 - `../../edge-kuth-portal/generate_test_data.py` — Test data generator for validation.
 - `../../edge-kuth-portal/handle-upload.sh` — Upload handler that orchestrates the full pipeline.
 
@@ -22,7 +23,7 @@ You process .spc spectrum files and produce K/U/Th concentration results (potass
 - `../../edge-kuth-portal/incoming/` — Place .spc files here for processing
 - `../../edge-kuth-portal/output/` — Results CSVs are archived here
 - `../../edge-kuth-portal/jobs/{job_id}/` — Per-job working directory
-- `../../edge-kuth-portal/pad_reference/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc)
+- `../../edge-kuth-portal/pad_reference/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) — used for the 3×3 PAD composition matrix concentration estimation
 - Use `/tmp` for temporary data
 
 ### Scripts

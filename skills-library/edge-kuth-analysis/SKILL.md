@@ -1,6 +1,6 @@
 # K/U/Th Spectral Analysis
 
-Analyze gamma-ray .spc spectra to estimate potassium (%), uranium (ppm), and thorium (ppm) concentrations using the PAD reference method.
+Analyze gamma-ray .spc spectra to estimate potassium (%), uranium (ppm), and thorium (ppm) concentrations using the PAD composition matrix method.
 
 ## Usage
 
@@ -14,21 +14,14 @@ The Python engine is at `edge-kuth-portal/estimate_k_u_th_matrix.py` in the work
 
 ```bash
 python /home/coding-agent/workspace/edge-kuth-portal/estimate_k_u_th_matrix.py \
-  --spectra-dir /path/to/spectra/folder \
+  --spectra /path/to/spectra/folder \
   --pad-dir /path/to/pad/reference/folder \
-  --output /path/to/results.csv
+  --out /path/to/results.csv
 ```
 
 Optional flags:
-- `--roi-half-width 25` — Set ROI half-width in keV (default: 20)
+- `--roi-half-width-kev 25` — Set ROI half-width in keV (default: 20)
 - `--normalize-live-time` — Normalize counts by live time (counts per second)
-
-### Interactive Mode
-
-```bash
-python /home/coding-agent/workspace/edge-kuth-portal/estimate_k_u_th_matrix.py
-```
-Prompts for paths interactively.
 
 ### Generating Test Data
 
@@ -46,8 +39,12 @@ python /home/coding-agent/workspace/edge-kuth-portal/generate_test_data.py \
    - K: 1460.8 keV (K-40)
    - U: 351.9, 609.3, 1120.3, 1764.5 keV (U-chain)
    - Th: 583.2, 911.1, 968.9, 2614.5 keV (Th-chain)
-3. **PAD fitting**: Least-squares fit of sample feature vector against PAD reference matrix (non-negative weights)
-4. **Concentration**: Multiply PAD weights by 3x3 composition matrix C_PAD
+3. **PAD fitting**: Non-negative least-squares fit of sample 9-feature vector against PAD reference matrix M_ref (9×3, columns = PAD_K, PAD_U, PAD_Th). This yields PAD weights w (w_PADK, w_PADU, w_PADTh) and fit quality R².
+4. **Concentration**: Convert PAD weights to concentrations via c = C_PAD @ w, where C_PAD is the hardcoded 3×3 composition matrix:
+   - Row 0 (K%): [6.85, 1.17, 0.98]
+   - Row 1 (U ppm): [1.38, 40.87, 1.90]
+   - Row 2 (Th ppm): [2.54, 4.42, 111.59]
+5. **Normalization** (pipeline): Before estimation, handle-upload.sh normalizes all spectra (PAD + sample) to 100k total counts, preventing count-scale differences from biasing PAD weights.
 
 ## Output Format
 

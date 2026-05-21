@@ -48,12 +48,19 @@ python3 -m pip install numpy 2>/dev/null || true
 ```
 
 ### Step 4: Run Estimation Immediately
+Read `normalize_live_time` from the webhook payload and pass `--normalize-live-time` if true:
 ```bash
+NORM_FLAG=""
+if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
+  NORM_FLAG="--normalize-live-time"
+fi
+
 bash ../../edge-kuth-portal/handle-upload.sh \
   --job-id {job_id} \
   --client {client_name} \
   --email {email} \
-  --roi-half-width {roi_half_width}
+  --roi-half-width {roi_half_width} \
+  $NORM_FLAG
 ```
 
 ### Step 5: Read Results

@@ -132,7 +132,75 @@ if [[ ! -d "$PAD_DIR" ]]; then
     fi
 fi
 
+# Normalize all spectra (PAD + sample) to the same total counts
+# This prevents PAD weights from being inflated by arbitrary count-scale differences.
+# Both PAD and sample .spc files are normalized so the least-squares fit gives
+# meaningful fractional weights instead of scale-driven inflated values.
+NORM_DIR="$JOB_OUTPUT/normalized"
+mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
+echo "[NORM] Normalizing all spectra to uniform total counts..."
+python3 -c "
+import numpy as np
+from pathlib import Path
+
+target_total = 100000.0  # arbitrary uniform target for all spectra
+pad_dir = Path('$PAD_DIR')
+sample_dir = Path('$JOB_INCOMING')
+norm_pad_dir = Path('$NORM_DIR/pads')
+norm_sample_dir = Path('$NORM_DIR/samples')
+
+# Normalize PAD files
+for spc in sorted(pad_dir.glob('*.spc')):
+    with open(spc) as f:
+        lines = [l.rstrip() for l in f]
+    live_us = float(lines[0].split()[0]) if lines[0].strip() else 0
+    clock_us = float(lines[1].split()[0]) if len(lines) > 1 and lines[1].strip() else 0
+    counts = []
+    for raw in lines[2:2+1024]:
+        try:
+            counts.append(float(raw.split()[0]))
+        except (ValueError, IndexError):
+            counts.append(0.0)
+    counts = np.array(counts)
+    total = counts.sum()
+    scale = target_total / total if total > 0 else 1.0
+    norm_counts = counts * scale
+    out_path = norm_pad_dir / spc.name
+    with open(out_path, 'w') as f:
+        f.write(f'{live_us}\n{clock_us}\n')
+        for c in norm_counts:
+            f.write(f'{int(round(c))}\n')
+    print(f'  PAD {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
+
+# Normalize sample files
+for spc in sorted(sample_dir.glob('*.spc')):
+    with open(spc) as f:
+        lines = [l.rstrip() for l in f]
+    live_us = float(lines[0].split()[0]) if lines[0].strip() else 0
+    clock_us = float(lines[1].split()[0]) if len(lines) > 1 and lines[1].strip() else 0
+    counts = []
+    for raw in lines[2:2+1024]:
+        try:
+            counts.append(float(raw.split()[0]))
+        except (ValueError, IndexError):
+            counts.append(0.0)
+    counts = np.array(counts)
+    total = counts.sum()
+    scale = target_total / total if total > 0 else 1.0
+    norm_counts = counts * scale
+    out_path = norm_sample_dir / spc.name
+    with open(out_path, 'w') as f:
+        f.write(f'{live_us}\n{clock_us}\n')
+        for c in norm_counts:
+            f.write(f'{int(round(c))}\n')
+    print(f'  sample {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
+" 2>&1
+
+PAD_DIR="$NORM_DIR/pads"
+JOB_INCOMING="$NORM_DIR/samples"
+
 # Run the Python estimation
+echo ""
 echo "Running K/U/Th estimation..."
 python3 "$PYTHON_SCRIPT" \
     --spectra "$JOB_INCOMING" \
@@ -160,10 +228,22 @@ print(len(rows))
     echo "Job: $JOB_ID"
     echo "Spectra: ${N} files processed"
     echo ""
-    echo "K: 0.5–0.8 pct"
-    echo "U: 8–12 ppm"
-    echo "Th: 6–8 ppm"
-    echo "R²: ~0.56–0.59"
+    python3 -c "
+import csv, sys
+with open('$RESULTS_CSV') as f:
+    rows = list(csv.DictReader(f))
+n = len(rows)
+if n == 0:
+    sys.exit(0)
+k = [float(r['K_percent']) for r in rows]
+u = [float(r['U_ppm']) for r in rows]
+th = [float(r['Th_ppm']) for r in rows]
+r2 = [float(r['fit_r2']) for r in rows]
+print(f'K:  {min(k):.2f}–{max(k):.2f}%  (avg {sum(k)/n:.2f})')
+print(f'U:  {min(u):.1f}–{max(u):.1f} ppm  (avg {sum(u)/n:.1f})')
+print(f'Th: {min(th):.1f}–{max(th):.1f} ppm  (avg {sum(th)/n:.1f})')
+print(f'R²: {min(r2):.3f}–{max(r2):.3f}')
+" 2>/dev/null || true
     echo ""
     echo "Full CSV has been saved. Email delivery pending Brevo sender verification."
     echo ""
