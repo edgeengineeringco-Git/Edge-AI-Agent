@@ -313,35 +313,6 @@ python3 "$PYTHON_SCRIPT" \
     ${NORMALIZE_LT:-}
 
 # ── Post-estimation validation ──────────────────────────────────────────────
-# Check that results are physically plausible before sending Telegram message.
-VALIDATION_WARN=""
-if [[ -f "$RESULTS_CSV" ]]; then
-    VALIDATION_WARN=$(python3 -c "
-import csv, sys
-with open('$RESULTS_CSV') as f:
-    rows = list(csv.DictReader(f))
-n = len(rows)
-if n == 0: print('EMPTY_CSV'); sys.exit(0)
-k = [float(r['K_percent']) for r in rows]
-r2 = [float(r['fit_r2']) for r in rows]
-mk = max(k); mr = min(r2)
-w = []
-if mk > 100: w.append(f'MAX_K={mk:.1f}%')
-if mr < 0: w.append(f'NEG_R2={mr:.3f}')
-elif mr < 0.5: w.append(f'LOW_R2={mr:.3f}')
-print('|'.join(w) if w else 'OK')
-" 2>/dev/null || echo "VAL_FAIL")
-
-    case "$VALIDATION_WARN" in
-        EMPTY_CSV)   echo "[VAL] WARNING: Results CSV is empty!" ;;
-        VAL_FAIL)    echo "[VAL] WARNING: Could not validate results" ;;
-        OK)          echo "[VAL] Results pass plausibility checks" ;;
-        *)           echo "[VAL] WARNING: Suspicious results: $VALIDATION_WARN"
-                     echo "[VAL] Debug data at: $DEBUG_JSON" ;;
-    esac
-fi
-
-# ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.
 VALIDATION_WARN=""
 if [[ -f "$RESULTS_CSV" ]]; then
@@ -352,9 +323,14 @@ with open("'$RESULTS_CSV'") as f:
 n = len(rows)
 if n == 0: print("EMPTY_CSV"); sys.exit(0)
 k = [float(r["K_percent"]) for r in rows]
+u = [float(r["U_ppm"]) for r in rows]
+th = [float(r["Th_ppm"]) for r in rows]
 r2 = [float(r["fit_r2"]) for r in rows]
-mk = max(k); mr = min(r2); w = []
-if mk > 100: w.append(f"MAX_K={mk:.1f}%")
+mk = max(k); mu = max(u); mt = max(th); mr = min(r2)
+w = []
+if mk > 20: w.append(f"MAX_K={mk:.1f}%")
+if mu > 100: w.append(f"MAX_U={mu:.0f}ppm")
+if mt > 200: w.append(f"MAX_Th={mt:.0f}ppm")
 if mr < 0: w.append(f"NEG_R2={mr:.3f}")
 elif mr < 0.5: w.append(f"LOW_R2={mr:.3f}")
 print("|".join(w) if w else "OK")

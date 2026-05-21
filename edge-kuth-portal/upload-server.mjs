@@ -328,7 +328,7 @@ const server = http.createServer(async (req, res) => {
     const apiKey = process.env.UPLOAD_API_KEY || "";
 
     try {
-      const jobDesc = `A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:
+      const jobDesc = `A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read agents/edge-kuth-portal/jobs/process-spectra.md and execute all steps using the webhook payload:
 
 job_id=${metadata.job_id}
 client_name=${metadata.client_name}
