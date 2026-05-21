@@ -120,8 +120,9 @@ async function sendConfirmationEmail(metadata, fileCount) {
     return;
   }
 
-  const fromEmail = process.env.FROM_EMAIL || "info@edgeengineers.net";
+  const fromEmail = process.env.FROM_EMAIL || "edgeengineering.co@gmail.com";
   const fromName = process.env.FROM_NAME || "EDGE K/U/Th Portal";
+  // NOTE: Change to info@edgeengineers.net once sender is verified in Brevo
   const project = metadata.project || metadata.client_name || "Unnamed";
 
   const body = `Dear Client,
