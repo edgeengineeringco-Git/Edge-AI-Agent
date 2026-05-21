@@ -74,3 +74,48 @@ agents/edge-critical-minerals/
 └── reports/
     └── YYYY-MM-DD-weekly-report.md
 ```
+
+### edge-kuth-portal
+
+EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files and returns K/U/Th concentration results. Runs natively in thepopebot as a scoped agent — no separate servers or containers needed.
+
+**Processing happens IMMEDIATELY on webhook trigger** — no cron batch delays.
+
+- **Scope:** `agents/edge-kuth-portal`
+- **Upload endpoint:** `/edge-kuth/upload-page` (Traefik → upload-server Docker container)
+- **Webhook trigger:** `/edge-kuth/upload` (TRIGGERS.json, **enabled**) — fires agent on upload server callback
+- **Flow:** Client form POSTs multipart → upload server saves files → triggers agent → agent runs Python → Telegram broadcast
+- **Telegram:** Results CSV broadcast to all admins via `agent-job-dm` skill
+- **Skill:** `edge-kuth-analysis` — invocable by any agent
+
+```
+agents/edge-kuth-portal/
+├── SYSTEM.md
+├── CLAUDE.md
+├── skills/
+│   ├── agent-job-dm → ../../../skills-library/agent-job-dm
+│   └── edge-kuth-analysis → ../../../skills-library/edge-kuth-analysis
+└── jobs/
+    └── process-spectra.md
+```
+
+**Pipeline files:**
+- `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core Python engine (CLI with args)
+- `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)
+- `edge-kuth-portal/handle-upload.sh` — Upload handler orchestrator
+- `edge-kuth-portal/drive-utils.sh` — Google Drive & Sheets helper (PAD fetch, results upload, job logging)
+- `edge-kuth-portal/send-email.sh` — SendGrid email helper (confirmation + results)
+- `edge-kuth-portal/incoming/` — Drop .spc files here for processing
+- `edge-kuth-portal/output/` — Results CSVs archived here
+- `edge-kuth-portal/jobs/{job_id}/` — Per-job working directory
+- `edge-kuth-portal/pad_reference/` — PAD reference spectra (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc)
+
+## Skills
+
+### edge-kuth-analysis
+
+K/U/Th spectral analysis skill. Any agent can invoke this skill for instructions on running the estimation engine. See `skills-library/edge-kuth-analysis/SKILL.md` for details.
+
+## Security Note
+
+The original n8n workflow used a hardcoded password (`Edge12345`). This thepopebot-native deployment handles auth through the platform's standard webhook authentication and agent scoping. No credentials are embedded in code.
