@@ -320,38 +320,27 @@ const server = http.createServer(async (req, res) => {
       message: `Job ${jobId} received. Processing results will be sent to ${fields.email || "the registered email"}.`,
     }));
 
-    // Trigger the thepopebot agent via event-handler
+    // Trigger the thepopebot agent via event-handler (uses fetch which follows redirects)
     const eventHandlerUrl = process.env.EVENT_HANDLER_URL
       || `http://${process.env.APP_HOSTNAME || "localhost"}/edge-kuth/upload`;
 
     try {
       const triggerBody = JSON.stringify(metadata);
-      const url = new URL(eventHandlerUrl);
-      const options = {
-        hostname: url.hostname,
-        port: url.port || 80,
-        path: url.pathname,
+      const response = await fetch(eventHandlerUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(triggerBody),
         },
-      };
-
-      const triggerReq = http.request(options, (triggerRes) => {
-        let body = "";
-        triggerRes.on("data", (chunk) => (body += chunk));
-        triggerRes.on("end", () => {
-          console.log(`[upload] Agent triggered: ${triggerRes.statusCode}`);
-        });
+        body: triggerBody,
+        // Follow redirects (Node 22 default: 20 redirects)
       });
-      triggerReq.on("error", (err) => {
-        console.error(`[upload] Trigger failed: ${err.message}`);
-      });
-      triggerReq.write(triggerBody);
-      triggerReq.end();
+      console.log(`[upload] Agent triggered: ${response.status}`);
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        console.error(`[upload] Trigger response: ${text.slice(0, 200)}`);
+      }
     } catch (err) {
-      console.error(`[upload] Trigger error: ${err.message}`);
+      console.error(`[upload] Trigger failed: ${err.message}`);
     }
 
   } catch (err) {
