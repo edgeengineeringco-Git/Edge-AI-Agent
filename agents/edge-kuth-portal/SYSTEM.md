@@ -101,14 +101,17 @@ else
   fi
 
   # 3. Upload results CSV to Drive job folder
-  CSV_LINK=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
+  READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
     --job-id {job_id} --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
     --client {client_name})
+  FOLDER_ID=$(echo "$READS" | awk '{print $1}')
+  CSV_LINK=$(echo "$READS" | awk '{print $2}')
 
   # 4. Log job to spreadsheet
   bash ../../edge-kuth-portal/drive-utils.sh log-job \
-    --job-id {job_id} --client {client_name} --email {email} \
-    --files {file_count} --status "complete" --csv-link "$CSV_LINK"
+    --job-id {job_id} --client {client_name} \
+    --drive-folder "$FOLDER_ID" --result-link "$CSV_LINK" \
+    --status "complete"
 fi
 ```
 

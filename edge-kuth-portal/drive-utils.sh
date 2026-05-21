@@ -5,7 +5,7 @@
 #   export GDRIVE_TOKEN="<oauth-access-token>"
 #   bash drive-utils.sh download-pads [--output-dir <path>]
 #   bash drive-utils.sh upload-results --job-id <id> --csv <path> [--client <name>]
-#   bash drive-utils.sh log-job --job-id <id> --client <name> --email <email> --files <n> --status <text> [--csv-link <url>]
+#   bash drive-utils.sh log-job --job-id <id> --client <name> --drive-folder <id> --result-link <url> --status <text>
 #
 # Dependencies: curl, jq (optional but recommended)
 # Authentication: Get token via: node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_CREDENTIALS
@@ -249,25 +249,26 @@ cmd_upload_results() {
   fi
 
   echo "Results uploaded to Drive job folder"
-  echo "$csv_link"
+  # Output: folder_id csv_link (space-separated for parsing)
+  echo "${folder_id} ${csv_link}"
   return 0
 }
 
 # ── Log job details to Google Sheets ──────────────────────────────────────────
+# Sheet columns (exact match): job_id | client_name | timestamp | drive_folder | result_link | status
 
 cmd_log_job() {
   check_auth
 
-  local job_id="" client_name="" email="" files_count="" status="" csv_link=""
+  local job_id="" client_name="" status="" drive_folder="" result_link=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --job-id) job_id="$2"; shift 2 ;;
       --client) client_name="$2"; shift 2 ;;
-      --email) email="$2"; shift 2 ;;
-      --files) files_count="$2"; shift 2 ;;
+      --drive-folder) drive_folder="$2"; shift 2 ;;
+      --result-link) result_link="$2"; shift 2 ;;
       --status) status="$2"; shift 2 ;;
-      --csv-link) csv_link="$2"; shift 2 ;;
       *) echo "Unknown: $1"; usage ;;
     esac
   done
@@ -291,12 +292,12 @@ cmd_log_job() {
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  # Build row values (timestamp, job_id, client, email, files, status, csv_link)
-  local row_values="[\"$timestamp\",\"$job_id\",\"$client_name\",\"$email\",\"$files_count\",\"$status\",\"$csv_link\"]"
+  # Row: job_id | client_name | timestamp | drive_folder | result_link | status
+  local row_values="[\"$job_id\",\"$client_name\",\"$timestamp\",\"$drive_folder\",\"$result_link\",\"$status\"]"
 
   local append_response
   append_response=$(curl -s -X POST \
-    "https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet_name}!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS" \
+    "https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet_name}!A:F:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS" \
     -H "Authorization: Bearer ${GDRIVE_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{\"values\":[$row_values]}")
