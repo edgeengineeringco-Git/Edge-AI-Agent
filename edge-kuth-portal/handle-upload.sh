@@ -41,6 +41,8 @@ CLIENT_NAME=""
 EMAIL=""
 ROI_HALF_WIDTH=20
 NORMALIZE_LT=""
+NORMALIZE_TC=""
+SUBTRACT_CONT=""
 PAD_DIR="$SCRIPT_DIR/embedded_pads"
 
 # Parse arguments
@@ -51,6 +53,8 @@ while [[ $# -gt 0 ]]; do
         --email) EMAIL="$2"; shift 2 ;;
         --roi-half-width) ROI_HALF_WIDTH="$2"; shift 2 ;;
         --normalize-live-time) NORMALIZE_LT="--normalize-live-time"; shift ;;
+        --normalize-total-counts) NORMALIZE_TC="--normalize-total-counts"; shift ;;
+        --subtract-continuum) SUBTRACT_CONT="--subtract-continuum"; shift ;;
         --pad-dir) PAD_DIR="$2"; shift 2 ;;
         --json) JSON_FILE="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -80,6 +84,7 @@ echo "Client:      ${CLIENT_NAME:-anonymous}"
 echo "Email:       ${EMAIL:-none}"
 echo "ROI half:          $ROI_HALF_WIDTH keV"
 echo "Live-time norm:    $([ -n "$NORMALIZE_LT" ] && echo yes || echo no)"
+echo "Total-count norm:  $([ -n "$NORMALIZE_TC" ] && echo yes || echo no)"
 echo ""
 
 # Find .spc files: first check job directory, then incoming
@@ -163,6 +168,8 @@ fi
 PROVENANCE_NOTES=()
 PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
 PROVENANCE_NOTES+=("live_time_normalized:$([ -n "$NORMALIZE_LT" ] && echo yes || echo no)")
+PROVENANCE_NOTES+=("total_count_normalized:$([ -n "$NORMALIZE_TC" ] && echo yes || echo no)")
+PROVENANCE_NOTES+=("continuum_subtraction:$([ -n "$SUBTRACT_CONT" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
 
@@ -170,59 +177,79 @@ PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
 # Save energy calibration, M_ref, and first-sample stats to estimation-debug.json
 # for post-mortem analysis of bad results.
 DEBUG_JSON="$JOB_OUTPUT/estimation-debug.json"
-python3 -c "
+DEBUG_SCRIPT="/tmp/kuth_debug_snapshot_${JOB_ID}.py"
+cat > "$DEBUG_SCRIPT" << 'PYEOF'
 import numpy as np, json, sys, glob
+
 def _rsc(p):
     with open(p) as f:
-        lines = [l.rstrip(chr(92)+"n") for l in f]
+        lines = [l.rstrip(chr(92)+'n') for l in f]
     c = []
     for raw in lines[2:2+1024]:
         try: c.append(float(raw.split()[0]))
         except: c.append(0.0)
     return np.array(c, dtype=float)
+
 def _rsl(p):
     with open(p) as f: line = f.readline().strip()
     try: return float(line.split()[0])
     except: return None
+
+pad_dir, debug_path, hw_kev, job_incoming = sys.argv[1], sys.argv[2], float(sys.argv[3]), sys.argv[4]
+
 anchors_ch = np.array([870.5, 720.8, 31.6, 484.0])
 anchors_kv = np.array([2611.4, 2162.3, 94.8, 1451.9])
 A = np.vstack([np.ones_like(anchors_ch), anchors_ch, anchors_ch**2]).T
 c0, c1, c2 = np.linalg.lstsq(A, anchors_kv, rcond=None)[0]
-pd = "$PAD_DIR"
-pk = _rsc(pd+"/PAD_K_A.spc"); pu = _rsc(pd+"/PAD_U_A.spc"); pth = _rsc(pd+"/PAD_Th_A.spc")
-ch = np.arange(1024.0); en = c0 + c1*ch + c2*ch**2
-hw = float("$ROI_HALF_WIDTH")
-RL = {"K":[1460.8],"U":[351.9,609.3,1120.3,1764.5],"Th":[583.2,911.1,968.9,2614.5]}
+pk = _rsc(pad_dir + "/PAD_K_A.spc")
+pu = _rsc(pad_dir + "/PAD_U_A.spc")
+pth = _rsc(pad_dir + "/PAD_Th_A.spc")
+ch = np.arange(1024.0)
+en = c0 + c1 * ch + c2 * ch**2
+hw = hw_kev
+RL = {"K": [1460.8], "U": [351.9, 609.3, 1120.3, 1764.5], "Th": [583.2, 911.1, 968.9, 2614.5]}
+
 def _roi(co, ll, hw):
-    return [float(co[(en>=e0-hw)&(en<=e0+hw)].sum()) for e0 in ll]
-labels = ["K_1460","U_351","U_609","U_1120","U_1764","Th_583","Th_911","Th_968","Th_2614"]
-fk = _roi(pk, RL["K"],hw)+_roi(pk, RL["U"],hw)+_roi(pk, RL["Th"],hw)
-fu = _roi(pu, RL["K"],hw)+_roi(pu, RL["U"],hw)+_roi(pu, RL["Th"],hw)
-fth = _roi(pth, RL["K"],hw)+_roi(pth, RL["U"],hw)+_roi(pth, RL["Th"],hw)
-mrt = [[fk[i],fu[i],fth[i]] for i in range(9)]
+    return [float(co[(en >= e0 - hw) & (en <= e0 + hw)].sum()) for e0 in ll]
+
+labels = ["K_1460", "U_351", "U_609", "U_1120", "U_1764", "Th_583", "Th_911", "Th_968", "Th_2614"]
+fk = _roi(pk, RL["K"], hw) + _roi(pk, RL["U"], hw) + _roi(pk, RL["Th"], hw)
+fu = _roi(pu, RL["K"], hw) + _roi(pu, RL["U"], hw) + _roi(pu, RL["Th"], hw)
+fth = _roi(pth, RL["K"], hw) + _roi(pth, RL["U"], hw) + _roi(pth, RL["Th"], hw)
+mrt = [[fk[i], fu[i], fth[i]] for i in range(9)]
 M = np.column_stack([fk, fu, fth])
-yk = np.array(fk+fu+fth)
-w,_,_,_ = np.linalg.lstsq(M, yk, rcond=None); w = np.maximum(w,0)
-yp = (M @ w).tolist(); ssr = sum((yk-yp)**2); sst = sum((yk-np.mean(yk))**2)
-spfs = sorted(glob.glob("$JOB_INCOMING/*.spc"))
+yk = np.array(fk)  # target = PAD_K reference features
+w, _, _, _ = np.linalg.lstsq(M, yk, rcond=None)
+w = np.maximum(w, 0)
+yp = (M @ w).tolist()
+ssr = sum((yk - yp) ** 2)
+sst = sum((yk - np.mean(yk)) ** 2)
+spfs = sorted(glob.glob(job_incoming + "/*.spc"))
 fs = _rsc(spfs[0]).tolist() if spfs else None
 flt = _rsl(spfs[0]) if spfs else None
 info = {
-    "energy_cal": {"c0":f"{c0:.4f}","c1":f"{c1:.4f}","c2":f"{c2:.6f}"},
-    "pad_live_times_us": {"K":_rsl(pd+"/PAD_K_A.spc"),"U":_rsl(pd+"/PAD_U_A.spc"),"Th":_rsl(pd+"/PAD_Th_A.spc")},
-    "pad_total_counts": {"K":int(pk.sum()),"U":int(pu.sum()),"Th":int(pth.sum())},
-    "m_ref": {labels[i]:mrt[i] for i in range(9)},
-    "pad_k_self_r2": float(1.0-ssr/sst if sst>0 else 1.0),
+    "energy_cal": {"c0": f"{c0:.4f}", "c1": f"{c1:.4f}", "c2": f"{c2:.6f}"},
+    "pad_live_times_us": {
+        "K": _rsl(pad_dir + "/PAD_K_A.spc"),
+        "U": _rsl(pad_dir + "/PAD_U_A.spc"),
+        "Th": _rsl(pad_dir + "/PAD_Th_A.spc"),
+    },
+    "pad_total_counts": {"K": int(pk.sum()), "U": int(pu.sum()), "Th": int(pth.sum())},
+    "m_ref": {labels[i]: mrt[i] for i in range(9)},
+    "pad_k_self_r2": float(1.0 - ssr / sst if sst > 0 else 1.0),
     "pad_k_self_weights": [float(f"{v:.6f}") for v in w],
     "first_sample": str(spfs[0]) if spfs else None,
     "first_sample_live_time_us": flt,
     "first_sample_total_counts": int(sum(fs)) if fs else None,
-    "first_sample_nonzero_ch": sum(1 for c in (fs or []) if c>0),
+    "first_sample_nonzero_ch": sum(1 for c in (fs or []) if c > 0),
     "numpy_version": np.__version__,
 }
-with open("$DEBUG_JSON","w") as f: json.dump(info, f, indent=2)
-print("[DEBUG] Estimation debug snapshot → " + "$DEBUG_JSON")
-" 2>&1 || echo "[WARN] Debug snapshot failed (non-fatal)"
+with open(debug_path, "w") as f:
+    json.dump(info, f, indent=2)
+print("[DEBUG] Estimation debug snapshot -> " + debug_path)
+PYEOF
+python3 "$DEBUG_SCRIPT" "$PAD_DIR" "$DEBUG_JSON" "$ROI_HALF_WIDTH" "$JOB_INCOMING" 2>&1 || echo "[WARN] Debug snapshot failed (non-fatal)"
+rm -f "$DEBUG_SCRIPT"
 
 # Run the Python estimation
 echo ""
@@ -233,14 +260,15 @@ python3 "$PYTHON_SCRIPT" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
     ${NORMALIZE_LT:-} \
-
+    ${NORMALIZE_TC:-} \
+    ${SUBTRACT_CONT:-}
 # ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.
 VALIDATION_WARN=""
 if [[ -f "$RESULTS_CSV" ]]; then
-    VALIDATION_WARN=$(python3 -c "
+    VALIDATION_WARN=$(python3 << PYEOF
 import csv, sys
-with open("'$RESULTS_CSV'") as f:
+with open("$RESULTS_CSV") as f:
     rows = list(csv.DictReader(f))
 n = len(rows)
 if n == 0: print("EMPTY_CSV"); sys.exit(0)
@@ -256,7 +284,8 @@ if mt > 200: w.append(f"MAX_Th={mt:.0f}ppm")
 if mr < 0: w.append(f"NEG_R2={mr:.3f}")
 elif mr < 0.5: w.append(f"LOW_R2={mr:.3f}")
 print("|".join(w) if w else "OK")
-" 2>/dev/null || echo "VAL_FAIL")
+PYEOF
+ 2>/dev/null || echo "VAL_FAIL")
     case "$VALIDATION_WARN" in
         EMPTY_CSV) echo "[VAL] WARNING: Empty results CSV" ;;
         VAL_FAIL)  echo "[VAL] WARNING: Could not validate" ;;
@@ -266,24 +295,8 @@ print("|".join(w) if w else "OK")
     esac
 fi
 
-# Write processing metadata
-META_JSON="$JOB_OUTPUT/processing-metadata.json"
-python3 -c "
-import json
-notes = [l for l in '''$(printf "%s\n" "${PROVENANCE_NOTES[@]}")'''.strip().split('\n') if l]
-meta = {}
-for n in notes:
-    if ':' in n:
-        k, v = n.split(':', 1)
-        meta[k] = v
-meta['job_id'] = '$JOB_ID'
-meta['client_name'] = '${CLIENT_NAME:-anonymous}'
-meta['email'] = '${EMAIL:-none}'
-meta['live_time_normalized'] = '${NORMALIZE_LT:+yes}' or 'no'
-with open('$META_JSON', 'w') as f:
-    json.dump(meta, f, indent=2)
-print(f'[META] Processing metadata written to $META_JSON')
-" 2>&1 || true
+# Processing metadata is written by the Python engine alongside results.csv.
+# The Python engine's version includes richer info (mode, calibration, pad_info, etc.).
 
 echo ""
 echo "=== Results ==="

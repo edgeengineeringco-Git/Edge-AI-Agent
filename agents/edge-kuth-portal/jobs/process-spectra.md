@@ -40,8 +40,8 @@ To explicitly regenerate from embedded data:
 ```bash
 python3 -c "
 from pad_data import ensure_pad_dir, validate_pad_dir
-ensure_pad_dir('../../edge-kuth-portal/pad_drive')
-validate_pad_dir('../../edge-kuth-portal/pad_drive')
+ensure_pad_dir('../../edge-kuth-portal/embedded_pads')
+validate_pad_dir('../../edge-kuth-portal/embedded_pads')
 "
 ```
 
@@ -55,15 +55,33 @@ Read the webhook payload flags and pass the corresponding CLI flags:
 
 | Form field | CLI flag | Effect |
 |-----------|----------|--------|
-| `normalize_live_time` | `--normalize-live-time` | Python divides counts by live time (counts/s) |
+| (none) | (none) | **Raw counts** — no preprocessing (default) |
+| `normalize_live_time` | `--normalize-live-time` | Divide counts by live time (counts/s) |
+| `normalize_total_counts` | `--normalize-total-counts` | Rescale both PADs and samples to 100k total counts |
 
-When `--normalize-live-time` is not set, **raw counts** are used with no preprocessing.
+The three normalization modes are **mutually exclusive** — at most one flag at a time.
+When neither flag is set, **raw counts** are used with no preprocessing.
+
+Continuum subtraction (independent of normalization mode):
+
+| Form field | CLI flag | Effect |
+|-----------|----------|--------|
+| `subtract_continuum` | `--subtract-continuum` | Subtract linear continuum from each ROI using shoulder windows |
 
 ```bash
 # Build flags from webhook payload
 NORM_LT_FLAG=""
-if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
+NORM_TC_FLAG=""
+SUBTRACT_CONT_FLAG=""
+PAYLOAD="../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json"
+if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
   NORM_LT_FLAG="--normalize-live-time"
+fi
+if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('normalize_total_counts') else 1)" 2>/dev/null; then
+  NORM_TC_FLAG="--normalize-total-counts"
+fi
+if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('subtract_continuum') else 1)" 2>/dev/null; then
+  SUBTRACT_CONT_FLAG="--subtract-continuum"
 fi
 
 bash ../../edge-kuth-portal/handle-upload.sh \
@@ -71,7 +89,9 @@ bash ../../edge-kuth-portal/handle-upload.sh \
   --client {client_name} \
   --email {email} \
   --roi-half-width {roi_half_width} \
-  $NORM_LT_FLAG
+  $NORM_LT_FLAG \
+  $NORM_TC_FLAG \
+  $SUBTRACT_CONT_FLAG
 ```
 
 ### Step 5: Read Results

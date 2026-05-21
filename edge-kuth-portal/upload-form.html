@@ -285,6 +285,24 @@
                 inconsistent counting times.
               </div>
             </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="normalize_total_counts" name="normalize_total_counts" value="true" />
+              <label for="normalize_total_counts">Normalize by total counts <span class="badge badge-default">100k</span></label>
+            </div>
+            <div class="checkbox-desc">
+              Normalize both PAD references and sample spectra to 100k total counts before
+              fitting. Compares spectral shapes rather than absolute intensities. Recommended
+              when sample counts differ significantly from PAD calibration counts.
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="subtract_continuum" name="subtract_continuum" value="true" />
+              <label for="subtract_continuum">Subtract continuum <span class="badge badge-default">shoulder</span></label>
+            </div>
+            <div class="checkbox-desc">
+              Estimate and subtract a linear continuum background from each ROI using
+              shoulder windows. Compensates for scattering continuum differences between
+              lab PAD references and field samples. Recommended for field survey data.
+            </div>
             <div class="helper" style="margin-top:6px">
               When unchecked, raw counts pass through unchanged (recommended for standard surveys).
             </div>

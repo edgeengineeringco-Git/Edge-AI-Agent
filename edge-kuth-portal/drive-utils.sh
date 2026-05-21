@@ -72,7 +72,7 @@ get_sheet_name() {
 cmd_download_pads() {
   check_auth
 
-  local output_dir="${1:-$SCRIPT_DIR/pad_reference}"
+  local output_dir="${1:-$SCRIPT_DIR/embedded_pads}"
   mkdir -p "$output_dir"
 
   echo "=== Downloading PAD reference spectra ==="
@@ -337,7 +337,7 @@ main() {
           *) echo "Unknown: $1"; usage ;;
         esac
       done
-      cmd_download_pads "${output_dir:-$SCRIPT_DIR/pad_reference}"
+      cmd_download_pads "${output_dir:-$SCRIPT_DIR/embedded_pads}"
       ;;
     upload-results)
       cmd_upload_results "$@"

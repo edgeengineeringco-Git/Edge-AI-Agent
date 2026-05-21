@@ -14,7 +14,7 @@ You process .spc spectrum files and produce K/U/Th concentration results (potass
 ## Available Resources
 
 ### Python Engine
-- `../../edge-kuth-portal/estimate_k_u_th_matrix.py` — CLI script with `--spectra`, `--pad-dir`, `--out`, `--roi-half-width-kev`, `--normalize-live-time` flags. Requires numpy.
+- `../../edge-kuth-portal/estimate_k_u_th_matrix.py` — CLI script with `--spectra`, `--pad-dir`, `--out`, `--roi-half-width-kev`, `--normalize-live-time`, `--normalize-total-counts`, `--subtract-continuum` flags. Requires numpy.
   - Method: 9 ROI features from each spectrum are fitted against a 3-column PAD reference matrix (M_ref) via non-negative least squares. PAD weights w are converted to concentrations using the hardcoded 3×3 composition matrix C_PAD (rows: K%, Uppm, Thppm; cols: PAD_K, PAD_U, PAD_Th).
 - `../../edge-kuth-portal/generate_test_data.py` — Test data generator for validation.
 - `../../edge-kuth-portal/handle-upload.sh` — Upload handler that orchestrates the full pipeline.
@@ -44,19 +44,29 @@ When triggered:
 3. **Get PAD files** — `../../edge-kuth-portal/pad_data.py` has all three PAD spectra embedded. The `handle-upload.sh` script generates them automatically. Do NOT download PADs from Drive.
 4. **Run estimation** — Call the CLI with normalization flags from the webhook:
    ```bash
-   # Read normalize_live_time from webhook payload
+   # Read normalization flags from webhook payload
    NORM_LT_FLAG=""
-   if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
+   NORM_TC_FLAG=""
+   SUBTRACT_CONT_FLAG=""
+   PAYLOAD="../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json"
+   if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
      NORM_LT_FLAG="--normalize-live-time"
    fi
-
+   if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('normalize_total_counts') else 1)" 2>/dev/null; then
+     NORM_TC_FLAG="--normalize-total-counts"
+   fi
+   if python3 -c "import json; d=json.load(open('$PAYLOAD')); exit(0 if d.get('subtract_continuum') else 1)" 2>/dev/null; then
+     SUBTRACT_CONT_FLAG="--subtract-continuum"
+   fi
 
    bash ../../edge-kuth-portal/handle-upload.sh \
      --job-id {job_id} --client {client_name} --email {email} \
-     --roi-half-width {roi_half_width} $NORM_LT_FLAG
+     --roi-half-width {roi_half_width} $NORM_LT_FLAG $NORM_TC_FLAG $SUBTRACT_CONT_FLAG
    ```
-   When `--normalize-live-time` is not set, **raw counts** are used with no preprocessing.
    When `--normalize-live-time` is set, Python divides counts by live time (counts/s).
+   When `--normalize-total-counts` is set, Python rescales PADs and samples to 100k total counts.
+   The normalization modes are **mutually exclusive** — conflicting flags raise an error.
+   `--subtract-continuum` is **independent** — it estimates and subtracts a linear continuum from each ROI using shoulder windows, compensating for scattering continuum differences between lab PADs and field samples.
 5. **Email results CSV** — Send the full CSV to the client via SendGrid (using `send-email.sh`). The upload server already sent a confirmation email when files were received.
 6. **Upload to Google Drive** — Upload results CSV and log job to spreadsheet (see Google Drive section below)
 7. **Send Telegram** — Broadcast the full CSV via `agent-job-dm` skill
@@ -67,14 +77,14 @@ When triggered:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | ROI half-width | 20 keV | Integration window around reference lines |
-| Live-time normalization | Off | `--normalize-live-time` — Python divides by live time (counts/s) |
-| Raw counts (default) | Default | No preprocessing — true raw counts pass through unchanged |
+| Preprocessing | Raw (none) | Three mutually exclusive modes: raw, `--normalize-live-time` (counts/s), `--normalize-total-counts` (100k rescale) |
+| Continuum subtraction | Off | `--subtract-continuum` — independent of normalization; subtracts linear continuum from each ROI using shoulder windows |
 | PAD files | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc | Embedded in `pad_data.py` (no Drive download) |
 
 ## Telegram CSV Delivery
 
 The results CSV includes ALL spectra with these columns:
-`file, [lat, lon, [elevation,]] K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
+`file, mode, live_time_us, clock_time_us, K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
 
 R² is included per row — send everything, no filtering.
 
