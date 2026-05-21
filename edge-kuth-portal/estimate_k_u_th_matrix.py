@@ -1,286 +1,167 @@
-#!/usr/bin/env python3
-"""K/U/Th concentration estimation via spectral matrix analysis using only stdlib."""
+# -*- coding: utf-8 -*-
+"""
+Estimate K (%), U (ppm), Th (ppm) for each .spc using PAD spectra and full 3x3 PAD composition matrix.
+
+- Energy calibrated with a quadratic (Geomon anchors).
+- Features = ROI sums around key lines (K-40, U-chain, Th-chain).
+- Fit y ≈ M_ref @ w to get PAD weights w≥0.
+- Convert PAD weights to concentrations with c = C @ w, where C is 3x3 PAD composition matrix:
+  rows = [K, U, Th], cols = [PAD_K_A, PAD_U_A, PAD_Th_A].
+
+Usage example:
+    python estimate_k_u_th_matrix.py ^
+        --spectra "E:\Calculations\Q12\spect_001021" ^
+        --pad-dir "C:\\Users\\mousavim\\Desktop\\D230A\\spectra" ^
+        --out "EE:\Calculations\Output" ^
+        --normalize-live-time
+
+"""
 
 import argparse
+from pathlib import Path
 import csv
-import glob
-import json
-import math
-import os
-import sys
+import numpy as np
 
+# ====== Energy calibration anchors (your validated ones) ======
+ANCHORS_CH  = np.array([870.5, 720.8,  31.6, 484.0], dtype=float)
+ANCHORS_KEV = np.array([2611.4, 2162.3, 94.8, 1451.9], dtype=float)
 
-def load_spectrum(filepath):
-    """Load a spectrum CSV, skipping comment lines."""
-    values = []
-    with open(filepath) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            values.append(float(line))
-    return values
+# ====== Reference lines for features (keV) ======
+REF_LINES = {
+    "K":  [1460.8],
+    "U":  [351.9, 609.3, 1120.3, 1764.5],
+    "Th": [583.2, 911.1, 968.9, 2614.5],
+}
+ROI_HALF_WIDTH_KEV = 20.0  # default ±20 keV around each line
 
+# ====== Hard-coded 3x3 PAD composition matrix (from your message) ======
+# Rows: [K(%), U(ppm), Th(ppm)] ; Columns: [PAD_K_A, PAD_U_A, PAD_Th_A]
+C_PAD = np.array([
+    [6.85, 1.17, 0.98],     # K (%)
+    [1.38, 40.87, 1.90],    # U (ppm)
+    [2.54, 4.42, 111.59],   # Th (ppm)
+], dtype=float)
 
-def dot(a, b):
-    return sum(x * y for x, y in zip(a, b))
-
-
-def solve_ols(AtA, Atb, n):
-    """Solve AtA * x = Atb using Gaussian elimination with partial pivoting."""
-    aug = [AtA[i][:] + [Atb[i]] for i in range(n)]
-
-    for col in range(n):
-        pivot = max(range(col, n), key=lambda r: abs(aug[r][col]))
-        if abs(aug[pivot][col]) < 1e-15:
+def first_numeric_token_or_none(line: str):
+    for tok in line.strip().split():
+        try:
+            return float(tok)
+        except ValueError:
             continue
-        aug[col], aug[pivot] = aug[pivot], aug[col]
-        piv_val = aug[col][col]
-        for row in range(col + 1, n):
-            factor = aug[row][col] / piv_val
-            for c in range(col, n + 1):
-                aug[row][c] -= factor * aug[col][c]
+    return None
 
-    x = [0.0] * n
-    for i in range(n - 1, -1, -1):
-        if abs(aug[i][i]) < 1e-15:
-            continue
-        s = aug[i][n]
-        for j in range(i + 1, n):
-            s -= aug[i][j] * x[j]
-        x[i] = s / aug[i][i]
-    return x
+def read_spc_counts_and_times(path: Path, header_lines: int = 2, n_channels: int = 1024):
+    """Return counts array and live_time_us (float or None)."""
+    if not path.exists():
+        raise FileNotFoundError(f"SPC not found: {path}")
+    with path.open("r", encoding="utf-8", errors="ignore") as f:
+        lines = [ln.rstrip("\n") for ln in f]
+    if len(lines) < header_lines + n_channels:
+        raise RuntimeError(f"SPC too short: {len(lines)} lines; need at least {header_lines + n_channels}.")
+    live_time_us = first_numeric_token_or_none(lines[0])   # line 1: Live time (us)
+    # clock_time_us = first_numeric_token_or_none(lines[1]) # line 2: Clock time (us), not used here
+    data_block = lines[header_lines : header_lines + n_channels]
+    counts = []
+    for raw in data_block:
+        val = first_numeric_token_or_none(raw)
+        counts.append(val if val is not None else 0.0)
+    return np.array(counts, dtype=float), live_time_us
 
+def calibrate_energy_quadratic(ch: np.ndarray, anchors_ch: np.ndarray, anchors_keV: np.ndarray):
+    A = np.vstack([np.ones_like(anchors_ch), anchors_ch, anchors_ch**2]).T
+    c0, c1, c2 = np.linalg.lstsq(A, anchors_keV, rcond=None)[0]
+    E = c0 + c1*ch + c2*(ch**2)
+    return (c0, c1, c2), E
 
-def nnls(A_cols, b):
-    """Non-negative least squares via active-set method.
+def integrate_rois(energy_keV: np.ndarray, counts: np.ndarray, roi_lines: list, half_width_keV: float):
+    feats = []
+    for E0 in roi_lines:
+        mask = (energy_keV >= (E0 - half_width_keV)) & (energy_keV <= (E0 + half_width_keV))
+        feats.append(counts[mask].sum())
+    return np.array(feats, dtype=float)
 
-    A_cols: list of column vectors
-    b: target vector
-    Returns (x, residual_norm).
-    """
-    m = len(b)
-    n = len(A_cols)
+def build_feature_vector(energy_keV: np.ndarray, counts: np.ndarray, half_width_keV: float):
+    fK  = integrate_rois(energy_keV, counts, REF_LINES["K"],  half_width_keV)
+    fU  = integrate_rois(energy_keV, counts, REF_LINES["U"],  half_width_keV)
+    fTh = integrate_rois(energy_keV, counts, REF_LINES["Th"], half_width_keV)
+    return np.concatenate([fK, fU, fTh], axis=0)  # shape = 9
 
-    # Precompute AtA and Atb
-    AtA = [[dot(A_cols[i], A_cols[j]) for j in range(n)] for i in range(n)]
-    Atb = [dot(A_cols[i], b) for i in range(n)]
-
-    # Start with all variables in the passive set (unconstrained)
-    # S[j] = True means variable j is in the active set (fixed at zero)
-    S = [False] * n
-    x = solve_ols(AtA, Atb, n)
-
-    # If the OLS solution is already non-negative, we're done
-    if all(v >= -1e-12 for v in x):
-        x = [max(0.0, v) for v in x]
-        residual = math.sqrt(sum((b[i] - sum(A_cols[j][i] * x[j] for j in range(n))) ** 2 for i in range(m)))
-        return x, residual
-
-    # Otherwise, start with all variables at zero
-    x = [0.0] * n
-    S = [True] * n  # Initially all are active (fixed at zero)
-
-    max_iter = 3 * n
-    for _ in range(max_iter):
-        # Compute gradient w = AtA x - Atb
-        w = [sum(AtA[j][k] * x[k] for k in range(n)) - Atb[j] for j in range(n)]
-
-        # Check KKT: for j in S (zero vars), we need w_j >= 0
-        optimal = True
-        for j in range(n):
-            if S[j] and w[j] < -1e-12:
-                optimal = False
-                break
-        if optimal:
-            break
-
-        # Choose the most negative w among active (zero) variables
-        most_neg = -1
-        most_neg_val = 0.0
-        for j in range(n):
-            if S[j] and w[j] < most_neg_val - 1e-12:
-                most_neg_val = w[j]
-                most_neg = j
-
-        if most_neg < 0:
-            break
-
-        # Move variable to passive set (allow it to become positive)
-        S[most_neg] = False
-
-        # Solve unconstrained for passive set
-        while True:
-            passive = [j for j in range(n) if not S[j]]
-            p = len(passive)
-            if p == 0:
-                break
-
-            # Build reduced system
-            sub_AtA = [[AtA[i][j] for j in passive] for i in passive]
-            sub_Atb = [Atb[j] for j in passive]
-
-            x_passive = solve_ols(sub_AtA, sub_Atb, p)
-
-            # Map back to full vector
-            z = [0.0] * n
-            for idx, val in zip(passive, x_passive):
-                z[idx] = val
-
-            # Check feasibility
-            if all(z[j] >= -1e-12 for j in range(n)):
-                x = z
-                break
-            else:
-                # Backtrack: find alpha so x + alpha*(z - x) stays feasible
-                alpha = 1.0
-                hit = -1
-                for j in passive:
-                    dz = z[j] - x[j]
-                    if dz < 0 and x[j] > 0:
-                        cand = -x[j] / dz
-                        if cand < alpha - 1e-12:
-                            alpha = cand
-                            hit = j
-
-                if alpha >= 1.0 or hit < 0:
-                    # Fallback: just project
-                    x = [max(0.0, v) for v in z]
-                    for j in range(n):
-                        if x[j] <= 1e-12:
-                            S[j] = True
-                            x[j] = 0.0
-                    break
-
-                # Step to boundary
-                for j in range(n):
-                    x[j] += alpha * (z[j] - x[j])
-
-                # Move hitting variable to active set
-                if hit >= 0:
-                    S[hit] = True
-                    x[hit] = 0.0
-
-    # Clamp tiny negatives
-    x = [max(0.0, v) for v in x]
-    residual = math.sqrt(sum((b[i] - sum(A_cols[j][i] * x[j] for j in range(n))) ** 2 for i in range(m)))
-    return x, residual
-
+def fit_pad_weights(y_feats: np.ndarray, M_ref: np.ndarray):
+    """Solve y ≈ M_ref @ w, clip w>=0, return (w, r2)."""
+    w_hat, _, _, _ = np.linalg.lstsq(M_ref, y_feats, rcond=None)
+    w_hat = np.maximum(w_hat, 0.0)
+    y_pred = M_ref @ w_hat
+    ss_res = np.sum((y_feats - y_pred)**2)
+    ss_tot = np.sum((y_feats - np.mean(y_feats))**2) if np.any(y_feats) else 0.0
+    r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 1.0
+    return w_hat, r2
 
 def main():
-    parser = argparse.ArgumentParser(description="Estimate K/U/Th from spectra")
-    parser.add_argument("--spectra-dir", required=True)
-    parser.add_argument("--pad-dir", required=True)
-    parser.add_argument("--output", required=True)
+    parser = argparse.ArgumentParser(description="Estimate K/U/Th using PAD spectra and full 3x3 PAD composition matrix.")
+    parser.add_argument("--spectra", required=True, help="Folder with input .spc spectra (e.g., 'sum').")
+    parser.add_argument("--pad-dir", required=True, help="Folder with PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc.")
+    parser.add_argument("--out", required=True, help="Output CSV path.")
+    parser.add_argument("--roi-half-width-kev", type=float, default=ROI_HALF_WIDTH_KEV, help="ROI half width around lines (keV).")
+    parser.add_argument("--normalize-live-time", action="store_true", help="Normalize counts by live time (counts/s).")
     args = parser.parse_args()
 
-    # Load pad spectra
-    print("Loading pad spectra...")
-    pads = {}
-    pad_files = sorted(glob.glob(os.path.join(args.pad_dir, "*_pad.csv")))
-    if not pad_files:
-        print(f"Error: No pad files found in {args.pad_dir}", file=sys.stderr)
-        sys.exit(1)
+    spectra_dir = Path(args.spectra)
+    pad_dir = Path(args.pad_dir)
+    out_csv = Path(args.out)
+    hw = args.roi_half_width_kev
 
-    for pf in pad_files:
-        basename = os.path.basename(pf)
-        elem = basename.replace("_pad.csv", "")
-        pads[elem] = load_spectrum(pf)
-        print(f"  {basename}: {len(pads[elem])} channels")
+    # Channels & energy (common for all files)
+    n_channels = 1024
+    channels = np.arange(n_channels, dtype=float)
+    (_, _, _), energy_keV = calibrate_energy_quadratic(channels, ANCHORS_CH, ANCHORS_KEV)
 
-    required = ["K", "U", "Th"]
-    missing = [e for e in required if e not in pads]
-    if missing:
-        print(f"Error: Missing pad spectra: {missing}", file=sys.stderr)
-        sys.exit(1)
+    # Read PAD spectra (rate-normalized if requested)
+    def read_pad(fname: str):
+        counts, live_us = read_spc_counts_and_times(pad_dir / fname)
+        if args.normalize_live_time and live_us and live_us > 0:
+            counts = counts / (live_us * 1e-6)  # counts per second
+        return counts
 
-    # Background subtract and build response matrix columns
-    BG = pads.get("BG", [0.0] * len(pads["K"]))
-    n_channels = len(pads["K"])
-    A_cols = [
-        [pads["K"][i] - BG[i] for i in range(n_channels)],
-        [pads["U"][i] - BG[i] for i in range(n_channels)],
-        [pads["Th"][i] - BG[i] for i in range(n_channels)],
-    ]
+    pad_k_counts = read_pad("PAD_K_A.spc")
+    pad_u_counts = read_pad("PAD_U_A.spc")
+    pad_th_counts = read_pad("PAD_Th_A.spc")
 
-    # Load sample spectra
-    spectrum_files = sorted(glob.glob(os.path.join(args.spectra_dir, "sample_*.csv")))
-    if not spectrum_files:
-        print(f"Error: No spectrum files found in {args.spectra_dir}", file=sys.stderr)
-        sys.exit(1)
+    # Build PAD feature matrix M_ref (n_features x 3)
+    fK  = build_feature_vector(energy_keV, pad_k_counts, hw)
+    fU  = build_feature_vector(energy_keV, pad_u_counts, hw)
+    fTh = build_feature_vector(energy_keV, pad_th_counts, hw)
+    M_ref = np.stack([fK, fU, fTh], axis=1)  # shape (9,3)
 
-    print(f"\nProcessing {len(spectrum_files)} spectra...")
+    # Process spectra
+    spc_files = sorted(spectra_dir.glob("*.spc"))
+    if not spc_files:
+        print(f"[WARN] No .spc files in: {spectra_dir}")
+        return
 
-    # Load ground truth for comparison
-    gt_dir = os.path.dirname(args.spectra_dir)
-    gt_path = os.path.join(gt_dir, "ground_truth.json")
-    ground_truth = None
-    if os.path.exists(gt_path):
-        with open(gt_path) as f:
-            ground_truth = {g["sample_id"]: g for g in json.load(f)}
-        print(f"Ground truth loaded from {gt_path}")
+    with out_csv.open("w", newline="", encoding="utf-8") as f_out:
+        writer = csv.writer(f_out)
+        writer.writerow(["file", "K_percent", "U_ppm", "Th_ppm", "w_PADK", "w_PADU", "w_PADTh", "fit_r2"])
 
-    # Process each spectrum
-    results = []
-    for sf in spectrum_files:
-        basename = os.path.basename(sf)
-        sample_id = basename.replace(".csv", "")
+        for spc in spc_files:
+            try:
+                counts, live_us = read_spc_counts_and_times(spc)
+                if args.normalize_live_time and live_us and live_us > 0:
+                    counts = counts / (live_us * 1e-6)
 
-        spectrum = load_spectrum(sf)
-        b = [spectrum[i] - BG[i] for i in range(n_channels)]
+                y_feats = build_feature_vector(energy_keV, counts, hw)
+                w_hat, r2 = fit_pad_weights(y_feats, M_ref)
 
-        x_est, residual = nnls(A_cols, b)
+                # Concentrations via c = C_PAD @ w
+                c = C_PAD @ w_hat
+                K_percent, U_ppm, Th_ppm = c.tolist()
 
-        # Empirically-derived calibration scaling factors
-        K_est = float(x_est[0] * 0.2)
-        U_est = float(x_est[1] * 0.67)
-        Th_est = float(x_est[2] * 0.35)
+                writer.writerow([spc.name, f"{K_percent:.3f}", f"{U_ppm:.3f}", f"{Th_ppm:.3f}",
+                                 f"{w_hat[0]:.4f}", f"{w_hat[1]:.4f}", f"{w_hat[2]:.4f}", f"{r2:.4f}"])
+                print(f"[OK] {spc.name}: K={K_percent:.3f}%  U={U_ppm:.3f} ppm  Th={Th_ppm:.3f} ppm  (R^2={r2:.3f})")
+            except Exception as e:
+                print(f"[ERR] {spc.name} -> {e}")
 
-        row = {
-            "sample_id": sample_id,
-            "K_est": round(K_est, 2),
-            "U_est": round(U_est, 1),
-            "Th_est": round(Th_est, 1),
-        }
-
-        if ground_truth and sample_id in ground_truth:
-            gt = ground_truth[sample_id]
-            row["K_true"] = gt["K_pct"]
-            row["U_true"] = gt["U_ppm"]
-            row["Th_true"] = gt["Th_ppm"]
-            if gt["K_pct"] > 0:
-                row["K_error_pct"] = round(abs(K_est - gt["K_pct"]) / gt["K_pct"] * 100, 1)
-            else:
-                row["K_error_pct"] = None
-            if gt["U_ppm"] > 0:
-                row["U_error_pct"] = round(abs(U_est - gt["U_ppm"]) / gt["U_ppm"] * 100, 1)
-            else:
-                row["U_error_pct"] = None
-            if gt["Th_ppm"] > 0:
-                row["Th_error_pct"] = round(abs(Th_est - gt["Th_ppm"]) / gt["Th_ppm"] * 100, 1)
-            else:
-                row["Th_error_pct"] = None
-
-        results.append(row)
-        print(f"  {basename}: K={K_est:.2f}%, U={U_est:.1f}ppm, Th={Th_est:.1f}ppm"
-              f"  |res|={residual:.1f}")
-
-    # Write CSV
-    fieldnames = [
-        "sample_id", "K_est", "U_est", "Th_est",
-        "K_true", "U_true", "Th_true",
-        "K_error_pct", "U_error_pct", "Th_error_pct",
-    ]
-    present_fields = [f for f in fieldnames if any(f in r for r in results)]
-
-    with open(args.output, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=present_fields)
-        writer.writeheader()
-        writer.writerows(results)
-
-    print(f"\nResults written to {args.output}")
-    print(f"Total: {len(results)} spectra processed.")
-
+    print(f"[CSV] Saved: {out_csv}")
 
 if __name__ == "__main__":
     main()

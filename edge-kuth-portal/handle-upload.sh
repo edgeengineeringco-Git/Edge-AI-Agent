@@ -120,10 +120,10 @@ fi
 # Run the Python estimation
 echo "Running K/U/Th estimation..."
 python3 "$PYTHON_SCRIPT" \
-    --spectra-dir "$JOB_INCOMING" \
+    --spectra "$JOB_INCOMING" \
     --pad-dir "$PAD_DIR" \
-    --output "$RESULTS_CSV" \
-    --roi-half-width "$ROI_HALF_WIDTH" \
+    --out "$RESULTS_CSV" \
+    --roi-half-width-kev "$ROI_HALF_WIDTH" \
     ${NORMALIZE_LT:-}
 
 echo ""
