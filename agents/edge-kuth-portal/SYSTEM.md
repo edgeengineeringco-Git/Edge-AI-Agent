@@ -68,7 +68,7 @@ When triggered:
 |-----------|---------|-------------|
 | ROI half-width | 20 keV | Integration window around reference lines |
 | Live-time normalization | Off | `--normalize-live-time` — Python divides by live time (counts/s) |
-| Total-count normalization (built-in) | Always on | Python rescales all spectra to 100k total counts to match C_PAD calibration |
+| Raw counts (default) | Default | No preprocessing — true raw counts pass through unchanged |
 | PAD files | PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc | Embedded in `pad_data.py` (no Drive download) |
 
 ## Telegram CSV Delivery
