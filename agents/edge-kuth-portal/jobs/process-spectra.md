@@ -155,16 +155,17 @@ fi
 ### Step 8: Send Results via Telegram
 Use the `agent-job-dm` skill (`--broadcast` flag) to send the results to all admins.
 
-Message format:
+Send only the message from the handle-upload.sh output between the BEGIN/END TELEGRAM MESSAGE markers. Do NOT include any per-file details, CSV content, or additional commentary.
+
+The output will look like:
 ```
-📊 EDGE K/U/Th Portal — Results
-Client: {client_name}
+📊 EDGE K/U/Th Portal — Results Ready
+
 Job: {job_id}
+Spectra: {N} files processed
 
-[Full CSV content]
+Full CSV has been saved. Email delivery pending Brevo sender verification.
 ```
-
-Include the ENTIRE CSV content in the message so admins see the numbers.
 
 ### Step 9: Archive
 ```bash
