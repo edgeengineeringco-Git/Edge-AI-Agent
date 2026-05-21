@@ -52,7 +52,7 @@ while [[ $# -gt 0 ]]; do
         --email) EMAIL="$2"; shift 2 ;;
         --roi-half-width) ROI_HALF_WIDTH="$2"; shift 2 ;;
         --normalize-live-time) NORMALIZE_LT="--normalize-live-time"; shift ;;
-        --normalize-total-counts) NORMALIZE_TOTAL="yes"; shift ;;
+        --normalize-total-counts) NORMALIZE_TOTAL="--normalize-total-counts"; shift ;;
         --pad-dir) PAD_DIR="$2"; shift 2 ;;
         --json) JSON_FILE="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -82,7 +82,7 @@ echo "Client:      ${CLIENT_NAME:-anonymous}"
 echo "Email:       ${EMAIL:-none}"
 echo "ROI half:          $ROI_HALF_WIDTH keV"
 echo "Live-time norm:    $([ -n "$NORMALIZE_LT" ] && echo yes || echo no)"
-echo "Total-count norm:  ${NORMALIZE_TOTAL:-no}"
+echo "Total-count norm:  $([ -n "$NORMALIZE_TOTAL" ] && echo yes || echo no)"
 echo ""
 
 # Find .spc files: first check job directory, then incoming
@@ -159,91 +159,18 @@ else
 fi
 
 # ── Preprocessing mode ──────────────────────────────────────────────────────
-# Three independent modes, controlled by CLI flags:
-#   neither flag set       = raw counts (no modification to PADs or samples)
-#   --normalize-live-time  = Python divides counts by live time (counts/s)
-#   --normalize-total-counts = Bash rescales all spectra to 100k total counts
-#
-# When --normalize-total-counts is set, live_time is written as 1,000,000 us
-# in the normalized headers, making --normalize-live-time a no-op if both
-# flags are set (division by 1s).
-#
-# PADs and samples always use identical preprocessing.
+# Normalization is handled by the Python engine:
+#   neither flag set       = raw counts
+#   --normalize-live-time  = divide counts by live time (counts/s)
+#   --normalize-total-counts = scale counts to 100k total per spectrum
 
 PROVENANCE_NOTES=()
 PROVENANCE_NOTES+=("PAD_source:embedded_pad_data.py")
-
-if [[ -n "$NORMALIZE_TOTAL" ]]; then
-    PROVENANCE_NOTES+=("total_count_normalized:100k")
-    NORM_DIR="$JOB_OUTPUT/normalized"
-    mkdir -p "$NORM_DIR/pads" "$NORM_DIR/samples"
-    echo "[NORM] Normalizing all spectra to uniform total counts..."
-    python3 -c "
-import numpy as np
-from pathlib import Path
-
-target_total = 100000.0
-pad_dir = Path('$PAD_DIR')
-sample_dir = Path('$JOB_INCOMING')
-norm_pad_dir = Path('$NORM_DIR/pads')
-norm_sample_dir = Path('$NORM_DIR/samples')
-
-for spc in sorted(pad_dir.glob('*.spc')):
-    with open(spc) as f:
-        lines = [l.rstrip() for l in f]
-    counts = []
-    for raw in lines[2:2+1024]:
-        try:
-            counts.append(float(raw.split()[0]))
-        except (ValueError, IndexError):
-            counts.append(0.0)
-    counts = np.array(counts)
-    total = counts.sum()
-    scale = target_total / total if total > 0 else 1.0
-    norm_counts = counts * scale
-    out_path = norm_pad_dir / spc.name
-    with open(out_path, 'w') as f:
-        f.write('1000000\n1000000\n')
-        for c in norm_counts:
-            f.write(f'{int(round(c))}\n')
-    print(f'  PAD {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
-
-for spc in sorted(sample_dir.glob('*.spc')):
-    with open(spc) as f:
-        lines = [l.rstrip() for l in f]
-    counts = []
-    for raw in lines[2:2+1024]:
-        try:
-            counts.append(float(raw.split()[0]))
-        except (ValueError, IndexError):
-            counts.append(0.0)
-    counts = np.array(counts)
-    total = counts.sum()
-    scale = target_total / total if total > 0 else 1.0
-    norm_counts = counts * scale
-    out_path = norm_sample_dir / spc.name
-    with open(out_path, 'w') as f:
-        f.write('1000000\n1000000\n')
-        for c in norm_counts:
-            f.write(f'{int(round(c))}\n')
-    print(f'  sample {spc.name}: {int(total):,} -> {int(target_total):,} (scale={scale:.4f})')
-" 2>&1
-
-    PAD_DIR="$NORM_DIR/pads"
-    JOB_INCOMING="$NORM_DIR/samples"
-else
-    echo "[NORM] Using raw counts (no total-count normalization)"
-    PROVENANCE_NOTES+=("total_count_normalized:no")
-fi
-
-if [[ -n "$NORMALIZE_LT" ]]; then
-    PROVENANCE_NOTES+=("live_time_normalized:yes")
-else
-    PROVENANCE_NOTES+=("live_time_normalized:no")
-fi
-
+PROVENANCE_NOTES+=("total_count_normalized:$([ -n "$NORMALIZE_TOTAL" ] && echo yes || echo no)")
+PROVENANCE_NOTES+=("live_time_normalized:$([ -n "$NORMALIZE_LT" ] && echo yes || echo no)")
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
+
 # ── Pre-estimation diagnostic snapshot ─────────────────────────────────────
 # Save energy calibration, M_ref, and first-sample stats to estimation-debug.json
 # for post-mortem analysis of bad results.
@@ -310,7 +237,8 @@ python3 "$PYTHON_SCRIPT" \
     --pad-dir "$PAD_DIR" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
-    ${NORMALIZE_LT:-}
+    ${NORMALIZE_LT:-} \
+    ${NORMALIZE_TOTAL:-}
 
 # ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.

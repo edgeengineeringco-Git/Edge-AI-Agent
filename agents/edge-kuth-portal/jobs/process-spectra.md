@@ -56,7 +56,7 @@ Read the webhook payload flags and pass the corresponding CLI flags:
 | Form field | CLI flag | Effect |
 |-----------|----------|--------|
 | `normalize_live_time` | `--normalize-live-time` | Python divides counts by live time (counts/s) |
-| `normalize_total_counts` | `--normalize-total-counts` | Bash rescales all spectra to 100k total counts |
+| `normalize_total_counts` | `--normalize-total-counts` | Python scales counts to 100k total per spectrum |
 
 When neither flag is set, **raw counts** are used with no preprocessing whatsoever — PADs and samples pass through unchanged.
 

@@ -103,6 +103,7 @@ def main():
     parser.add_argument("--out", required=True, help="Output CSV path.")
     parser.add_argument("--roi-half-width-kev", type=float, default=ROI_HALF_WIDTH_KEV, help="ROI half width around lines (keV).")
     parser.add_argument("--normalize-live-time", action="store_true", help="Normalize counts by live time (counts/s).")
+    parser.add_argument("--normalize-total-counts", action="store_true", help="Normalize counts to 100k total counts per spectrum.")
     args = parser.parse_args()
 
     spectra_dir = Path(args.spectra)
@@ -115,12 +116,20 @@ def main():
     channels = np.arange(n_channels, dtype=float)
     (_, _, _), energy_keV = calibrate_energy_quadratic(channels, ANCHORS_CH, ANCHORS_KEV)
 
-    # Read PAD spectra (rate-normalized if requested)
+    def _normalize(counts):
+        """Apply optional normalization (live-time then total-count)."""
+        if args.normalize_total_counts:
+            total = counts.sum()
+            if total > 0:
+                counts = counts * (100000.0 / total)
+        return counts
+
+    # Read PAD spectra (normalized if requested)
     def read_pad(fname: str):
         counts, live_us = read_spc_counts_and_times(pad_dir / fname)
         if args.normalize_live_time and live_us and live_us > 0:
             counts = counts / (live_us * 1e-6)  # counts per second
-        return counts
+        return _normalize(counts)
 
     pad_k_counts = read_pad("PAD_K_A.spc")
     pad_u_counts = read_pad("PAD_U_A.spc")
@@ -147,6 +156,7 @@ def main():
                 counts, live_us = read_spc_counts_and_times(spc)
                 if args.normalize_live_time and live_us and live_us > 0:
                     counts = counts / (live_us * 1e-6)
+                counts = _normalize(counts)
 
                 y_feats = build_feature_vector(energy_keV, counts, hw)
                 w_hat, r2 = fit_pad_weights(y_feats, M_ref)
