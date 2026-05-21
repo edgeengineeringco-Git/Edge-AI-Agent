@@ -1,0 +1,14 @@
+{
+  "job_id": "GGalway_202605211315062",
+  "client_name": "GGalway",
+  "project": "GGalway",
+  "email": "senan.aghdam@aol.com",
+  "roi_half_width": 30,
+  "normalize_live_time": true,
+  "measurement_id_column": "measurement_id",
+  "spectra_files": [
+    "spect_000001.spc","spect_000002.spc","spect_000003.spc","spect_000004.spc","spect_000005.spc","spect_000006.spc","spect_000007.spc","spect_000008.spc","spect_000009.spc","spect_000010.spc","spect_000011.spc","spect_000012.spc","spect_000013.spc","spect_000014.spc","spect_000015.spc","spect_000016.spc","spect_000017.spc","spect_000018.spc","spect_000019.spc","spect_000020.spc","spect_000021.spc","spect_000022.spc","spect_000023.spc","spect_000024.spc","spect_000025.spc","spect_000026.spc","spect_000027.spc","spect_000028.spc","spect_000029.spc","spect_000030.spc","spect_000031.spc","spect_000032.spc","spect_000033.spc","spect_000034.spc","spect_000035.spc","spect_000036.spc","spect_000037.spc","spect_000038.spc","spect_000039.spc","spect_000040.spc","spect_000041.spc","spect_000042.spc","spect_000043.spc","spect_000044.spc","spect_000045.spc","spect_000046.spc","spect_000047.spc","spect_000048.spc","spect_000049.spc","spect_000050.spc","spect_000051.spc","spect_000052.spc","spect_000053.spc","spect_000054.spc","spect_000055.spc","spect_000056.spc","spect_000057.spc","spect_000058.spc","spect_000059.spc","spect_000060.spc","spect_000061.spc","spect_000062.spc","spect_000063.spc","spect_000064.spc","spect_00065.spc","spect_000066.spc","spect_000067.spc","spect_000068.spc","spect_000069.spc","spect_000070.spc","spect_000071.spc","spect_000072.spc","spect_000073.spc","spect_000074.spc","spect_000075.spc","spect_000076.spc","spect_000077.spc","spect_000078.spc","spect_000079.spc","spect_000080.spc","spect_000081.spc","spect_000082.spc","spect_000083.spc","spect_000084.spc","spect_000085.spc","spect_000086.spc","spect_000087.spc","spect_000088.spc","spect_000089.spc","spect_000090.spc","spect_000091.spc","spect_000092.spc","spect_000093.spc","spect_000094.spc","spect_000095.spc","spect_000096.spc","spect_000097.spc","spect_000098.spc","spect_000099.spc","spect_000100.spc"
+  ],
+  "dose_csv_file": "meas_log.csv",
+  "timestamp": "2026-05-21T13:15:06.000Z"
+}
