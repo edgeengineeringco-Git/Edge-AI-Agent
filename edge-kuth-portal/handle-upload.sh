@@ -244,6 +244,63 @@ fi
 
 PROVENANCE_NOTES+=("roi_half_width_kev:${ROI_HALF_WIDTH}")
 PROVENANCE_NOTES+=("engine:estimate_k_u_th_matrix.py")
+# ── Pre-estimation diagnostic snapshot ─────────────────────────────────────
+# Save energy calibration, M_ref, and first-sample stats to estimation-debug.json
+# for post-mortem analysis of bad results.
+DEBUG_JSON="$JOB_OUTPUT/estimation-debug.json"
+python3 -c "
+import numpy as np, json, sys, glob
+def _rsc(p):
+    with open(p) as f:
+        lines = [l.rstrip(chr(92)+"n") for l in f]
+    c = []
+    for raw in lines[2:2+1024]:
+        try: c.append(float(raw.split()[0]))
+        except: c.append(0.0)
+    return np.array(c, dtype=float)
+def _rsl(p):
+    with open(p) as f: line = f.readline().strip()
+    try: return float(line.split()[0])
+    except: return None
+anchors_ch = np.array([870.5, 720.8, 31.6, 484.0])
+anchors_kv = np.array([2611.4, 2162.3, 94.8, 1451.9])
+A = np.vstack([np.ones_like(anchors_ch), anchors_ch, anchors_ch**2]).T
+c0, c1, c2 = np.linalg.lstsq(A, anchors_kv, rcond=None)[0]
+pd = "$PAD_DIR"
+pk = _rsc(pd+"/PAD_K_A.spc"); pu = _rsc(pd+"/PAD_U_A.spc"); pth = _rsc(pd+"/PAD_Th_A.spc")
+ch = np.arange(1024.0); en = c0 + c1*ch + c2*ch**2
+hw = float("$ROI_HALF_WIDTH")
+RL = {"K":[1460.8],"U":[351.9,609.3,1120.3,1764.5],"Th":[583.2,911.1,968.9,2614.5]}
+def _roi(co, ll, hw):
+    return [float(co[(en>=e0-hw)&(en<=e0+hw)].sum()) for e0 in ll]
+labels = ["K_1460","U_351","U_609","U_1120","U_1764","Th_583","Th_911","Th_968","Th_2614"]
+fk = _roi(pk, RL["K"],hw)+_roi(pk, RL["U"],hw)+_roi(pk, RL["Th"],hw)
+fu = _roi(pu, RL["K"],hw)+_roi(pu, RL["U"],hw)+_roi(pu, RL["Th"],hw)
+fth = _roi(pth, RL["K"],hw)+_roi(pth, RL["U"],hw)+_roi(pth, RL["Th"],hw)
+mrt = [[fk[i],fu[i],fth[i]] for i in range(9)]
+M = np.column_stack([fk, fu, fth])
+yk = np.array(fk+fu+fth)
+w,_,_,_ = np.linalg.lstsq(M, yk, rcond=None); w = np.maximum(w,0)
+yp = (M @ w).tolist(); ssr = sum((yk-yp)**2); sst = sum((yk-np.mean(yk))**2)
+spfs = sorted(glob.glob("$JOB_INCOMING/*.spc"))
+fs = _rsc(spfs[0]).tolist() if spfs else None
+flt = _rsl(spfs[0]) if spfs else None
+info = {
+    "energy_cal": {"c0":f"{c0:.4f}","c1":f"{c1:.4f}","c2":f"{c2:.6f}"},
+    "pad_live_times_us": {"K":_rsl(pd+"/PAD_K_A.spc"),"U":_rsl(pd+"/PAD_U_A.spc"),"Th":_rsl(pd+"/PAD_Th_A.spc")},
+    "pad_total_counts": {"K":int(pk.sum()),"U":int(pu.sum()),"Th":int(pth.sum())},
+    "m_ref": {labels[i]:mrt[i] for i in range(9)},
+    "pad_k_self_r2": float(1.0-ssr/sst if sst>0 else 1.0),
+    "pad_k_self_weights": [float(f"{v:.6f}") for v in w],
+    "first_sample": str(spfs[0]) if spfs else None,
+    "first_sample_live_time_us": flt,
+    "first_sample_total_counts": int(sum(fs)) if fs else None,
+    "first_sample_nonzero_ch": sum(1 for c in (fs or []) if c>0),
+    "numpy_version": np.__version__,
+}
+with open("$DEBUG_JSON","w") as f: json.dump(info, f, indent=2)
+print("[DEBUG] Estimation debug snapshot → " + "$DEBUG_JSON")
+" 2>&1 || echo "[WARN] Debug snapshot failed (non-fatal)"
 
 # Run the Python estimation
 echo ""
@@ -254,6 +311,62 @@ python3 "$PYTHON_SCRIPT" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
     ${NORMALIZE_LT:-}
+
+# ── Post-estimation validation ──────────────────────────────────────────────
+# Check that results are physically plausible before sending Telegram message.
+VALIDATION_WARN=""
+if [[ -f "$RESULTS_CSV" ]]; then
+    VALIDATION_WARN=$(python3 -c "
+import csv, sys
+with open('$RESULTS_CSV') as f:
+    rows = list(csv.DictReader(f))
+n = len(rows)
+if n == 0: print('EMPTY_CSV'); sys.exit(0)
+k = [float(r['K_percent']) for r in rows]
+r2 = [float(r['fit_r2']) for r in rows]
+mk = max(k); mr = min(r2)
+w = []
+if mk > 100: w.append(f'MAX_K={mk:.1f}%')
+if mr < 0: w.append(f'NEG_R2={mr:.3f}')
+elif mr < 0.5: w.append(f'LOW_R2={mr:.3f}')
+print('|'.join(w) if w else 'OK')
+" 2>/dev/null || echo "VAL_FAIL")
+
+    case "$VALIDATION_WARN" in
+        EMPTY_CSV)   echo "[VAL] WARNING: Results CSV is empty!" ;;
+        VAL_FAIL)    echo "[VAL] WARNING: Could not validate results" ;;
+        OK)          echo "[VAL] Results pass plausibility checks" ;;
+        *)           echo "[VAL] WARNING: Suspicious results: $VALIDATION_WARN"
+                     echo "[VAL] Debug data at: $DEBUG_JSON" ;;
+    esac
+fi
+
+# ── Post-estimation validation ──────────────────────────────────────────────
+# Check results are physically plausible before sending Telegram.
+VALIDATION_WARN=""
+if [[ -f "$RESULTS_CSV" ]]; then
+    VALIDATION_WARN=$(python3 -c "
+import csv, sys
+with open("'$RESULTS_CSV'") as f:
+    rows = list(csv.DictReader(f))
+n = len(rows)
+if n == 0: print("EMPTY_CSV"); sys.exit(0)
+k = [float(r["K_percent"]) for r in rows]
+r2 = [float(r["fit_r2"]) for r in rows]
+mk = max(k); mr = min(r2); w = []
+if mk > 100: w.append(f"MAX_K={mk:.1f}%")
+if mr < 0: w.append(f"NEG_R2={mr:.3f}")
+elif mr < 0.5: w.append(f"LOW_R2={mr:.3f}")
+print("|".join(w) if w else "OK")
+" 2>/dev/null || echo "VAL_FAIL")
+    case "$VALIDATION_WARN" in
+        EMPTY_CSV) echo "[VAL] WARNING: Empty results CSV" ;;
+        VAL_FAIL)  echo "[VAL] WARNING: Could not validate" ;;
+        OK)        echo "[VAL] Results pass plausibility checks" ;;
+        *)         echo "[VAL] WARNING: Suspicious results: $VALIDATION_WARN"
+                     echo "[VAL] Debug data at: $DEBUG_JSON" ;;
+    esac
+fi
 
 # Write processing metadata
 META_JSON="$JOB_OUTPUT/processing-metadata.json"
@@ -313,6 +426,11 @@ print(f'Th: {min(th):.1f}–{max(th):.1f} ppm  (avg {sum(th)/n:.1f})')
 print(f'R²: {min(r2):.3f}–{max(r2):.3f}')
 " 2>/dev/null || true
     echo ""
+	    if [[ -n "$VALIDATION_WARN" && "$VALIDATION_WARN" != "OK" && "$VALIDATION_WARN" != "VAL_FAIL" && "$VALIDATION_WARN" != "EMPTY_CSV" ]]; then
+	        echo "⚠️  WARNING: Results may be unreliable — $VALIDATION_WARN"
+	        echo ""
+	    fi
+	    echo ""
     echo "Full CSV has been saved. Email delivery pending Brevo sender verification."
     echo ""
     echo "--- END TELEGRAM MESSAGE ---"
