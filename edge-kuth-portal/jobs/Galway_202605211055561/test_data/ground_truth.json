@@ -1,0 +1,32 @@
+[
+  {
+    "sample_id": "sample_000",
+    "K_pct": 0.82,
+    "U_ppm": 18.1,
+    "Th_ppm": 1.1
+  },
+  {
+    "sample_id": "sample_001",
+    "K_pct": 1.49,
+    "U_ppm": 14.6,
+    "Th_ppm": 26.6
+  },
+  {
+    "sample_id": "sample_002",
+    "K_pct": 1.8,
+    "U_ppm": 1.8,
+    "Th_ppm": 22.1
+  },
+  {
+    "sample_id": "sample_003",
+    "K_pct": 3.23,
+    "U_ppm": 1.5,
+    "Th_ppm": 17.1
+  },
+  {
+    "sample_id": "sample_004",
+    "K_pct": 2.81,
+    "U_ppm": 15.6,
+    "Th_ppm": 15.8
+  }
+]
