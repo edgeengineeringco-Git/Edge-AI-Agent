@@ -131,7 +131,7 @@ cmd_download_pads() {
 create_job_folder() {
   local job_id="$1"
 
-  echo "Creating job folder: $job_id"
+  echo "Creating job folder: $job_id" >&2
 
   local folder_json
   folder_json=$(curl -s -X POST \

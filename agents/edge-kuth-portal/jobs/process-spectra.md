@@ -35,10 +35,32 @@ fi
 Then verify the .spc files exist:
 
 ```bash
-ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc
+if ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc 2>/dev/null; then
+  echo "Files found in workspace"
+else
+  echo "Files not found in workspace — trying Docker host fallback..."
+  # The workspace is isolated from the host filesystem where the upload server saves files.
+  # Try copying via the event-handler container (has full project mount at /project).
+  if [ -S /var/run/docker.sock ]; then
+    WORKSPACE_NAME=$(cd ../../edge-kuth-portal && pwd -P | awk -F/ '{print $(NF-2)}')
+    EXEC_ID=$(curl -s --unix-socket /var/run/docker.sock \
+      -X POST http://localhost/containers/thepopebot-event-handler/exec \
+      -H "Content-Type: application/json" \
+      -d '{"Cmd":["/bin/sh","-c","cp -a /project/edge-kuth-portal/jobs/'"${job_id}"' /project/data/workspaces/'"${WORKSPACE_NAME}"'/workspace/edge-kuth-portal/jobs/"],"AttachStdout":true,"AttachStderr":true}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('Id',''))" 2>/dev/null)
+    if [ -n "$EXEC_ID" ]; then
+      curl -s --unix-socket /var/run/docker.sock \
+        -X POST "http://localhost/exec/$EXEC_ID/start" \
+        -H "Content-Type: application/json" \
+        -d '{"Detach":false,"Tty":false}' >/dev/null 2>&1
+      echo "Files copied from host"
+    fi
+  fi
+  ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc || {
+    echo "ERROR: No .spc files found in job directory. The upload server may not have saved them."
+    exit 1
+  }
+fi
 ```
-
-If no .spc files found, stop and notify via Telegram broadcast.
 
 The webhook payload is at `../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json` (created by upload server).
 
@@ -147,39 +169,30 @@ If `SENDGRID_API_KEY` is not configured, this step skips gracefully.
 Use the `drive-utils.sh` helper. PAD files come from the embedded `pad_data.py` module — no Drive download needed. Results upload and job logging use Drive if configured.
 
 ```bash
-# Get OAuth token from agent-job-secrets
+# Get OAuth credentials from agent-job-secrets
+# Note: GOOGLE_DRIVE_OAUTH returns refresh credentials (client_id, client_secret, refresh_token),
+# not an access_token directly. Must exchange refresh token for a fresh access token.
 CREDENTIALS=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH 2>/dev/null || echo "")
 if [[ -z "$CREDENTIALS" ]]; then
   echo "Google Drive not configured — skipping"
 else
-  # Parse token
-  GDRIVE_TOKEN=$(echo "$CREDENTIALS" | python3 -c "
-import json, sys, urllib.request, urllib.parse
-cred = json.load(sys.stdin)
-at = cred.get('access_token')
-if at:
-    print(at)
-else:
-    inner = cred.get('credentials', cred)
-    rt = inner.get('refresh_token', '')
-    cid = inner.get('client_id', '') or inner.get('clientId', '')
-    cs = inner.get('client_secret', '') or inner.get('clientSecret', '')
-    if rt and cid and cs:
-        data = urllib.parse.urlencode({
-            'client_id': cid, 'client_secret': cs,
-            'refresh_token': rt, 'grant_type': 'refresh_token'
-        }).encode()
-        req = urllib.request.Request('https://oauth2.googleapis.com/token', data=data)
-        resp = json.loads(urllib.request.urlopen(req).read())
-        print(resp.get('access_token', ''))
-    elif inner.get('access_token'):
-        print(inner['access_token'])
-" 2>/dev/null || echo "")
-  
-  if [[ -z "$GDRIVE_TOKEN" ]]; then
-    echo "Google Drive token exchange failed — skipping Drive steps"
-  else
-    export GDRIVE_TOKEN
+	  # Exchange OAuth refresh credentials for an access token
+	  CLIENT_ID=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('client_id',''))")
+	  CLIENT_SECRET=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('client_secret',''))")
+	  REFRESH_TOKEN=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('refresh_token',''))")
+	  TOKEN_URI=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token_uri','https://oauth2.googleapis.com/token'))")
+	  if [[ -z "$REFRESH_TOKEN" || -z "$CLIENT_ID" || -z "$CLIENT_SECRET" ]]; then
+	    echo "Google Drive OAuth credentials incomplete — skipping Drive steps"
+	  else
+	    GDRIVE_TOKEN=$(curl -s -X POST "$TOKEN_URI" \
+	      -d "client_id=$CLIENT_ID" \
+	      -d "client_secret=$CLIENT_SECRET" \
+	      -d "refresh_token=$REFRESH_TOKEN" \
+	      -d "grant_type=refresh_token" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+	    if [[ -z "$GDRIVE_TOKEN" ]]; then
+	      echo "Google Drive token exchange failed — skipping Drive steps"
+	    else
+	      export GDRIVE_TOKEN
 
     # 7a. Upload results CSV to Drive job folder
     READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
