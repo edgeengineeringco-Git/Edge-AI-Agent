@@ -1,0 +1,9 @@
+{
+  "PAD_source": "embedded_pad_data.py",
+  "live_time_normalized": "no",
+  "roi_half_width_kev": "20",
+  "engine": "estimate_k_u_th_matrix.py",
+  "job_id": "Galway_Granite_Spectra_202605221213285",
+  "client_name": "Galway_Granite_Spectra",
+  "email": "senan.aghdam@gmail.com"
+}
