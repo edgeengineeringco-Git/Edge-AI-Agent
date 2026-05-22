@@ -117,7 +117,7 @@ jobs:
             }' > /tmp/payload.json
 
           # 7. Send to event handler
-          curl -s -X POST "${{ vars.APP_URL }}/api/github/webhook" \
+          curl -s -k -X POST "${{ vars.APP_URL }}/api/github/webhook" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Webhook-Secret-Token: ${{ secrets.GH_WEBHOOK_SECRET }}" \
             -d @/tmp/payload.json

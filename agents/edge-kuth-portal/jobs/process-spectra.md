@@ -20,27 +20,65 @@ This job runs when a client submits the upload form. The webhook payload contain
 
 ## Execution Steps (Execute All Immediately)
 
-### Step 1: Verify Job Directory and Files
-The upload server already created the job directory with .spc files on the host at `/project/edge-kuth-portal/jobs/{job_id}/`. This workspace has `/project` mounted so host files are accessible. First, ensure files are available in the workspace:
+### Step 1: Verify Job Directory and Files — CRITICAL: NEVER FABRICATE DATA
+The upload server created the job directory with .spc files on the host. **You MUST verify you are processing the EXACT files uploaded for this job. If verification fails, STOP and broadcast an error. NEVER process stale, unrelated, or wrong files.**
+
+First, read the webhook payload to get the expected file list:
 
 ```bash
-# Copy files from host path if not already in workspace
+# Read webhook payload to get expected .spc filenames
 if [ ! -f "../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json" ]; then
-  echo "Job directory not found in workspace — copying from host path..."
-  mkdir -p ../../edge-kuth-portal/jobs/{job_id}
-  cp -r /project/edge-kuth-portal/jobs/{job_id}/* ../../edge-kuth-portal/jobs/{job_id}/
+  echo "ERROR: webhook-payload.json not found — cannot verify files"
+  echo "Stopping: no files to process"
+  node skills/agent-job-dm/agent-job-dm.js send --broadcast "ERROR: Job {job_id} — webhook-payload.json not found. Pipeline stopped."
+  exit 1
 fi
+
+webhook_data=$(cat ../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json)
+expected_files=$(echo "$webhook_data" | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('spectra_files',[])))")
+
+echo "Webhook payload found. Expected $expected_files .spc files."
 ```
 
-Then verify the .spc files exist:
+Then locate the .spc files. The Docker container has `/project/edge-kuth-portal/jobs/` mounted, so files are directly accessible:
 
 ```bash
-ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc
+# List actual .spc files in the job directory
+actual_files=$(ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc 2>/dev/null || echo "")
+actual_count=$(echo "$actual_files" | grep -c '\.spc$' 2>/dev/null || echo 0)
 ```
 
-If no .spc files found, stop and notify via Telegram broadcast.
+**STRICT VERIFICATION — MUST PASS ALL CHECKS:**
 
-The webhook payload is at `../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json` (created by upload server).
+```bash
+# Check 1: Files must exist
+if [ "$actual_count" -eq 0 ]; then
+  echo "FATAL: No .spc files found at ../../edge-kuth-portal/jobs/{job_id}/spectra/"
+  echo "Job directory contents:"
+  ls -la ../../edge-kuth-portal/jobs/{job_id}/ 2>/dev/null || echo "  (directory does not exist)"
+  node skills/agent-job-dm/agent-job-dm.js send --broadcast "FATAL: Job {job_id} — zero .spc files found in job directory. Pipeline stopped. No data was processed."
+  exit 1
+fi
+
+# Check 2: File count must match webhook payload
+if [ "$actual_count" -ne "$expected_files" ]; then
+  echo "FATAL: File count mismatch — expected $expected_files but found $actual_count"
+  echo "This means the wrong files are being processed. STOPPING."
+  node skills/agent-job-dm/agent-job-dm.js send --broadcast "FATAL: Job {job_id} — file count mismatch (expected $expected_files, found $actual_count). Pipeline stopped. No data was processed."
+  exit 1
+fi
+
+# Check 3: Files must be fresh (modified within the last hour)
+stale_files=$(find ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc -mmin -60 2>/dev/null | wc -l)
+if [ "$stale_files" -ne "$actual_count" ]; then
+  echo "FATAL: Some .spc files are too old (not modified in the last hour)"
+  echo "This means stale files from a previous job may be present. STOPPING."
+  node skills/agent-job-dm/agent-job-dm.js send --broadcast "FATAL: Job {job_id} — stale .spc files detected (not modified in last hour). Pipeline stopped. No data was processed."
+  exit 1
+fi
+
+echo "ALL VERIFICATION CHECKS PASSED — $actual_count fresh .spc files match webhook payload"
+```
 
 ### Step 2: Ensure PAD Reference Files
 PAD files (PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc) are embedded in `../../edge-kuth-portal/pad_data.py` as the authoritative source.
@@ -87,7 +125,7 @@ bash ../../edge-kuth-portal/handle-upload.sh \
 
 ### Step 5: Read Results
 Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
-Columns: `file, latitude, longitude, elevation, K_percent, U_ppm, Th_ppm, K_from_PADK, K_from_PADU, K_from_PADTh, U_from_PADK, U_from_PADU, U_from_PADTh, Th_from_PADK, Th_from_PADU, Th_from_PADTh, w_PADK, w_PADU, w_PADTh, fit_r2`
+Columns: `file, latitude, longitude, elevation, K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
 
 Location (lat/lon/elev) is extracted from the 3 lines before the footer of each .spc file. Missing values are blank.
 
@@ -230,6 +268,20 @@ Full CSV has been saved. Email delivery pending Brevo sender verification.
 ```bash
 cp ../../edge-kuth-portal/jobs/{job_id}/results.csv ../../edge-kuth-portal/output/{job_id}_results.csv
 ```
+
+## Critical Rules — Read and Obey
+
+### NEVER FABRICATE DATA
+- **Never process .spc files that aren't the exact files uploaded for this job.**
+- **Never use cached, stale, or git-tracked .spc files.**
+- **Never fall back to "example" or "sample" data.**
+- **If file verification fails, STOP and broadcast an error via Telegram.**
+- **It is better to fail completely than to produce wrong results.**
+
+### Verification
+- File count must match `spectra_files` in webhook-payload.json exactly.
+- All .spc files must be modified within the last hour.
+- If any check fails: stop, broadcast error, exit.
 
 ## Notes
 - All results are kept — no R² filtering or quality review

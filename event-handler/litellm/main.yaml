@@ -1,6 +1,10 @@
-# Managed by thepopebot — do not edit manually.
 # LiteLLM proxy config. Docs: https://docs.litellm.ai/docs/
-# API keys and model entries are written here automatically when
-# a non-Anthropic provider is selected as the Claude Code backend.
+# DeepSeek V3 configured as Claude Code backend.
+# Set DEEPSEEK_API_KEY in .env.
 
-model_list: []
+model_list:
+  - model_name: deepseek-chat
+    litellm_params:
+      model: openai/deepseek-chat
+      api_key: ${DEEPSEEK_API_KEY}
+      api_base: https://api.deepseek.com/v1

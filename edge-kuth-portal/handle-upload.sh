@@ -174,7 +174,7 @@ python3 -c "
 import numpy as np, json, sys, glob
 def _rsc(p):
     with open(p) as f:
-        lines = [l.rstrip(chr(92)+"n") for l in f]
+        lines = [l.rstrip() for l in f]
     c = []
     for raw in lines[2:2+1024]:
         try: c.append(float(raw.split()[0]))
@@ -232,7 +232,7 @@ python3 "$PYTHON_SCRIPT" \
     --pad-dir "$PAD_DIR" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
-    ${NORMALIZE_LT:-} \
+    ${NORMALIZE_LT:-}
 
 # ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.
@@ -323,11 +323,11 @@ print(f'Th: {min(th):.1f}–{max(th):.1f} ppm  (avg {sum(th)/n:.1f})')
 print(f'R²: {min(r2):.3f}–{max(r2):.3f}')
 " 2>/dev/null || true
     echo ""
-	    if [[ -n "$VALIDATION_WARN" && "$VALIDATION_WARN" != "OK" && "$VALIDATION_WARN" != "VAL_FAIL" && "$VALIDATION_WARN" != "EMPTY_CSV" ]]; then
-	        echo "⚠️  WARNING: Results may be unreliable — $VALIDATION_WARN"
-	        echo ""
-	    fi
-	    echo ""
+    if [[ -n "$VALIDATION_WARN" && "$VALIDATION_WARN" != "OK" && "$VALIDATION_WARN" != "VAL_FAIL" && "$VALIDATION_WARN" != "EMPTY_CSV" ]]; then
+        echo "⚠️  WARNING: Results may be unreliable — $VALIDATION_WARN"
+        echo ""
+    fi
+    echo ""
     echo "Full CSV has been saved. Email delivery pending Brevo sender verification."
     echo ""
     echo "--- END TELEGRAM MESSAGE ---"
