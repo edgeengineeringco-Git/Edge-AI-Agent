@@ -76,7 +76,9 @@ bash ../../edge-kuth-portal/handle-upload.sh \
 
 ### Step 5: Read Results
 Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
-Columns: `file, [lat, lon, [elevation,]] K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
+Columns: `file, latitude, longitude, elevation, K_percent, U_ppm, Th_ppm, K_from_PADK, K_from_PADU, K_from_PADTh, U_from_PADK, U_from_PADU, U_from_PADTh, Th_from_PADK, Th_from_PADU, Th_from_PADTh, w_PADK, w_PADU, w_PADTh, fit_r2`
+
+Location (lat/lon/elev) is extracted from the 3 lines before the footer of each .spc file. Missing values are blank.
 
 Processing metadata at: `../../edge-kuth-portal/jobs/{job_id}/processing-metadata.json`
 
