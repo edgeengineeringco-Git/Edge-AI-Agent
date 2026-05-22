@@ -1,0 +1,8 @@
+{
+  "job_id": "Galway_Granite_202605221131121",
+  "client_name": "Galway_Granite",
+  "email": "senan.aghdam@aol.com",
+  "status": "failed",
+  "error": "No .spc files found in job directory. Upload server was not running when form was submitted.",
+  "timestamp": "2026-05-22T11:31:21.000Z"
+}
