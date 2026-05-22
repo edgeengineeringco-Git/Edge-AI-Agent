@@ -42,6 +42,12 @@ Thumbs.db
 __pycache__/
 *.pyc
 
+# EDGE K/U/Th Portal — generated / ephemeral
+edge-kuth-portal/jobs/
+edge-kuth-portal/embedded_pads/
+edge-kuth-portal/pad_drive/
+edge-kuth-portal/output/
+
 # Temporary files
 tmp/
 temp/
