@@ -21,7 +21,18 @@ This job runs when a client submits the upload form. The webhook payload contain
 ## Execution Steps (Execute All Immediately)
 
 ### Step 1: Verify Job Directory and Files
-The upload server already created the job directory with .spc files. Verify they exist:
+The upload server already created the job directory with .spc files on the host at `/project/edge-kuth-portal/jobs/{job_id}/`. This workspace has `/project` mounted so host files are accessible. First, ensure files are available in the workspace:
+
+```bash
+# Copy files from host path if not already in workspace
+if [ ! -f "../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json" ]; then
+  echo "Job directory not found in workspace — copying from host path..."
+  mkdir -p ../../edge-kuth-portal/jobs/{job_id}
+  cp -r /project/edge-kuth-portal/jobs/{job_id}/* ../../edge-kuth-portal/jobs/{job_id}/
+fi
+```
+
+Then verify the .spc files exist:
 
 ```bash
 ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc
@@ -142,24 +153,50 @@ if [[ -z "$CREDENTIALS" ]]; then
   echo "Google Drive not configured — skipping"
 else
   # Parse token
-  GDRIVE_TOKEN=$(echo "$CREDENTIALS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null)
-  export GDRIVE_TOKEN
+  GDRIVE_TOKEN=$(echo "$CREDENTIALS" | python3 -c "
+import json, sys, urllib.request, urllib.parse
+cred = json.load(sys.stdin)
+at = cred.get('access_token')
+if at:
+    print(at)
+else:
+    inner = cred.get('credentials', cred)
+    rt = inner.get('refresh_token', '')
+    cid = inner.get('client_id', '') or inner.get('clientId', '')
+    cs = inner.get('client_secret', '') or inner.get('clientSecret', '')
+    if rt and cid and cs:
+        data = urllib.parse.urlencode({
+            'client_id': cid, 'client_secret': cs,
+            'refresh_token': rt, 'grant_type': 'refresh_token'
+        }).encode()
+        req = urllib.request.Request('https://oauth2.googleapis.com/token', data=data)
+        resp = json.loads(urllib.request.urlopen(req).read())
+        print(resp.get('access_token', ''))
+    elif inner.get('access_token'):
+        print(inner['access_token'])
+" 2>/dev/null || echo "")
+  
+  if [[ -z "$GDRIVE_TOKEN" ]]; then
+    echo "Google Drive token exchange failed — skipping Drive steps"
+  else
+    export GDRIVE_TOKEN
 
-  # 7a. Upload results CSV to Drive job folder
-  READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
-    --job-id {job_id} \
-    --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
-    --client {client_name})
-  FOLDER_ID=$(echo "$READS" | awk '{print $1}')
-  CSV_LINK=$(echo "$READS" | awk '{print $2}')
+    # 7a. Upload results CSV to Drive job folder
+    READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
+      --job-id {job_id} \
+      --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
+      --client {client_name})
+    FOLDER_ID=$(echo "$READS" | awk '{print $1}')
+    CSV_LINK=$(echo "$READS" | awk '{print $2}')
 
-  # 7b. Log job details to spreadsheet (Google Sheets)
-  bash ../../edge-kuth-portal/drive-utils.sh log-job \
-    --job-id {job_id} \
-    --client {client_name} \
-    --drive-folder "$FOLDER_ID" \
-    --result-link "$CSV_LINK" \
-    --status "complete"
+    # 7b. Log job details to spreadsheet (Google Sheets)
+    bash ../../edge-kuth-portal/drive-utils.sh log-job \
+      --job-id {job_id} \
+      --client {client_name} \
+      --drive-folder "$FOLDER_ID" \
+      --result-link "$CSV_LINK" \
+      --status "complete"
+  fi
 fi
 ```
 
