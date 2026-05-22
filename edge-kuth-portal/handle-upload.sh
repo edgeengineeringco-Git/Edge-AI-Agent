@@ -174,7 +174,7 @@ python3 -c "
 import numpy as np, json, sys, glob
 def _rsc(p):
     with open(p) as f:
-        lines = [l.rstrip(chr(92)+"n") for l in f]
+        lines = [l.rstrip() for l in f]
     c = []
     for raw in lines[2:2+1024]:
         try: c.append(float(raw.split()[0]))
@@ -232,7 +232,7 @@ python3 "$PYTHON_SCRIPT" \
     --pad-dir "$PAD_DIR" \
     --out "$RESULTS_CSV" \
     --roi-half-width-kev "$ROI_HALF_WIDTH" \
-    ${NORMALIZE_LT:-} \
+    ${NORMALIZE_LT:-}
 
 # ── Post-estimation validation ──────────────────────────────────────────────
 # Check results are physically plausible before sending Telegram.
