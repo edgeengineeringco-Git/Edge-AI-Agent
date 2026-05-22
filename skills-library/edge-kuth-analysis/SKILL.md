@@ -23,15 +23,6 @@ Optional flags:
 - `--roi-half-width-kev 25` — Set ROI half-width in keV (default: 20)
 - `--normalize-live-time` — Normalize counts by live time (counts per second)
 
-### Generating Test Data
-
-To create synthetic .spc files for testing:
-
-```bash
-python /home/coding-agent/workspace/edge-kuth-portal/generate_test_data.py \
-  --output-dir /tmp/kuth_test
-```
-
 ## How It Works
 
 1. **Energy calibration**: Quadratic fit using Geomon anchors maps channel → keV
@@ -59,7 +50,7 @@ Quality check: `fit_r2` should be > 0.90 for reliable results.
 - `PAD_Th_A.spc` — Thorium reference spectrum
 
 ### Local files
-Place them in `edge-kuth-portal/pad_reference/`. Generate test data with `generate_test_data.py` if needed.
+Place them in `edge-kuth-portal/pad_reference/`.
 
 ### Google Drive (when configured)
 The agent can fetch PADs from the Drive calibration folder (`1Eg04frfuGOFYbtqd-o4IMCpOaW6xoNc4`) using `edge-kuth-portal/drive-utils.sh download-pads` with a valid `GDRIVE_TOKEN`.

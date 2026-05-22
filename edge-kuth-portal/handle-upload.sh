@@ -323,11 +323,11 @@ print(f'Th: {min(th):.1f}–{max(th):.1f} ppm  (avg {sum(th)/n:.1f})')
 print(f'R²: {min(r2):.3f}–{max(r2):.3f}')
 " 2>/dev/null || true
     echo ""
-	    if [[ -n "$VALIDATION_WARN" && "$VALIDATION_WARN" != "OK" && "$VALIDATION_WARN" != "VAL_FAIL" && "$VALIDATION_WARN" != "EMPTY_CSV" ]]; then
-	        echo "⚠️  WARNING: Results may be unreliable — $VALIDATION_WARN"
-	        echo ""
-	    fi
-	    echo ""
+    if [[ -n "$VALIDATION_WARN" && "$VALIDATION_WARN" != "OK" && "$VALIDATION_WARN" != "VAL_FAIL" && "$VALIDATION_WARN" != "EMPTY_CSV" ]]; then
+        echo "⚠️  WARNING: Results may be unreliable — $VALIDATION_WARN"
+        echo ""
+    fi
+    echo ""
     echo "Full CSV has been saved. Email delivery pending Brevo sender verification."
     echo ""
     echo "--- END TELEGRAM MESSAGE ---"
