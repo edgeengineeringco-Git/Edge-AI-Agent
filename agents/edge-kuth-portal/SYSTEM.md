@@ -74,7 +74,9 @@ When triggered:
 ## Telegram CSV Delivery
 
 The results CSV includes ALL spectra with these columns:
-`file, [lat, lon, [elevation,]] K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
+`file, K_percent, U_ppm, Th_ppm, K_from_PADK, K_from_PADU, K_from_PADTh, U_from_PADK, U_from_PADU, U_from_PADTh, Th_from_PADK, Th_from_PADU, Th_from_PADTh, w_PADK, w_PADU, w_PADTh, fit_r2`
+
+The 3×3 contribution breakdown (`{element}_from_{pad}`) shows how each PAD contributes to each element concentration. The total for each element equals the sum of its three PAD contributions (e.g., `K_percent = K_from_PADK + K_from_PADU + K_from_PADTh`).
 
 R² is included per row — send everything, no filtering.
 

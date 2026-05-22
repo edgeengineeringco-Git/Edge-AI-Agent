@@ -1,0 +1,290 @@
+{
+  "workflow": {
+    "name": "K-U-Th Concentration Estimation via PAD Spectral Decomposition",
+    "version": "1.0.0",
+    "description": "Estimates K (%), U (ppm), Th (ppm) for each input .spc file using three PAD reference spectra and a 3x3 PAD composition matrix. Energy-calibrated with a quadratic Geomon fit. Features are ROI sums around key gamma lines. Concentrations are recovered via least-squares spectral unmixing.",
+    "script": "estimate_k_u_th_matrix.py",
+    "language": "Python 3",
+    "dependencies": ["numpy", "argparse", "csv", "pathlib"]
+  },
+
+  "cli_arguments": {
+    "--spectra": {
+      "required": true,
+      "type": "string",
+      "description": "Path to folder containing input .spc spectra files",
+      "example": "E:\\Calculations\\Q12\\spect_001021"
+    },
+    "--pad-dir": {
+      "required": true,
+      "type": "string",
+      "description": "Path to folder containing PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc",
+      "example": "C:\\Users\\mousavim\\Desktop\\D230A\\spectra"
+    },
+    "--out": {
+      "required": true,
+      "type": "string",
+      "description": "Output CSV file path (full path including filename)",
+      "example": "E:\\Calculations\\Output\\results.csv"
+    },
+    "--roi-half-width-kev": {
+      "required": false,
+      "type": "float",
+      "default": 20.0,
+      "description": "Half-width in keV of each ROI window centred on a reference gamma line"
+    },
+    "--normalize-live-time": {
+      "required": false,
+      "type": "flag",
+      "default": false,
+      "description": "If set, normalises all spectra (PAD and input) to counts-per-second using live time from SPC header"
+    }
+  },
+
+  "energy_calibration": {
+    "method": "quadratic_least_squares",
+    "description": "Fit E(ch) = c0 + c1*ch + c2*ch^2 using known anchor pairs. Validated Geomon anchors.",
+    "anchors": [
+      { "channel": 870.5, "energy_keV": 2611.4, "nuclide": "Tl-208 (Th-chain)" },
+      { "channel": 720.8, "energy_keV": 2162.3, "nuclide": "Tl-208 / Bi-212 (Th-chain)" },
+      { "channel": 31.6,  "energy_keV": 94.8,   "nuclide": "Low-energy reference" },
+      { "channel": 484.0, "energy_keV": 1451.9,  "nuclide": "K-40 adjacent reference" }
+    ],
+    "n_channels": 1024,
+    "output": "energy_keV array of length 1024"
+  },
+
+  "reference_gamma_lines": {
+    "K": {
+      "lines_keV": [1460.8],
+      "nuclide": "K-40",
+      "description": "Potassium-40 characteristic gamma line"
+    },
+    "U": {
+      "lines_keV": [351.9, 609.3, 1120.3, 1764.5],
+      "nuclide": "U-238 decay chain",
+      "description": "Pb-214 (351.9 keV), Bi-214 (609.3, 1120.3, 1764.5 keV)"
+    },
+    "Th": {
+      "lines_keV": [583.2, 911.1, 968.9, 2614.5],
+      "nuclide": "Th-232 decay chain",
+      "description": "Tl-208 (583.2, 2614.5 keV), Ac-228 (911.1, 968.9 keV)"
+    }
+  },
+
+  "roi_integration": {
+    "method": "sum_counts_in_window",
+    "window_type": "rectangular",
+    "half_width_keV": 20.0,
+    "feature_vector_length": 9,
+    "feature_order": [
+      "K_1460.8",
+      "U_351.9", "U_609.3", "U_1120.3", "U_1764.5",
+      "Th_583.2", "Th_911.1", "Th_968.9", "Th_2614.5"
+    ]
+  },
+
+  "pad_reference_spectra": {
+    "description": "Three PAD reference spectra used as spectral end-members for unmixing",
+    "files": {
+      "PAD_K_A": {
+        "filename": "PAD_K_A.spc",
+        "live_time_us": 586042739,
+        "clock_time_us": 590000000,
+        "live_time_s": 586.042739,
+        "n_channels": 1024,
+        "description": "High-potassium PAD reference. Dominant K-40 peak at 1460.8 keV."
+      },
+      "PAD_U_A": {
+        "filename": "PAD_U_A.spc",
+        "live_time_us": 596901497,
+        "clock_time_us": 600000000,
+        "live_time_s": 596.901497,
+        "n_channels": 1024,
+        "description": "High-uranium PAD reference. Strong Bi-214 lines at 609.3 and 1764.5 keV."
+      },
+      "PAD_Th_A": {
+        "filename": "PAD_Th_A.spc",
+        "live_time_us": 616578151,
+        "clock_time_us": 620000000,
+        "live_time_s": 616.578151,
+        "n_channels": 1024,
+        "description": "High-thorium PAD reference. Strong Tl-208 line at 2614.5 keV."
+      }
+    },
+    "spc_format": {
+      "line_1": "Live time (microseconds)",
+      "line_2": "Clock time (microseconds)",
+      "lines_3_to_1026": "Counts per channel (1024 channels total, one value per line)",
+      "last_line": "Footer metadata string (e.g. '11.4 0 3 0') - not used in processing"
+    }
+  },
+
+  "pad_composition_matrix": {
+    "description": "Hard-coded 3x3 matrix C_PAD where c = C_PAD @ w gives element concentrations from PAD weights. Rows = [K, U, Th], Columns = [PAD_K_A, PAD_U_A, PAD_Th_A]",
+    "rows": ["K_percent", "U_ppm", "Th_ppm"],
+    "columns": ["PAD_K_A", "PAD_U_A", "PAD_Th_A"],
+    "matrix": {
+      "K_percent": { "PAD_K_A": 6.85,  "PAD_U_A": 1.17,  "PAD_Th_A": 0.98   },
+      "U_ppm":     { "PAD_K_A": 1.38,  "PAD_U_A": 40.87, "PAD_Th_A": 1.90   },
+      "Th_ppm":    { "PAD_K_A": 2.54,  "PAD_U_A": 4.42,  "PAD_Th_A": 111.59 }
+    },
+    "units": {
+      "K": "percent (%)",
+      "U": "parts per million (ppm)",
+      "Th": "parts per million (ppm)"
+    }
+  },
+
+  "spectral_unmixing": {
+    "method": "lstsq_with_non_negative_clip",
+    "description": "Solves y_feats = M_ref @ w using numpy.linalg.lstsq, then clips w to >= 0.",
+    "M_ref_shape": "[9 x 3]",
+    "y_feats_shape": "[9]",
+    "w_shape": "[3]",
+    "w_labels": ["w_PADK", "w_PADU", "w_PADTh"],
+    "concentration_formula": "c = C_PAD @ w_hat  (shape [3])",
+    "goodness_of_fit": {
+      "metric": "R-squared (R2)",
+      "formula": "R2 = 1 - (SS_res / SS_tot)",
+      "SS_res": "sum( (y_feats - M_ref @ w_hat)^2 )",
+      "SS_tot": "sum( (y_feats - mean(y_feats))^2 )",
+      "edge_case": "R2 = 1.0 if SS_tot = 0 (all-zero feature vector)"
+    }
+  },
+
+  "output_csv": {
+    "filename_convention": "User-defined via --out argument",
+    "encoding": "utf-8",
+    "newline": "",
+    "columns": [
+      { "name": "file",          "type": "string", "description": "Input .spc filename (basename only)" },
+      { "name": "K_percent",     "type": "float",  "unit": "%",              "precision": 3, "description": "Estimated potassium concentration (total)" },
+      { "name": "U_ppm",         "type": "float",  "unit": "ppm",            "precision": 3, "description": "Estimated uranium concentration (total)" },
+      { "name": "Th_ppm",        "type": "float",  "unit": "ppm",            "precision": 3, "description": "Estimated thorium concentration (total)" },
+      { "name": "K_from_PADK",   "type": "float",  "unit": "%",              "precision": 4, "description": "K% contribution from PAD_K_A (6.85 * w_PADK)" },
+      { "name": "K_from_PADU",   "type": "float",  "unit": "%",              "precision": 4, "description": "K% contribution from PAD_U_A (1.17 * w_PADU)" },
+      { "name": "K_from_PADTh",  "type": "float",  "unit": "%",              "precision": 4, "description": "K% contribution from PAD_Th_A (0.98 * w_PADTh)" },
+      { "name": "U_from_PADK",   "type": "float",  "unit": "ppm",            "precision": 4, "description": "U ppm contribution from PAD_K_A (1.38 * w_PADK)" },
+      { "name": "U_from_PADU",   "type": "float",  "unit": "ppm",            "precision": 4, "description": "U ppm contribution from PAD_U_A (40.87 * w_PADU)" },
+      { "name": "U_from_PADTh",  "type": "float",  "unit": "ppm",            "precision": 4, "description": "U ppm contribution from PAD_Th_A (1.90 * w_PADTh)" },
+      { "name": "Th_from_PADK",  "type": "float",  "unit": "ppm",            "precision": 4, "description": "Th ppm contribution from PAD_K_A (2.54 * w_PADK)" },
+      { "name": "Th_from_PADU",  "type": "float",  "unit": "ppm",            "precision": 4, "description": "Th ppm contribution from PAD_U_A (4.42 * w_PADU)" },
+      { "name": "Th_from_PADTh", "type": "float",  "unit": "ppm",            "precision": 4, "description": "Th ppm contribution from PAD_Th_A (111.59 * w_PADTh)" },
+      { "name": "w_PADK",        "type": "float",  "unit": "dimensionless",  "precision": 4, "description": "Unmixing weight assigned to PAD_K_A" },
+      { "name": "w_PADU",        "type": "float",  "unit": "dimensionless",  "precision": 4, "description": "Unmixing weight assigned to PAD_U_A" },
+      { "name": "w_PADTh",       "type": "float",  "unit": "dimensionless",  "precision": 4, "description": "Unmixing weight assigned to PAD_Th_A" },
+      { "name": "fit_r2",        "type": "float",  "unit": "dimensionless",  "precision": 4, "description": "R-squared goodness of spectral fit" }
+    ]
+  },
+
+  "processing_pipeline": {
+    "steps": [
+      {
+        "step": 1,
+        "name": "Energy Calibration",
+        "function": "calibrate_energy_quadratic()",
+        "input": "channels [1024], ANCHORS_CH [4], ANCHORS_KEV [4]",
+        "output": "energy_keV array [1024]",
+        "runs": "once at startup"
+      },
+      {
+        "step": 2,
+        "name": "Load PAD Reference Spectra",
+        "function": "read_spc_counts_and_times(pad_dir / fname)",
+        "input": "PAD_K_A.spc, PAD_U_A.spc, PAD_Th_A.spc from --pad-dir",
+        "output": "pad_k_counts, pad_u_counts, pad_th_counts [1024 each] + live times",
+        "normalisation": "If --normalize-live-time: counts = counts / (live_us * 1e-6)",
+        "runs": "once at startup"
+      },
+      {
+        "step": 3,
+        "name": "Build PAD Feature Matrix M_ref",
+        "function": "build_feature_vector() x3 + np.stack(..., axis=1)",
+        "input": "Three PAD counts arrays + energy_keV + roi_half_width_kev",
+        "output": "M_ref [9 x 3]",
+        "runs": "once at startup"
+      },
+      {
+        "step": 4,
+        "name": "Discover Input Spectra",
+        "action": "sorted(spectra_dir.glob('*.spc'))",
+        "input": "--spectra folder path",
+        "output": "Sorted list of .spc Path objects",
+        "runs": "once at startup"
+      },
+      {
+        "step": 5,
+        "name": "Per-File Processing Loop",
+        "runs": "once per .spc file",
+        "sub_steps": [
+          {
+            "sub_step": "5a",
+            "name": "Read Input Spectrum",
+            "function": "read_spc_counts_and_times(spc)",
+            "output": "counts [1024], live_time_us"
+          },
+          {
+            "sub_step": "5b",
+            "name": "Optional Live-Time Normalisation",
+            "condition": "--normalize-live-time AND live_time_us > 0",
+            "formula": "counts = counts / (live_time_us * 1e-6)"
+          },
+          {
+            "sub_step": "5c",
+            "name": "Compute Feature Vector",
+            "function": "build_feature_vector(energy_keV, counts, hw)",
+            "output": "y_feats [9]"
+          },
+          {
+            "sub_step": "5d",
+            "name": "Spectral Unmixing",
+            "function": "fit_pad_weights(y_feats, M_ref)",
+            "output": "w_hat [3], r2 (scalar)"
+          },
+          {
+            "sub_step": "5e",
+            "name": "Concentration Conversion",
+            "formula": "c = C_PAD @ w_hat",
+            "output": "K_percent (float), U_ppm (float), Th_ppm (float)"
+          },
+          {
+            "sub_step": "5f",
+            "name": "Write CSV Row + Log to Console",
+            "output": "One row appended to output CSV; [OK] or [ERR] printed to stdout"
+          }
+        ]
+      },
+      {
+        "step": 6,
+        "name": "Finalise Output",
+        "action": "CSV file flushed and closed",
+        "log": "[CSV] Saved: <out_path>"
+      }
+    ]
+  },
+
+  "error_handling": {
+    "FileNotFoundError": "Raised if a PAD file does not exist at the given path",
+    "RuntimeError_spc_too_short": "Raised if a .spc file has fewer than header_lines + n_channels (1026) lines",
+    "non_numeric_channel_value": "Silently replaced with 0.0",
+    "per_file_exception": "Caught per file in try/except; logs [ERR] filename -> error message; processing continues",
+    "empty_spectra_folder": "Logs [WARN] and returns cleanly without writing CSV"
+  },
+
+  "example_commands": {
+    "windows_with_normalisation": "python estimate_k_u_th_matrix.py --spectra \"E:\\Calculations\\Q12\\spect_001021\" --pad-dir \"C:\\Users\\mousavim\\Desktop\\D230A\\spectra\" --out \"E:\\Calculations\\Output\\results.csv\" --normalize-live-time",
+    "linux_with_normalisation": "python estimate_k_u_th_matrix.py --spectra /data/spectra/Q12 --pad-dir /data/pads --out /data/output/results.csv --normalize-live-time",
+    "no_normalisation": "python estimate_k_u_th_matrix.py --spectra /data/spectra --pad-dir /data/pads --out /data/results.csv",
+    "custom_roi_width": "python estimate_k_u_th_matrix.py --spectra /data/spectra --pad-dir /data/pads --out /data/results.csv --roi-half-width-kev 15.0"
+  },
+
+  "notes": {
+    "live_time_units": "SPC header line 1 stores live time in microseconds. Conversion to seconds: live_us * 1e-6.",
+    "clock_time_unused": "SPC header line 2 (clock time) is parsed but not used in any calculation.",
+    "nnls_approximation": "numpy.linalg.lstsq followed by max(w,0) is a NNLS approximation. For strict NNLS use scipy.optimize.nnls instead.",
+    "pad_column_order": "Columns in M_ref and C_PAD must always be in the fixed order [PAD_K_A, PAD_U_A, PAD_Th_A].",
+    "recalibration": "Anchor channel values are detector-specific. Recalibrate ANCHORS_CH if using a different instrument.",
+    "embedded_pad_variant": "PAD files can be embedded as multiline string constants inside the script, removing the --pad-dir file dependency. See companion DeepSeek embedding prompt."
+  }
+}

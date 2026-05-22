@@ -76,7 +76,9 @@ bash ../../edge-kuth-portal/handle-upload.sh \
 
 ### Step 5: Read Results
 Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
-Columns: `file, [lat, lon, [elevation,]] K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
+Columns: `file, K_percent, U_ppm, Th_ppm, K_from_PADK, K_from_PADU, K_from_PADTh, U_from_PADK, U_from_PADU, U_from_PADTh, Th_from_PADK, Th_from_PADU, Th_from_PADTh, w_PADK, w_PADU, w_PADTh, fit_r2`
+
+The 3×3 contribution matrix (`{element}_from_{pad}`) breaks down each element total by PAD source. E.g., `K_percent = K_from_PADK + K_from_PADU + K_from_PADTh`.
 
 Processing metadata at: `../../edge-kuth-portal/jobs/{job_id}/processing-metadata.json`
 

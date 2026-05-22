@@ -140,7 +140,11 @@ def main():
 
     with out_csv.open("w", newline="", encoding="utf-8") as f_out:
         writer = csv.writer(f_out)
-        writer.writerow(["file", "K_percent", "U_ppm", "Th_ppm", "w_PADK", "w_PADU", "w_PADTh", "fit_r2"])
+        writer.writerow(["file", "K_percent", "U_ppm", "Th_ppm",
+                         "K_from_PADK", "K_from_PADU", "K_from_PADTh",
+                         "U_from_PADK", "U_from_PADU", "U_from_PADTh",
+                         "Th_from_PADK", "Th_from_PADU", "Th_from_PADTh",
+                         "w_PADK", "w_PADU", "w_PADTh", "fit_r2"])
 
         for spc in spc_files:
             try:
@@ -154,7 +158,15 @@ def main():
                 c = C_PAD @ w_hat
                 K_percent, U_ppm, Th_ppm = c.tolist()
 
+                # 3x3 contribution breakdown: element-wise C_PAD[i,j] * w_hat[j]
+                # Rows: K%, Uppm, Thppm  |  Cols: PAD_K, PAD_U, PAD_Th
+                contrib = C_PAD * w_hat[np.newaxis, :]  # shape (3,3)
+                contrib_flat = contrib.flatten()         # row-major: 9 values
+
                 writer.writerow([spc.name, f"{K_percent:.3f}", f"{U_ppm:.3f}", f"{Th_ppm:.3f}",
+                                 f"{contrib_flat[0]:.4f}", f"{contrib_flat[1]:.4f}", f"{contrib_flat[2]:.4f}",
+                                 f"{contrib_flat[3]:.4f}", f"{contrib_flat[4]:.4f}", f"{contrib_flat[5]:.4f}",
+                                 f"{contrib_flat[6]:.4f}", f"{contrib_flat[7]:.4f}", f"{contrib_flat[8]:.4f}",
                                  f"{w_hat[0]:.4f}", f"{w_hat[1]:.4f}", f"{w_hat[2]:.4f}", f"{r2:.4f}"])
                 print(f"[OK] {spc.name}: K={K_percent:.3f}%  U={U_ppm:.3f} ppm  Th={Th_ppm:.3f} ppm  (R^2={r2:.3f})")
             except Exception as e:
