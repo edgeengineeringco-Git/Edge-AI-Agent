@@ -110,14 +110,20 @@ EOF
 
   payload="${payload}}"
 
+  # Write payload to temp file to avoid "Argument list too long" on large attachments
+  local payload_file
+  payload_file=$(mktemp /tmp/brevo_payload_XXXXXX.json)
+  echo "$payload" > "$payload_file"
+
   local response http_code
   http_code=$(curl -s -o /tmp/brevo_response.txt -w "%{http_code}" \
     "https://api.brevo.com/v3/smtp/email" \
     -X POST \
     -H "api-key: ${API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "$payload" 2>/dev/null)
+    -d "@${payload_file}" 2>/dev/null)
   response=$(cat /tmp/brevo_response.txt 2>/dev/null || echo "")
+  rm -f "$payload_file"
 
   if [[ "$http_code" == "201" || "$http_code" == "200" ]]; then
     echo "[EMAIL] Sent successfully (${http_code})"
@@ -164,14 +170,20 @@ EOF
 
   payload="${payload}}"
 
+  # Write payload to temp file to avoid "Argument list too long" on large attachments
+  local payload_file
+  payload_file=$(mktemp /tmp/sg_payload_XXXXXX.json)
+  echo "$payload" > "$payload_file"
+
   local response http_code
   http_code=$(curl -s -o /tmp/sg_response.txt -w "%{http_code}" \
     "https://api.sendgrid.com/v3/mail/send" \
     -X POST \
     -H "Authorization: Bearer ${API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "$payload" 2>/dev/null)
+    -d "@${payload_file}" 2>/dev/null)
   response=$(cat /tmp/sg_response.txt 2>/dev/null || echo "")
+  rm -f "$payload_file"
 
   if [[ "$http_code" == "202" ]]; then
     echo "[EMAIL] Sent successfully (202)"
