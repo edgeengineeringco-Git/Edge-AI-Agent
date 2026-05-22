@@ -344,6 +344,8 @@ The .spc files are already saved to edge-kuth-portal/jobs/${metadata.job_id}/spe
       const body = JSON.stringify({
         agent_job: jobDesc,
         scope: "agents/edge-kuth-portal",
+        agent_backend: "claude-code",
+        llm_model: "deepseek-chat",
       });
       const headers = { "Content-Type": "application/json" };
       if (apiKey) headers["x-api-key"] = apiKey;
