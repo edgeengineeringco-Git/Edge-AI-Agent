@@ -159,6 +159,9 @@
     "newline": "",
     "columns": [
       { "name": "file",          "type": "string", "description": "Input .spc filename (basename only)" },
+      { "name": "latitude",      "type": "float",  "unit": "decimal degrees",  "precision": 10, "description": "Latitude from .spc trailing metadata (blank if missing)" },
+      { "name": "longitude",     "type": "float",  "unit": "decimal degrees",  "precision": 10, "description": "Longitude from .spc trailing metadata (blank if missing)" },
+      { "name": "elevation",     "type": "float",  "unit": "m",                "precision": 1,  "description": "Elevation from .spc trailing metadata (blank if missing)" },
       { "name": "K_percent",     "type": "float",  "unit": "%",              "precision": 3, "description": "Estimated potassium concentration (total)" },
       { "name": "U_ppm",         "type": "float",  "unit": "ppm",            "precision": 3, "description": "Estimated uranium concentration (total)" },
       { "name": "Th_ppm",        "type": "float",  "unit": "ppm",            "precision": 3, "description": "Estimated thorium concentration (total)" },

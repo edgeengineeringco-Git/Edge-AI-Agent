@@ -50,6 +50,31 @@ def first_numeric_token_or_none(line: str):
             continue
     return None
 
+def extract_location_from_spc(path: Path):
+    """Extract latitude, longitude, elevation from the 3 lines before the final line of an .spc file.
+
+    File structure for measurement .spc files:
+        lines[-4] = latitude
+        lines[-3] = longitude
+        lines[-2] = elevation
+        lines[-1] = footer string (ignored)
+
+    Returns:
+        (lat, lon, elev) as floats, or None for any that are missing/invalid.
+    """
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as f:
+            lines = [ln.rstrip("\n") for ln in f]
+        # Need at least header_lines + n_channels + 4 trailing lines
+        if len(lines) < 1030:
+            return None, None, None
+        lat = first_numeric_token_or_none(lines[-4].strip())
+        lon = first_numeric_token_or_none(lines[-3].strip())
+        elev = first_numeric_token_or_none(lines[-2].strip())
+        return lat, lon, elev
+    except Exception:
+        return None, None, None
+
 def read_spc_counts_and_times(path: Path, header_lines: int = 2, n_channels: int = 1024):
     """Return counts array and live_time_us (float or None)."""
     if not path.exists():
@@ -140,7 +165,8 @@ def main():
 
     with out_csv.open("w", newline="", encoding="utf-8") as f_out:
         writer = csv.writer(f_out)
-        writer.writerow(["file", "K_percent", "U_ppm", "Th_ppm",
+        writer.writerow(["file", "latitude", "longitude", "elevation",
+                         "K_percent", "U_ppm", "Th_ppm",
                          "K_from_PADK", "K_from_PADU", "K_from_PADTh",
                          "U_from_PADK", "U_from_PADU", "U_from_PADTh",
                          "Th_from_PADK", "Th_from_PADU", "Th_from_PADTh",
@@ -149,6 +175,13 @@ def main():
         for spc in spc_files:
             try:
                 counts, live_us = read_spc_counts_and_times(spc)
+                lat, lon, elev = extract_location_from_spc(spc)
+
+                # Format location for CSV, blank if missing
+                lat_str = f"{lat:.10f}" if lat is not None else ""
+                lon_str = f"{lon:.10f}" if lon is not None else ""
+                elev_str = f"{elev:.1f}" if elev is not None else ""
+
                 if args.normalize_live_time and live_us and live_us > 0:
                     counts = counts / (live_us * 1e-6)
                 y_feats = build_feature_vector(energy_keV, counts, hw)
@@ -163,7 +196,8 @@ def main():
                 contrib = C_PAD * w_hat[np.newaxis, :]  # shape (3,3)
                 contrib_flat = contrib.flatten()         # row-major: 9 values
 
-                writer.writerow([spc.name, f"{K_percent:.3f}", f"{U_ppm:.3f}", f"{Th_ppm:.3f}",
+                writer.writerow([spc.name, lat_str, lon_str, elev_str,
+                                 f"{K_percent:.3f}", f"{U_ppm:.3f}", f"{Th_ppm:.3f}",
                                  f"{contrib_flat[0]:.4f}", f"{contrib_flat[1]:.4f}", f"{contrib_flat[2]:.4f}",
                                  f"{contrib_flat[3]:.4f}", f"{contrib_flat[4]:.4f}", f"{contrib_flat[5]:.4f}",
                                  f"{contrib_flat[6]:.4f}", f"{contrib_flat[7]:.4f}", f"{contrib_flat[8]:.4f}",
