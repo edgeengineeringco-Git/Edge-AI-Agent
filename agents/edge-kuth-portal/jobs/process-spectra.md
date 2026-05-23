@@ -27,24 +27,24 @@ First, read the webhook payload to get the expected file list:
 
 ```bash
 # Read webhook payload to get expected .spc filenames
-if [ ! -f "../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json" ]; then
+if [ ! -f "/home/coding-agent/jobs/{job_id}/webhook-payload.json" ]; then
   echo "ERROR: webhook-payload.json not found — cannot verify files"
   echo "Stopping: no files to process"
   node skills/agent-job-dm/agent-job-dm.js send --broadcast "ERROR: Job {job_id} — webhook-payload.json not found. Pipeline stopped."
   exit 1
 fi
 
-webhook_data=$(cat ../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json)
+webhook_data=$(cat /home/coding-agent/jobs/{job_id}/webhook-payload.json)
 expected_files=$(echo "$webhook_data" | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('spectra_files',[])))")
 
 echo "Webhook payload found. Expected $expected_files .spc files."
 ```
 
-Then locate the .spc files. The Docker container has `/project/edge-kuth-portal/jobs/` mounted, so files are directly accessible:
+Then locate the .spc files. The Docker container has the jobs directory bind-mounted at `/home/coding-agent/jobs/`, so files are directly accessible:
 
 ```bash
 # List actual .spc files in the job directory
-actual_files=$(ls ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc 2>/dev/null || echo "")
+actual_files=$(ls /home/coding-agent/jobs/{job_id}/spectra/*.spc 2>/dev/null || echo "")
 actual_count=$(echo "$actual_files" | grep -c '\.spc$' 2>/dev/null || echo 0)
 ```
 
@@ -53,9 +53,9 @@ actual_count=$(echo "$actual_files" | grep -c '\.spc$' 2>/dev/null || echo 0)
 ```bash
 # Check 1: Files must exist
 if [ "$actual_count" -eq 0 ]; then
-  echo "FATAL: No .spc files found at ../../edge-kuth-portal/jobs/{job_id}/spectra/"
+  echo "FATAL: No .spc files found at /home/coding-agent/jobs/{job_id}/spectra/"
   echo "Job directory contents:"
-  ls -la ../../edge-kuth-portal/jobs/{job_id}/ 2>/dev/null || echo "  (directory does not exist)"
+  ls -la /home/coding-agent/jobs/{job_id}/ 2>/dev/null || echo "  (directory does not exist)"
   node skills/agent-job-dm/agent-job-dm.js send --broadcast "FATAL: Job {job_id} — zero .spc files found in job directory. Pipeline stopped. No data was processed."
   exit 1
 fi
@@ -69,7 +69,7 @@ if [ "$actual_count" -ne "$expected_files" ]; then
 fi
 
 # Check 3: Files must be fresh (modified within the last hour)
-stale_files=$(find ../../edge-kuth-portal/jobs/{job_id}/spectra/*.spc -mmin -60 2>/dev/null | wc -l)
+stale_files=$(find /home/coding-agent/jobs/{job_id}/spectra/*.spc -mmin -60 2>/dev/null | wc -l)
 if [ "$stale_files" -ne "$actual_count" ]; then
   echo "FATAL: Some .spc files are too old (not modified in the last hour)"
   echo "This means stale files from a previous job may be present. STOPPING."
@@ -111,7 +111,7 @@ When `--normalize-live-time` is not set, **raw counts** are used with no preproc
 ```bash
 # Build flags from webhook payload
 NORM_LT_FLAG=""
-if python3 -c "import json; d=json.load(open('../../edge-kuth-portal/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
+if python3 -c "import json; d=json.load(open('/home/coding-agent/jobs/{job_id}/webhook-payload.json')); exit(0 if d.get('normalize_live_time') else 1)" 2>/dev/null; then
   NORM_LT_FLAG="--normalize-live-time"
 fi
 
@@ -124,12 +124,12 @@ bash ../../edge-kuth-portal/handle-upload.sh \
 ```
 
 ### Step 5: Read Results
-Results CSV at: `../../edge-kuth-portal/jobs/{job_id}/results.csv`
+Results CSV at: `/home/coding-agent/jobs/{job_id}/results.csv`
 Columns: `file, latitude, longitude, elevation, K_percent, U_ppm, Th_ppm, w_PADK, w_PADU, w_PADTh, fit_r2`
 
 Location (lat/lon/elev) is extracted from the 3 lines before the footer of each .spc file. Missing values are blank.
 
-Processing metadata at: `../../edge-kuth-portal/jobs/{job_id}/processing-metadata.json`
+Processing metadata at: `/home/coding-agent/jobs/{job_id}/processing-metadata.json`
 
 R² is included for every spectrum — no review or filtering, include everything.
 
@@ -142,7 +142,7 @@ The upload server already sent a confirmation email — this is the follow-up wi
 # Read CSV to build summary stats
 SUMMARY=$(python3 -c "
 import csv
-with open('../../edge-kuth-portal/jobs/{job_id}/results.csv') as f:
+with open('/home/coding-agent/jobs/{job_id}/results.csv') as f:
     rows = list(csv.DictReader(f))
 n = len(rows)
 k = [float(r['K_percent']) for r in rows]
@@ -176,7 +176,7 @@ bash ../../edge-kuth-portal/send-email.sh \
   --to "{email}" \
   --subject "EDGE K/U/Th Portal — Results Ready ({job_id})" \
   --body "$EMAIL_BODY" \
-  --attach ../../edge-kuth-portal/jobs/{job_id}/results.csv
+  --attach /home/coding-agent/jobs/{job_id}/results.csv
 ```
 
 If `SENDGRID_API_KEY` is not configured, this step skips gracefully.
@@ -222,7 +222,7 @@ else:
     # 7a. Upload results CSV to Drive job folder
     READS=$(bash ../../edge-kuth-portal/drive-utils.sh upload-results \
       --job-id {job_id} \
-      --csv ../../edge-kuth-portal/jobs/{job_id}/results.csv \
+      --csv /home/coding-agent/jobs/{job_id}/results.csv \
       --client {client_name})
     FOLDER_ID=$(echo "$READS" | awk '{print $1}')
     CSV_LINK=$(echo "$READS" | awk '{print $2}')
@@ -266,7 +266,7 @@ Full CSV has been saved. Email delivery pending Brevo sender verification.
 
 ### Step 9: Archive
 ```bash
-cp ../../edge-kuth-portal/jobs/{job_id}/results.csv ../../edge-kuth-portal/output/{job_id}_results.csv
+cp /home/coding-agent/jobs/{job_id}/results.csv ../../edge-kuth-portal/output/{job_id}_results.csv
 ```
 
 ## Critical Rules — Read and Obey
