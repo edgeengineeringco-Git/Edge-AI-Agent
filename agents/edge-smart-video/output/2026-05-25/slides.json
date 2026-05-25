@@ -1,40 +1,40 @@
 [
   {
     "type": "title",
-    "headline": "Real-Time Soil Specification via Portable XRF",
-    "subtitle": "Geotechnical Engineering | EDGE Engineers",
-    "sector": "Geotechnical Engineering"
+    "headline": "Geo-Intelligence Platform for Mineral Exploration",
+    "subtitle": "Energy Resources | EDGE Engineers",
+    "sector": "Energy Resources"
   },
   {
     "type": "content",
-    "headline": "The Problem: Lab Delays Cost Millions",
+    "headline": "The Problem: Fragmented Exploration Data",
     "bullets": [
-      "Soil samples sent to labs take days for results \u2014 delaying critical path decisions",
-      "Idle plant, redesign cycles, and avoidable risk burn through project budgets",
-      "Portable XRF has been field-proven for years, yet most projects still rely on slow lab workflows"
+      "Satellite imagery, geochem surveys, and drilling data spread across six different platforms",
+      "Critical signals buried in spreadsheet noise \u2014 weeks of interpretation time lost per target",
+      "Desktop GIS silos prevent real-time collaboration between field teams and office interpreters"
     ]
   },
   {
     "type": "content",
-    "headline": "The EDGE Solution: Real-Time XRF",
+    "headline": "The EDGE Solution: Unified Intelligence",
     "bullets": [
-      "Simultaneous multi-element analysis with zero sample preparation \u2014 results in minutes, not days",
-      "Data feeds directly into your geotechnical model while the rig is still turning",
-      "Deployable workflow on major infrastructure projects \u2014 not a pilot, proven at scale"
+      "AI-powered target generation cross-referencing geology, geochem, and geophysics in one view",
+      "Satellite-derived alteration mapping updated weekly \u2014 not quarterly",
+      "Cloud-native platform eliminating six-figure software CAPEX with subscription access"
     ]
   },
   {
     "type": "content",
-    "headline": "Measurable Impact for Project Directors",
+    "headline": "Measurable Impact for Exploration Teams",
     "bullets": [
-      "Faster decisions on excavation class and material handling \u2014 cut 72-hour waits to minutes",
-      "Reduce laboratory dependency and logistics overhead from your critical path",
-      "Audit-ready digital records from day one, regulator-ready before the next inspection"
+      "40% faster target generation cycles reported by early adopters",
+      "Significantly lower data management overhead and software costs",
+      "Collaborative workspace where field and office work from the same live data"
     ]
   },
   {
     "type": "cta",
-    "headline": "Can you still afford to wait?",
+    "headline": "Is your exploration team keeping pace?",
     "url": "www.edgeengineers.net",
     "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
   }
