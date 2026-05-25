@@ -2,235 +2,287 @@
 
 Execute the following pipeline sequentially. Each phase builds on the previous.
 
+**Sheet ID:** `1xeLg8mnRrgF6jlW97JcJDk1ODcbsdbaydQjohaVf5x8`
+**Sheet Name:** `Edge_topics_sample`
+
+---
+
 ## Phase 0: Setup
 
-1. Create dated output directory: `output/YYYY-MM-DD-topic-slug/`
-2. Fetch secrets:
-   - `SHOTSTACK_API_KEY` — for video rendering (optional, HTML fallback works without it)
-   - `GEMINI_API_KEY` — for Nano Banana image backend (optional, Pollinations is free)
-   - `GOOGLE_SHEETS_ID` — content tracker sheet ID (optional, use local fallback)
-3. Check Python3 available: `which python3`
+1. Get secrets via `agent-job-secrets`:
+   - `GOOGLE_DRIVE_OAUTH` — for Google Sheets access (already in env for scoped agent jobs)
+   - `GEMINI_API_KEY` — for Nano Banana images + Veo video (set in admin panel)
+   - `SHOTSTACK_API_KEY` — optional, for MP4 video output
 
-## Phase 1: Fetch Topic
+2. Create dated output directory:
+   ```bash
+   DATE_DIR=$(date +%Y-%m-%d)
+   mkdir -p "output/$DATE_DIR"
+   ```
 
-### Option A: Google Sheets (preferred if GOOGLE_SHEETS_ID is available)
+3. Verify Python3 and scripts:
+   ```bash
+   python3 scripts/generate_images.py --help > /dev/null && echo "OK"
+   python3 scripts/generate_video.py --help > /dev/null && echo "OK"
+   python3 scripts/compose_video.py --help > /dev/null && echo "OK"
+   python3 scripts/sheets_handler.py --help > /dev/null && echo "OK"
+   ```
 
-Use Google Sheets API to fetch the first row where Status = "Pending":
+---
+
+## Phase 1: Fetch Pending Topic
+
+Run the sheets handler to find the next pending topic:
 
 ```bash
-# Alternative: Export sheet as CSV
-curl -sL "https://docs.google.com/spreadsheets/d/$GOOGLE_SHEETS_ID/export?format=csv" \
-  -o /tmp/edge_topics.csv
+python3 scripts/sheets_handler.py read \
+  --sheet-id 1xeLg8mnRrgF6jlW97JcJDk1ODcbsdbaydQjohaVf5x8 \
+  --find-pending \
+  --output-dir "output/$DATE_DIR"
 ```
 
-Parse the CSV to find the first Pending row. Extract: ID, Topic, Sector, Notes.
+This saves `output/$DATE_DIR/topic.json`. Read it:
 
-### Option B: Local file fallback
+```bash
+TOPIC_ID=$(python3 -c "import json; d=json.load(open('output/$DATE_DIR/topic.json')); print(d['id'])")
+TOPIC=$(python3 -c "import json; d=json.load(open('output/$DATE_DIR/topic.json')); print(d['topic'])")
+SECTOR=$(python3 -c "import json; d=json.load(open('output/$DATE_DIR/topic.json')); print(d['sector'])")
+SHEET_ROW=$(python3 -c "import json; d=json.load(open('output/$DATE_DIR/topic.json')); print(d.get('sheet_row', ''))")
 
-Check if `input/topics.csv` exists. If not, create a demo entry:
-
-```csv
-ID,Topic,Sector,Status,Notes
-001,Advancements in Autonomous Drilling Systems,Civil Automation,Pending,
-002,AI-Powered Geotechnical Analysis,Geo-Engineering,Pending,
+echo "Topic: $TOPIC_ID - $TOPIC ($SECTOR)"
 ```
 
-Pick the first Pending entry.
+If no pending topic found, STOP and report.
 
-### Validate
-
-- Topic and Sector must be non-empty strings
-- If no Pending topics found, report and exit
+---
 
 ## Phase 2: Generate LinkedIn Post Text
 
-Using your LLM capabilities, generate a LinkedIn post about the topic.
+Using LLM capabilities, generate a LinkedIn post.
 
 ### Post Requirements
 
-| Element | Specification |
-|---------|--------------|
-| **Hook** | First line must stop the scroll — bold claim, surprising fact, or provocative question |
+| Aspect | Specification |
+|--------|--------------|
+| **Hook** | First line stops the scroll — bold claim, surprising fact, provocative question |
 | **Structure** | 2-3 short punchy paragraphs |
-| **Business value** | Specific benefits (cost savings, time reduction, accuracy improvement, risk mitigation) |
-| **Tone** | C-suite / Project Director / Engineering Manager audience. Thought leader, not marketer |
+| **Business value** | Specific: cost savings, time reduction, accuracy improvement, risk mitigation |
+| **Tone** | C-suite / Project Director / Engineering Manager. Thought leader, not marketer |
 | **Length** | Max 250 words |
 | **Emojis** | Strategic only, max 6. Not decorative. |
 | **CTA** | Visit www.edgeengineers.net |
 | **Hashtags** | Exactly 4 relevant hashtags at the end |
 
-### Also Generate Image Prompts
+Save the post text:
 
-Create 4 image prompts for the video slides:
-
-| Slide | Style |
-|-------|-------|
-| **Slide 1** | Professional engineering/technology background related to the sector |
-| **Slide 2** | Infographic/technical diagram style about the specific topic |
-| **Slide 3** | Team/people working on the technology |
-| **CTA Slide** | Abstract tech network background with EDGE branding colors (dark + cyan) |
-
-Save the post text and image prompts to a content file:
 ```bash
-cat > "output/$DATE_DIR/post_content.json" << 'CONTENT_EOF'
+cat > "output/$DATE_DIR/post.json" << 'EOF'
 {
-  "id": "TOPIC_ID",
-  "topic": "TOPIC",
-  "sector": "SECTOR",
-  "post_text": "FULL_POST_TEXT",
-  "image_prompts": {
-    "slide1": "PROMPT_1",
-    "slide2": "PROMPT_2",
-    "slide3": "PROMPT_3",
-    "cta": "PROMPT_CTA"
-  }
+  "id": "TOPIC_ID_REPLACE",
+  "topic": "TOPIC_REPLACE",
+  "sector": "SECTOR_REPLACE",
+  "post_text": "FULL POST TEXT HERE\n\nwww.edgeengineers.net\n\n#Hashtag1 #Hashtag2 #Hashtag3 #Hashtag4"
 }
-CONTENT_EOF
+EOF
 ```
+
+(Replace placeholders with actual values.)
+
+---
 
 ## Phase 3: Generate Images
 
-Run the image generation script:
+### Option A: Pollinations.ai (free, no key needed)
 
 ```bash
-# Default: Pollinations.ai (free, no API key needed)
 python3 scripts/generate_images.py \
   --topic "$TOPIC" \
   --sector "$SECTOR" \
   --output-dir "output/$DATE_DIR" \
   --backend pollinations
-
-# For better quality (if GEMINI_API_KEY is available):
-# python3 scripts/generate_images.py \
-#   --topic "$TOPIC" \
-#   --sector "$SECTOR" \
-#   --output-dir "output/$DATE_DIR" \
-#   --backend nano-banana \
-#   --gemini-key "$GEMINI_API_KEY"
 ```
 
-### Verify Images
-
-- Check each PNG file was created (> 2KB)
-- If any image failed, note it but continue (the video composition handles missing images)
-
-## Phase 4: Compose Video/Render
-
-Run the video composition script:
+### Option B: Nano Banana (Gemini, better quality)
 
 ```bash
-# With Shotstack (needs SHOTSTACK_API_KEY)
+# Need GEMINI_API_KEY in env
+python3 scripts/generate_images.py \
+  --topic "$TOPIC" \
+  --sector "$SECTOR" \
+  --output-dir "output/$DATE_DIR" \
+  --backend nano-banana \
+  --gemini-key "$GEMINI_API_KEY"
+```
+
+Backend options:
+- `pollinations` — Free, no key, variable quality
+- `nano-banana` — Gemini 2.5 Flash Image (60/min free tier)
+- `nano-banana-2` — Gemini 3.1 Flash Image Preview (higher quality)
+- `nano-banana-pro` — Gemini 3 Pro Image (best quality, paid)
+
+### Verify
+
+Check `output/$DATE_DIR/image_manifest.json` has at least 2/4 success.
+
+---
+
+## Phase 4: Generate Veo 3.1 AI Video (Optional — skip if no GEMINI_API_KEY)
+
+This generates a short AI video clip for use as background/visual content.
+
+```bash
+if [ -n "$GEMINI_API_KEY" ]; then
+  python3 scripts/generate_video.py \
+    --topic "$TOPIC" \
+    --sector "$SECTOR" \
+    --model veo-3.1-lite-generate-preview \
+    --duration 5 \
+    --output-dir "output/$DATE_DIR" \
+    --gemini-key "$GEMINI_API_KEY"
+fi
+```
+
+Model options (cheapest first):
+- `veo-3.1-lite-generate-preview` — Cost-effective Lite
+- `veo-3.1-fast-generate-preview` — Faster, lower quality
+- `veo-3.1-generate-preview` — Standard quality
+
+Note: Veo generation takes 30-120 seconds. Check `output/$DATE_DIR/veo_result.json` for status.
+
+---
+
+## Phase 5: Compose Video
+
+```bash
+VEO_FLAG=""
+if [ -f "output/$DATE_DIR/veo_video.mp4" ]; then
+  VEO_FLAG="--veo-video output/$DATE_DIR/veo_video.mp4"
+fi
+
+SHOTSTACK_FLAG=""
+if [ -n "$SHOTSTACK_API_KEY" ]; then
+  SHOTSTACK_FLAG="--shotstack-key $SHOTSTACK_API_KEY"
+fi
+
 python3 scripts/compose_video.py \
   --manifest "output/$DATE_DIR/image_manifest.json" \
   --sector "$SECTOR" \
   --topic "$TOPIC" \
-  --post-text "$POST_TEXT" \
-  --shotstack-key "$SHOTSTACK_API_KEY" \
-  --output-dir "output/$DATE_DIR"
-
-# Without Shotstack (creates HTML slideshow instead)
-# python3 scripts/compose_video.py \
-#   --manifest "output/$DATE_DIR/image_manifest.json" \
-#   --sector "$SECTOR" \
-#   --topic "$TOPIC" \
-#   --post-text "$POST_TEXT" \
-#   --output-dir "output/$DATE_DIR" \
-#   --force-html
+  --post-text "$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/post.json'))['post_text'])" 2>/dev/null || echo 'Post not saved')" \
+  --output-dir "output/$DATE_DIR" \
+  $SHOTSTACK_FLAG \
+  $VEO_FLAG
 ```
 
-### Check result
+---
 
-Read `output/$DATE_DIR/video_result.json` to confirm:
-- `video_url` (if Shotstack was used) or
-- `html_slideshow` (HTML fallback path)
+## Phase 6: Update Sheet Status
 
-## Phase 5: Create Output Summary
-
-Create a comprehensive summary file:
+Update the topic status in Google Sheets:
 
 ```bash
-cat > "output/$DATE_DIR/summary.md" << 'EOF'
+POST_TEXT=$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/post.json'))['post_text'])" 2>/dev/null || echo "")
+
+python3 scripts/sheets_handler.py update \
+  --sheet-id 1xeLg8mnRrgF6jlW97JcJDk1ODcbsdbaydQjohaVf5x8 \
+  --topic-id "$TOPIC_ID" \
+  --row "$SHEET_ROW" \
+  --status "Draft Ready" \
+  --post-text "$POST_TEXT"
+```
+
+---
+
+## Phase 7: Create Summary and Deliver
+
+### Summary file
+
+```bash
+cat > "output/$DATE_DIR/summary.md" << SUMMARYEOF
 # EDGE Smart Video — Content Summary
 
-**Date:** YYYY-MM-DD
-**Topic:** [Topic]
-**Sector:** [Sector]
-**ID:** [Topic ID]
+**Date:** $(date +%Y-%m-%d)
+**Topic:** $TOPIC
+**Sector:** $SECTOR
+**Sheet ID:** $TOPIC_ID
 
 ## LinkedIn Post
 
-[Full post text]
+[See post.json]
 
-## Video
+## Assets
 
-- Shotstack URL: [URL or N/A]
-- HTML Slideshow: [path or N/A]
-- Images: slide1.png, slide2.png, slide3.png, cta.png
+- Images: slide1, slide2, slide3, cta
+- Veo AI Video: veo_video.mp4
+- Shotstack Video URL: [check video_result.json]
+- HTML Slideshow: slideshow.html
 
 ## Status
 
-Ready for review.
-EOF
+Draft Ready — review and post on LinkedIn.
+SUMMARYEOF
 ```
 
-## Phase 6: Deliver
-
-### Update topic status
-
-If using Google Sheets, mark the topic as "Draft Ready" (or record locally).
-
-### Send via Telegram
-
-Use the `agent-job-dm` skill to notify admins:
+### Telegram notification
 
 ```bash
+POST_TEXT_SNIPPET=$(echo "$POST_TEXT" | head -5 | cut -c1-200)
+
 node skills/agent-job-dm/agent-job-dm.js send --broadcast \
-  "🛰 *EDGE Video Draft Ready for Review*
+  "🛰 *EDGE Smart Video — Draft Ready*
 ━━━━━━━━━━━━━━━━━━━━━
-📌 Topic: $TOPIC
-🏭 Sector: $SECTOR
+📌 *Topic:* $TOPIC
+🏭 *Sector:* $SECTOR
+🆔 *ID:* $TOPIC_ID
 ━━━━━━━━━━━━━━━━━━━━━
 
-📝 *Post:*
-$POST_TEXT
+📝 *Post preview:*
+$POST_TEXT_SNIPPET...
 
 ━━━━━━━━━━━━━━━━━━━━━
-🎬 *Video:* $VIDEO_URL
+📁 Output: \`output/$(date +%Y-%m-%d)/\`
 🌐 www.edgeengineers.net
-━━━━━━━━━━━━━━━━━━━━━
-Reply:
-✅ APPROVE
-✏️ IMPROVE : suggestion
-❌ REJECT : reason"
+
+Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 ```
 
-## Phase 7: Report
+---
 
-Output a final status report:
+## Phase 8: Report
 
 ```
-✅ Pipeline complete
-📁 Output: output/$DATE_DIR/
-📝 Post: [Saved]
-🖼 Images: [X/4 generated]
-🎬 Video: [URL or path]
-📨 Telegram: [Sent/Not sent]
+╔═══════════════════════════════════════╗
+║   EDGE Smart Video Pipeline Results    ║
+╚═══════════════════════════════════════╝
+
+📌 Topic:        $TOPIC_ID - $TOPIC
+🏭 Sector:       $SECTOR
+🖼 Images:       [check manifest]
+🎬 Veo Video:    [check veo_result.json]
+🎥 Composition:  [check video_result.json]
+📊 Sheet:        Updated to Draft Ready
+📨 Telegram:     Sent
 ```
+
+---
 
 ## Error Recovery
 
 | Failure | Action |
 |---------|--------|
-| Image generation fails | Retry once, skip failed slide, continue |
-| Shotstack fails | Fall back to HTML slideshow automatically |
-| Telegram fails | Log the message, continue |
-| Topic fetch fails | Use local demo topic |
-| Script error | Check stderr, try with --help for options |
+| Sheets OAuth fails | Retry `agent-job-secrets get GOOGLE_DRIVE_OAUTH` |
+| No pending topics | Report and exit cleanly |
+| Image generation fails | Retry once, skip failed, continue with fewer |
+| Veo API quota exceeded | Skip Veo, continue without AI video |
+| Shotstack fails | Falls back to HTML slideshow automatically |
+| Telegram fails | Log message, continue |
 
 ## Important Notes
 
-- **Pollinations.ai is free** — rate limit to 1 request per 1.5 seconds (script handles this)
-- **Shotstack stage** is free tier — 5 renders/day limit
-- **Nano Banana** (Gemini API) is a paid upgrade — only use if GEMINI_API_KEY is available in secrets
-- The HTML slideshow is always created as a backup
-- All generated files go in the dated output directory
+- **GEMINI_API_KEY** must be set in thepopebot admin panel (not in this repo)
+- **GOOGLE_DRIVE_OAUTH** is auto-injected for scoped agent jobs
+- **Pollinations.ai** is free but rate-limited (1.5s between requests)
+- **Nano Banana** free tier: 60 images/min for Gemini 2.5 Flash
+- **Veo 3.1 Lite**: ~$0.05/sec, or free tier with quota limits
+- **Shotstack stage**: free tier, 5 renders/day
+- The HTML slideshow is always created as a guaranteed deliverable
