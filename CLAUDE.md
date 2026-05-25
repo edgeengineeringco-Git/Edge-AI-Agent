@@ -63,4 +63,86 @@ The **EDGE Critical Minerals Intel Agent** runs every Monday at 08:00 Ireland ti
 - Cron entry: `edge-weekly-critical-minerals` in `agent-job/CRONS.json`
 - Pipeline: Research (web search) → HTML report → Google Drive upload → Telegram notification
 
-Requires `GOOGLE_DRIVE_CREDENTIALS` (Google service account JSON key) stored as a secret for Drive uploads. Telegram notifications use the built-in `agent-job-dm` skill.
+```
+agents/edge-critical-minerals/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── weekly-report.md
+└── reports/
+    └── YYYY-MM-DD-weekly-report.md
+```
+
+### edge-kuth-portal
+
+EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files and returns K/U/Th concentration results. Runs natively in thepopebot as a scoped agent — no separate servers or containers needed.
+
+**Processing happens IMMEDIATELY on webhook trigger** — no cron batch delays.
+
+- **Scope:** `agents/edge-kuth-portal`
+- **Upload endpoint:** `/edge-kuth/upload-page` (Traefik → upload-server Docker container)
+- **Webhook trigger:** `/edge-kuth/upload` (TRIGGERS.json, **enabled**) — fires agent on upload server callback
+- **Flow:** Client form POSTs multipart → upload server saves files → triggers agent → agent runs Python → Telegram broadcast
+- **Telegram:** Results CSV broadcast to all admins via `agent-job-dm` skill
+- **Skill:** `edge-kuth-analysis` — invocable by any agent
+
+```
+agents/edge-kuth-portal/
+├── SYSTEM.md
+├── CLAUDE.md
+├── skills/
+│   ├── agent-job-dm → ../../../skills-library/agent-job-dm
+│   └── edge-kuth-analysis → ../../../skills-library/edge-kuth-analysis
+└── jobs/
+    └── process-spectra.md
+```
+
+**Pipeline files:**
+- `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core Python engine (CLI with args)
+- `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)
+- `edge-kuth-portal/handle-upload.sh` — Upload handler orchestrator
+- `edge-kuth-portal/pad_data.py` — Embedded PAD reference spectra (authoritative source, no Drive download)
+- `edge-kuth-portal/drive-utils.sh` — Google Drive & Sheets helper (PAD fetch, results upload, job logging)
+- `edge-kuth-portal/send-email.sh` — SendGrid email helper (confirmation + results)
+- `edge-kuth-portal/incoming/` — Drop .spc files here for processing
+- `edge-kuth-portal/output/` — Results CSVs archived here
+- `edge-kuth-portal/jobs/{job_id}/` — Per-job working directory
+
+### edge-smart-video
+
+EDGE Smart Video Content Agent — LinkedIn-ready video content from a topic queue. Generates LinkedIn posts via LLM, images via Pollinations.ai (free) or Nano Banana (Gemini API), and composes videos via Shotstack API (free stage tier) with HTML slideshow fallback.
+
+- **Scope:** `agents/edge-smart-video`
+- **Schedule:** Wednesdays at 10:00 AM (cron: `0 10 * * 3`)
+- **System prompt:** `agents/edge-smart-video/SYSTEM.md`
+- **Jobs:** `agents/edge-smart-video/jobs/generate-content.md`
+- **Pipeline:** Topic fetch → Post + image prompt generation → 4-slide image generation → Video composition → Telegram delivery
+- **Fallbacks:** HTML slideshow if Shotstack unavailable; local CSV if sheets unavailable
+
+```
+agents/edge-smart-video/
+├── SYSTEM.md
+├── CLAUDE.md
+├── scripts/
+│   ├── generate_images.py    # Pollinations (free) or Nano Banana (Gemini) backend
+│   └── compose_video.py      # Shotstack API + HTML slideshow fallback
+├── jobs/
+│   └── generate-content.md
+├── input/
+│   └── topics.csv            # Local topic queue (fallback)
+├── skills/
+│   └── agent-job-dm → ../../../skills-library/agent-job-dm
+└── output/
+    └── YYYY-MM-DD-topic/     # Generated assets per run
+```
+
+## Skills
+
+### edge-kuth-analysis
+
+K/U/Th spectral analysis skill. Any agent can invoke this skill for instructions on running the estimation engine. See `skills-library/edge-kuth-analysis/SKILL.md` for details.
+
+## Security Note
+
+The original n8n workflow used a hardcoded password (`Edge12345`). This thepopebot-native deployment handles auth through the platform's standard webhook authentication and agent scoping. No credentials are embedded in code.
+

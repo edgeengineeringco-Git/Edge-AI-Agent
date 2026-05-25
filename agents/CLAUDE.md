@@ -64,6 +64,13 @@ For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.m
 ### edge-kuth-portal
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
 
+### edge-smart-video
+EDGE Smart Video Content Agent — produces LinkedIn-ready video content from a topic queue. Generates posts via LLM, images via Pollinations.ai (free) or Nano Banana (Gemini API), and composes videos via Shotstack API (free stage tier) with HTML slideshow fallback. Runs Wednesdays at 10:00 AM. Scope: `agents/edge-smart-video`.
+
+- **Pipeline**: Topic fetch → Post generation → Image generation (4 slides) → Video composition → Telegram delivery
+- **Skills**: `agent-job-dm` for Telegram notifications
+- **Fallbacks**: HTML slideshow if Shotstack unavailable; local topic CSV if sheets unavailable
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.
