@@ -19,7 +19,6 @@
     "type": "agent",
     "job": "Read jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-critical-minerals",
-    "user_id": "4ab4ba80-a095-4c07-bb61-3e3471545055",
     "enabled": true
   },
   {

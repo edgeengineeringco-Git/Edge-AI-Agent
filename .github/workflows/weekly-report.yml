@@ -1,0 +1,124 @@
+name: Weekly Critical Minerals Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_now:
+        description: 'Run immediately (override cron schedule for testing)'
+        type: boolean
+        default: false
+
+env:
+  GH_OWNER: edgeengineeringco-Git
+  GH_REPO: Edge-AI-Agent
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN || github.token }}
+
+      - name: Create .env from secrets
+        run: |
+          cat > .env << EOF
+          AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+          AUTH_TRUST_HOST=true
+          APP_URL=http://localhost
+          APP_HOSTNAME=localhost
+          GH_TOKEN=${{ secrets.GH_TOKEN || github.token }}
+          GH_OWNER=${{ env.GH_OWNER }}
+          GH_REPO=${{ env.GH_REPO }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          DATABASE_PATH=data/thepopebot.sqlite
+          THEPOPEBOT_VERSION=${{ vars.THEPOPEBOT_VERSION || 'latest' }}
+          EOF
+
+      - name: Create required directories
+        run: |
+          mkdir -p traefik-config data logs
+
+      - name: Force immediate run on manual trigger
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_now }}
+        run: |
+          cp agent-job/CRONS.json agent-job/CRONS.json.bak
+          node -e "
+            const crons = JSON.parse(require('fs').readFileSync('agent-job/CRONS.json','utf8'));
+            const weekly = crons.find(c => c.name === 'edge-critical-minerals-weekly');
+            if (weekly) {
+              weekly.schedule = '* * * * *';
+              weekly.enabled = true;
+            }
+            require('fs').writeFileSync('agent-job/CRONS.json', JSON.stringify(crons, null, 2) + '\n');
+          "
+          echo "CRONS.json patched for immediate run"
+
+      - name: Start the event-handler
+        run: |
+          docker compose up -d event-handler 2>&1
+          echo "Waiting for event-handler to initialize..."
+          for i in $(seq 1 30); do
+            if docker exec thepopebot-event-handler curl -sf http://localhost:80/api/ping >/dev/null 2>&1; then
+              echo "Event-handler ready after ${i}s"
+              break
+            fi
+            sleep 2
+          done
+          docker logs thepopebot-event-handler --tail 20 2>&1 || true
+
+      - name: Wait for agent job to complete (poll for report)
+        run: |
+          echo "Waiting for agent job to produce the weekly report..."
+          TODAY=$(date +%Y-%m-%d)
+          REPORT_FILE="agents/edge-critical-minerals/reports/${TODAY}-weekly-report.md"
+          START_TS=$(date +%s)
+          TIMEOUT=900
+
+          while true; do
+            NOW=$(date +%s)
+            if [ $((NOW - START_TS)) -gt $TIMEOUT ]; then
+              echo "Timeout reached (${TIMEOUT}s). Event-handler logs:"
+              docker logs thepopebot-event-handler --tail 50 2>&1 || true
+              exit 1
+            fi
+
+            # Pull latest from remote (agent container pushes there when done)
+            git pull origin main 2>&1 || true
+
+            if [ -f "$REPORT_FILE" ]; then
+              echo "Report found: $REPORT_FILE"
+              head -10 "$REPORT_FILE"
+              break
+            fi
+
+            echo "Waiting... ($((NOW - START_TS))s elapsed)"
+            sleep 20
+          done
+
+      - name: Restore CRONS.json if patched
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_now }}
+        run: |
+          if [ -f agent-job/CRONS.json.bak ]; then
+            mv agent-job/CRONS.json.bak agent-job/CRONS.json
+            echo "CRONS.json restored from backup"
+            git add agent-job/CRONS.json
+            # Only commit if there's actual content change (not just whitespace)
+            git diff --cached --exit-code || git commit -m "chore: restore CRONS.json after manual dispatch [skip ci]"
+            git push origin main 2>&1 || true
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: '${{ env.GH_OWNER }}',
+              repo: '${{ env.GH_REPO }}',
+              title: 'Weekly Critical Minerals Report Failed',
+              body: 'The automated weekly report workflow failed on ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.\n\nTrigger: ${{ github.event_name }}\nTime: ${{ github.run_attempt }}'
+            })
