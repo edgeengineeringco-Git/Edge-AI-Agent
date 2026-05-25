@@ -13,8 +13,8 @@ This agent runs the weekly EDGE Critical Minerals Intelligence Briefing pipeline
 The agent relies on:
 
 1. **Web Search** — Built into the coding agent (WebSearch tool). No external API needed.
-2. **Google Drive Upload** — Requires a Google Cloud service account. The service account JSON key must be stored as a secret named `GOOGLE_DRIVE_CREDENTIALS` in the Admin UI (Settings > Agent Jobs > Secrets). The target Google Drive folder (ID: `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T`) must be shared with the service account email.
-3. **Telegram Notifications** — Handled by the built-in `agent-job-dm` skill, which uses the thepopebot's internal API. No additional API key needed.
+2. **Google Drive Upload** — Uses OAuth refresh token auth. The `GOOGLE_DRIVE_OAUTH` secret (JSON with client_id, client_secret, refresh_token, token_uri) is stored as an agent job secret and auto-injected into agent-job containers. The target Google Drive folder (ID: `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T`) must be accessible by the authenticated Google user.
+3. **Telegram Notifications** — Uses Telegram Bot API directly with bot token configured via webhook. Chat ID: `466297056`.
 
 ## Skills
 

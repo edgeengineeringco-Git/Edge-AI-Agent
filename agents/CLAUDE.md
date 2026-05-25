@@ -10,7 +10,7 @@ The EDGE Weekly Critical Minerals Intel pipeline. Runs every Monday at 08:00 Ire
 - **Job**: `agents/edge-critical-minerals/jobs/weekly-report.md`
 - **System prompt**: `agents/edge-critical-minerals/SYSTEM.md`
 - **Skills**: Inherits root skills (agent-job-dm, agent-job-secrets, google-drive-upload)
-- **Secrets needed**: `GOOGLE_DRIVE_CREDENTIALS` (Google service account JSON key)
+- **Secrets needed**: `GOOGLE_DRIVE_OAUTH` (OAuth refresh token JSON — client_id, client_secret, refresh_token)
 
 ## Adding an Agent
 

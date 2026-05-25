@@ -242,17 +242,17 @@ EDGE GeoIntelligence · Automated Report"
 
 ---
 
-## Step 5 — Try Google Drive Upload (Optional)
+## Step 5 — Upload to Google Drive
 
-If the `GOOGLE_DRIVE_CREDENTIALS` secret is available (check with `agent-job-secrets list`), attempt to upload to Google Drive:
+The `GOOGLE_DRIVE_OAUTH` secret is already configured and will be auto-injected as an env var into agent-job containers. Upload the report to Google Drive using the OAuth-based upload script:
 
 ```bash
-skills/google-drive-upload/upload.sh /tmp/{filename} 1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T
+skills/google-drive-upload/upload-oauth.sh /tmp/{filename} 1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T
 ```
 
 The folder ID `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T` is the EDGE reports folder on Google Drive.
 
-If it fails, log the error and continue. The file has already been delivered via Telegram in Step 4, so Drive is optional/secondary.
+If the upload fails, log the error and continue. The file has already been delivered via Telegram in Step 4, so Drive is secondary.
 
 ---
 
