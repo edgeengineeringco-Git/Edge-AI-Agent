@@ -1,0 +1,27 @@
+{
+  "topic": "Real-time soil specification via portable XRF",
+  "sector": "Civil Engineering",
+  "backend": "pollinations",
+  "slides": {
+    "slide1": {
+      "path": "output/2026-05-25/slide1.png",
+      "prompt": "Professional engineering technology background, Civil Engineering industry, Real-time soil specification via portable XRF, sleek dark blue tone, cinematic lighting, photorealistic, 16:9",
+      "seed": 3109
+    },
+    "slide2": {
+      "path": "output/2026-05-25/slide2.png",
+      "prompt": "Infographic technical diagram about Real-time soil specification via portable XRF in Civil Engineering, data visualization, dark theme with cyan accents, professional, 16:9",
+      "seed": 4001
+    },
+    "slide3": {
+      "path": "output/2026-05-25/slide3.png",
+      "prompt": "Engineering team working on Real-time soil specification via portable XRF, Civil Engineering industry, innovation, modern workplace, professional photography, warm tones, 16:9",
+      "seed": 8161
+    },
+    "cta": {
+      "path": "output/2026-05-25/cta.png",
+      "prompt": "Abstract technology network background, Civil Engineering concept, global connection, dark theme electric blue accents, minimalist, professional, 16:9",
+      "seed": 6164
+    }
+  }
+}
