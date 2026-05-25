@@ -176,7 +176,31 @@ python3 scripts/compose_video.py \
 
 ---
 
-## Phase 6: Update Sheet Status
+## Phase 6: Upload to Google Drive
+
+Upload all generated files to a dated subfolder in the EDGE Smart Video Drive folder.
+
+```bash
+DRIVE_FOLDER_ID="1OFc_pa6G2w9GCvNbSvLN-Jn-5sjfVTiG"
+
+python3 scripts/drive_upload.py \
+  --folder-id "$DRIVE_FOLDER_ID" \
+  --output-dir "output/$DATE_DIR" \
+  --topic "$TOPIC"
+```
+
+This creates a subfolder like `YYYY-MM-DD-Topic-Name` and uploads all PNGs, HTML, JSON, and MP4 files.
+
+Read the Drive folder URL from the result:
+
+```bash
+DRIVE_URL=$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/drive_upload.json'))['folder_url'])")
+echo "Drive folder: $DRIVE_URL"
+```
+
+---
+
+## Phase 7: Update Sheet Status
 
 Update the topic status in Google Sheets:
 
@@ -193,11 +217,17 @@ python3 scripts/sheets_handler.py update \
 
 ---
 
-## Phase 7: Create Summary and Deliver
+## Phase 8: Create Summary and Deliver (post-Telegram finalisation)
 
 ### Summary file
 
 ```bash
+# Get Drive URL if uploaded
+DRIVE_URL=""
+if [ -f "output/$DATE_DIR/drive_upload.json" ]; then
+  DRIVE_URL=$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/drive_upload.json'))['folder_url'])")
+fi
+
 cat > "output/$DATE_DIR/summary.md" << SUMMARYEOF
 # EDGE Smart Video — Content Summary
 
@@ -216,6 +246,7 @@ cat > "output/$DATE_DIR/summary.md" << SUMMARYEOF
 - Veo AI Video: veo_video.mp4
 - Shotstack Video URL: [check video_result.json]
 - HTML Slideshow: slideshow.html
+- Google Drive: $DRIVE_URL
 
 ## Status
 
@@ -227,6 +258,17 @@ SUMMARYEOF
 
 ```bash
 POST_TEXT_SNIPPET=$(echo "$POST_TEXT" | head -5 | cut -c1-200)
+
+# Get Drive URL if uploaded
+DRIVE_URL=""
+if [ -f "output/$DATE_DIR/drive_upload.json" ]; then
+  DRIVE_URL=$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/drive_upload.json'))['folder_url'])")
+fi
+
+DRIVE_LINE=""
+if [ -n "$DRIVE_URL" ]; then
+  DRIVE_LINE="📁 Drive: \$DRIVE_URL"
+fi
 
 node skills/agent-job-dm/agent-job-dm.js send --broadcast \
   "🛰 *EDGE Smart Video — Draft Ready*
@@ -240,7 +282,8 @@ node skills/agent-job-dm/agent-job-dm.js send --broadcast \
 $POST_TEXT_SNIPPET...
 
 ━━━━━━━━━━━━━━━━━━━━━
-📁 Output: \`output/$(date +%Y-%m-%d)/\`
+📁 Local: \`output/$(date +%Y-%m-%d)/\`
+$DRIVE_LINE
 🌐 www.edgeengineers.net
 
 Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
@@ -261,6 +304,7 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 🎬 Veo Video:    [check veo_result.json]
 🎥 Composition:  [check video_result.json]
 📊 Sheet:        Updated to Draft Ready
+📁 Drive:         Uploaded
 📨 Telegram:     Sent
 ```
 
@@ -275,6 +319,7 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 | Image generation fails | Retry once, skip failed, continue with fewer |
 | Veo API quota exceeded | Skip Veo, continue without AI video |
 | Shotstack fails | Falls back to HTML slideshow automatically |
+| Drive upload fails | Log error, continue — files still exist locally |
 | Telegram fails | Log message, continue |
 
 ## Important Notes
