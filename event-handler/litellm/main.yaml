@@ -8,3 +8,12 @@ model_list:
       model: openai/deepseek-chat
       api_key: ${DEEPSEEK_API_KEY}
       api_base: https://api.deepseek.com/v1
+
+  # Moonshot AI (Kimi) — OpenAI-compatible.
+  # Models: moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k, kimi-k2.6
+  # Set MOONSHOT_API_KEY in .env.
+  - model_name: moonshot-chat
+    litellm_params:
+      model: openai/moonshot-v1-128k
+      api_key: ${MOONSHOT_API_KEY}
+      api_base: https://api.moonshot.cn/v1

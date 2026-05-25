@@ -104,6 +104,7 @@ services:
       - ./event-handler/litellm:/litellm:ro
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
     restart: unless-stopped
 
   runner:
