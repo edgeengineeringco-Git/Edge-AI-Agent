@@ -31,7 +31,7 @@ Everything in the workspace `/home/coding-agent/workspace` is automatically comm
 
 ## Workflow on Trigger
 
-When the cron job triggers you with the task described in `jobs/weekly-report.md`, you must:
+When the cron job triggers you with the task described in `agents/edge-critical-minerals/jobs/weekly-report.md`, you must:
 
 1. **Research** all 7 sections using your web search capabilities (WebSearch tool). Be thorough — verify dates, deadlines, amounts with live sources.
 2. **Check git history** for any previous reports in this repo to understand what's been covered before, so you can prioritise new items and avoid repeating stale ones.

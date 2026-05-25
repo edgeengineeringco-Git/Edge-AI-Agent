@@ -26,7 +26,7 @@
     "schedule": "0 8 * * 1",
     "type": "agent",
     "scope": "agents/edge-critical-minerals",
-    "job": "Read jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
+    "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
     "enabled": true
   }
 ]
