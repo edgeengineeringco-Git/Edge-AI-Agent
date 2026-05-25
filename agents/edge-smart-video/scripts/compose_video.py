@@ -20,13 +20,13 @@ import html as html_mod
 
 
 BRAND = {
-    "bg": "#050d17",
-    "surface": "#0a1628",
-    "primary": "#4fc3c8",
-    "primary_dim": "#2a9ca0",
-    "text": "#ffffff",
-    "text_dim": "#94a3b8",
-    "accent": "#f59e0b",
+    "bg": "#f0f4f0",         # Light green-gray background
+    "surface": "#ffffff",     # White card surface
+    "primary": "#1a7a3a",     # Professional deep green
+    "primary_dim": "#145c2d", # Darker green for gradients
+    "text": "#1e293b",        # Slate-800 near-black text
+    "text_dim": "#64748b",    # Slate-500 medium gray
+    "accent": "#d97706",      # Amber-600 accent for CTA contrast
     "font": "'Inter', 'Helvetica Neue', Arial, sans-serif"
 }
 
@@ -74,12 +74,12 @@ body {{
     width: 100%;
     max-width: 960px;
     aspect-ratio: 16/9;
-    background: {BRAND['bg']};
+    background: {BRAND['surface']};
     position: relative;
     overflow: hidden;
     border-radius: 16px;
     box-shadow:
-        0 0 0 1px rgba(79, 195, 200, 0.1),
+        0 0 0 1px rgba(26, 122, 58, 0.1),
         0 30px 80px rgba(0, 0, 0, 0.6);
     z-index: 1;
 }}
@@ -89,7 +89,7 @@ body {{
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 3px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.04);
     z-index: 100;
 }}
 .progress-fill {{
@@ -296,14 +296,14 @@ body {{
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.1);
     cursor: pointer;
     transition: all 0.3s;
     border: none;
 }}
 .nav-dot.active {{
     background: {BRAND['primary']};
-    box-shadow: 0 0 12px rgba(79, 195, 200, 0.4);
+    box-shadow: 0 0 12px rgba(26, 122, 58, 0.4);
     width: 24px;
     border-radius: 4px;
 }}

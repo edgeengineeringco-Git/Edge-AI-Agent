@@ -9,7 +9,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-    background: #050d17;
+    background: #f0f4f0;
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
     display: flex;
     justify-content: center;
@@ -22,12 +22,12 @@ body {
     width: 100%;
     max-width: 960px;
     aspect-ratio: 16/9;
-    background: #050d17;
+    background: #ffffff;
     position: relative;
     overflow: hidden;
     border-radius: 16px;
     box-shadow:
-        0 0 0 1px rgba(79, 195, 200, 0.1),
+        0 0 0 1px rgba(26, 122, 58, 0.1),
         0 30px 80px rgba(0, 0, 0, 0.6);
     z-index: 1;
 }
@@ -37,12 +37,12 @@ body {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 3px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.04);
     z-index: 100;
 }
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #4fc3c8, #2a9ca0);
+    background: linear-gradient(90deg, #1a7a3a, #145c2d);
     transition: width 0.1s linear;
     width: 0%;
 }
@@ -76,10 +76,10 @@ body {
 .brand-dot {
     width: 8px; height: 8px;
     border-radius: 50%;
-    background: #4fc3c8;
+    background: #1a7a3a;
 }
 .brand-name {
-    color: #4fc3c8;
+    color: #1a7a3a;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 3px;
@@ -94,7 +94,7 @@ body {
     text-align: center;
 }
 .slide-title .sector-tag {
-    color: #4fc3c8;
+    color: #1a7a3a;
     font-size: clamp(12px, 1.4vw, 18px);
     font-weight: 600;
     letter-spacing: 6px;
@@ -104,7 +104,7 @@ body {
     animation: fadeUp 0.6s 0.2s forwards;
 }
 .slide-title h1 {
-    color: #ffffff;
+    color: #1e293b;
     font-size: clamp(28px, 4vw, 56px);
     font-weight: 800;
     line-height: 1.15;
@@ -114,7 +114,7 @@ body {
     animation: fadeUp 0.6s 0.4s forwards;
 }
 .slide-title .subtitle {
-    color: #94a3b8;
+    color: #64748b;
     font-size: clamp(14px, 1.5vw, 22px);
     font-weight: 300;
     opacity: 0;
@@ -124,7 +124,7 @@ body {
     margin-top: 32px;
     width: 60px;
     height: 2px;
-    background: #4fc3c8;
+    background: #1a7a3a;
     margin-left: auto;
     margin-right: auto;
     opacity: 0;
@@ -139,7 +139,7 @@ body {
     margin-bottom: 32px;
 }
 .slide-content .slide-number {
-    color: #4fc3c8;
+    color: #1a7a3a;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 4px;
@@ -148,7 +148,7 @@ body {
     margin-bottom: 6px;
 }
 .slide-content h2 {
-    color: #ffffff;
+    color: #1e293b;
     font-size: clamp(22px, 2.8vw, 40px);
     font-weight: 700;
     line-height: 1.2;
@@ -161,7 +161,7 @@ body {
     bottom: 0; left: 0;
     width: 50px;
     height: 3px;
-    background: #4fc3c8;
+    background: #1a7a3a;
     border-radius: 2px;
 }
 .slide-content .bullets {
@@ -172,7 +172,7 @@ body {
     gap: 14px;
 }
 .slide-content .bullets li {
-    color: #94a3b8;
+    color: #64748b;
     font-size: clamp(13px, 1.3vw, 20px);
     line-height: 1.5;
     padding-left: 28px;
@@ -187,7 +187,7 @@ body {
     top: 10px;
     width: 10px;
     height: 10px;
-    border: 2px solid #4fc3c8;
+    border: 2px solid #1a7a3a;
     border-radius: 50%;
     opacity: 0.6;
 }
@@ -203,7 +203,7 @@ body {
     text-align: center;
 }
 .slide-cta h2 {
-    color: #ffffff;
+    color: #1e293b;
     font-size: clamp(24px, 3vw, 44px);
     font-weight: 800;
     margin-bottom: 16px;
@@ -211,7 +211,7 @@ body {
     animation: fadeUp 0.6s 0.2s forwards;
 }
 .slide-cta .cta-url {
-    color: #4fc3c8;
+    color: #1a7a3a;
     font-size: clamp(18px, 2vw, 32px);
     font-weight: 700;
     letter-spacing: 2px;
@@ -219,7 +219,7 @@ body {
     animation: fadeUp 0.6s 0.5s forwards;
 }
 .slide-cta .cta-sub {
-    color: #94a3b8;
+    color: #64748b;
     font-size: clamp(11px, 1vw, 16px);
     margin-top: 20px;
     letter-spacing: 3px;
@@ -244,14 +244,14 @@ body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.1);
     cursor: pointer;
     transition: all 0.3s;
     border: none;
 }
 .nav-dot.active {
-    background: #4fc3c8;
-    box-shadow: 0 0 12px rgba(79, 195, 200, 0.4);
+    background: #1a7a3a;
+    box-shadow: 0 0 12px rgba(26, 122, 58, 0.4);
     width: 24px;
     border-radius: 4px;
 }
