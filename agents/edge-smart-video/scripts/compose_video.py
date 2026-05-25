@@ -31,9 +31,10 @@ BRAND = {
 }
 
 
-def build_video_html(topic, sector, slides, output_dir, background_image=None):
+def build_video_html(topic, sector, slides, output_dir, background_image=None, schematics=None):
     """Create a professional auto-advancing video-style slideshow."""
     slides_data = json.dumps(slides)
+    schematics_data = json.dumps(schematics) if schematics else "[]"
     bg_style = ""
     if background_image and os.path.exists(background_image):
         import base64
@@ -248,6 +249,52 @@ body {{
 .slide-content .bullets li:nth-child(3) {{ animation-delay: 0.5s; }}
 .slide-content .bullets li:nth-child(4) {{ animation-delay: 0.65s; }}
 
+/* Content slide with SVG schematic */
+.slide-content.has-svg {{
+    flex-direction: row;
+    align-items: center;
+    gap: 40px;
+}}
+.slide-text {{
+    flex: 1;
+    min-width: 0;
+}}
+.slide-svg {{
+    flex: 0 0 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 0.6s 0.3s forwards;
+}}
+.slide-svg svg {{
+    width: 100%;
+    height: auto;
+    max-height: 340px;
+    border-radius: 8px;
+}}
+
+/* Background SVG for title and CTA slides */
+.slide-bg-svg {{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.06;
+    z-index: -1;
+    overflow: hidden;
+}}
+.slide-bg-svg svg {{
+    width: 80%;
+    height: 80%;
+}}
+
+@keyframes fadeIn {{
+    from {{ opacity: 0; }}
+    to {{ opacity: 1; }}
+}}
+
 /* CTA slide */
 .slide-cta {{
     justify-content: center;
@@ -333,6 +380,7 @@ body {{
 
 <script>
 const slides = {slides_data};
+const schematics = {schematics_data};
 const SLIDE_DURATION = 5000;
 let current = 0;
 let timer = null;
@@ -348,30 +396,37 @@ function render() {{
         const div = document.createElement('div');
         div.className = 'slide' + (i === current ? ' active' : '');
 
+        const svgData = schematics && schematics[i] && schematics[i].svg;
+
         if (slide.type === 'title') {{
-            div.className += ' slide-title';
+            div.className += ' slide-title' + (svgData ? ' has-bg-svg' : '');
             div.innerHTML = `
+                ${{svgData ? `<div class="slide-bg-svg">${{svgData}}</div>` : ''}}
                 <div class="sector-tag">${{slide.sector || '{html_mod.escape(sector)}'}}</div>
                 <h1>${{slide.headline}}</h1>
                 ${{slide.subtitle ? `<div class="subtitle">${{slide.subtitle}}</div>` : ''}}
                 <div class="tagline-bar"></div>
             `;
         }} else if (slide.type === 'cta') {{
-            div.className += ' slide-cta';
+            div.className += ' slide-cta' + (svgData ? ' has-bg-svg' : '');
             div.innerHTML = `
+                ${{svgData ? `<div class="slide-bg-svg">${{svgData}}</div>` : ''}}
                 <h2>${{slide.headline}}</h2>
                 <div class="cta-url">${{slide.url || 'www.edgeengineers.net'}}</div>
                 ${{slide.subtitle ? `<div class="cta-sub">${{slide.subtitle}}</div>` : ''}}
             `;
         }} else {{
-            div.className += ' slide-content';
+            div.className += ' slide-content' + (svgData ? ' has-svg' : '');
             const bullets = (slide.bullets || []).map(b => `<li>${{b}}</li>`).join('');
             div.innerHTML = `
-                <div class="slide-header">
-                    <div class="slide-number">${{slide.number || (i + 1)}} / ${{slides.length}}</div>
-                    <h2>${{slide.headline}}</h2>
+                <div class="slide-text">
+                    <div class="slide-header">
+                        <div class="slide-number">${{slide.number || (i + 1)}} / ${{slides.length}}</div>
+                        <h2>${{slide.headline}}</h2>
+                    </div>
+                    ${{bullets ? `<ul class="bullets">${{bullets}}</ul>` : ''}}
                 </div>
-                ${{bullets ? `<ul class="bullets">${{bullets}}</ul>` : ''}}
+                ${{svgData ? `<div class="slide-svg">${{svgData}}</div>` : ''}}
             `;
         }}
 
@@ -499,6 +554,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Compose EDGE professional video slideshow")
     parser.add_argument("--slides", help="Path to slides.json (LLM-generated slide content)")
+    parser.add_argument("--schematics", help="Path to schematics.json (Moonshot SVG diagrams)")
     parser.add_argument("--output-dir", default="./output", help="Output directory")
     parser.add_argument("--topic", required=True, help="Video topic")
     parser.add_argument("--sector", required=True, help="Industry sector")
@@ -523,10 +579,17 @@ def main():
         json.dump(slides, f, indent=2)
     print(f"  Saved slide data: {slides_path}")
 
+    # Load schematics if provided
+    schematics = None
+    if args.schematics and os.path.exists(args.schematics):
+        with open(args.schematics) as f:
+            schematics = json.load(f)
+        print(f"  Loaded {len(schematics)} schematics from {args.schematics}")
+
     # Build video
     video_path = build_video_html(
         args.topic, args.sector, slides,
-        args.output_dir, args.background
+        args.output_dir, args.background, schematics
     )
 
     # Result manifest

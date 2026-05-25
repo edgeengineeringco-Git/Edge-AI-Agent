@@ -177,8 +177,8 @@ def update_topic_status(sheet_id, access_token, topic_id, row_idx,
     """Update topic status and data in the sheet."""
     updates_made = []
 
-    # Update Status column (usually D)
-    update_sheet_cell(sheet_id, row_idx, "D", status, access_token, sheet_name)
+    # Update Status column (column C per sheet header: id/topic/status/sector/notes)
+    update_sheet_cell(sheet_id, row_idx, "C", status, access_token, sheet_name)
     updates_made.append(f"Status -> {status}")
     print(f"  Updated Status -> {status}")
 
