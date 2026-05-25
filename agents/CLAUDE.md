@@ -65,11 +65,11 @@ For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.m
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
 
 ### edge-smart-video
-EDGE Smart Video Content Agent — produces LinkedIn-ready video content from a topic queue. Generates posts via LLM, images via Pollinations.ai (free) or Nano Banana (Gemini API), and composes videos via Shotstack API (free stage tier) with HTML slideshow fallback. Runs Wednesdays at 10:00 AM. Scope: `agents/edge-smart-video`.
+EDGE Smart Video Content Agent — produces LinkedIn-ready video content from a topic queue. Generates posts via LLM, produces professional text-first HTML video slideshow with structured slide content, and optionally generates Veo 3.1 AI video clips. Runs Wednesdays at 10:00 AM. Scope: `agents/edge-smart-video`.
 
-- **Pipeline**: Topic fetch → Post generation → Image generation (4 slides) → Video composition → Telegram delivery
+- **Pipeline**: Topic fetch → Post + slide generation → Optional images/Veo → HTML video composition → Drive upload → Telegram delivery
+- **Primary output**: Self-contained HTML slideshow (`video.html`) — no API keys needed
 - **Skills**: `agent-job-dm` for Telegram notifications
-- **Fallbacks**: HTML slideshow if Shotstack unavailable; local topic CSV if sheets unavailable
 
 ## Removing an Agent
 

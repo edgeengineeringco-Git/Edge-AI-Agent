@@ -151,32 +151,89 @@ Note: Veo generation takes 30-120 seconds. Check `output/$DATE_DIR/veo_result.js
 
 ---
 
-## Phase 5: Compose Video
+## Phase 5: Generate Structured Slide Content
+
+Generate structured slide content for the video. Two approaches:
+
+### Option A: LLM-Generated Slides (Recommended)
+
+Use LLM capabilities to create structured slide content from the post. Create a `slides.json` file:
+
+```json
+[
+  {
+    "type": "title",
+    "headline": "Main Topic Headline",
+    "subtitle": "Sector | EDGE Engineers",
+    "sector": "SECTOR_NAME"
+  },
+  {
+    "type": "content",
+    "headline": "The Challenge",
+    "bullets": [
+      "Specific industry pain point or problem",
+      "Another key challenge",
+      "A third critical issue"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution",
+    "bullets": [
+      "How EDGE solves the problem",
+      "Key benefit or differentiator",
+      "Measurable outcome"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to transform your operations?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
+```
+
+Save as `output/$DATE_DIR/slides.json`.
+
+### Option B: Auto-Generate from Post Text
 
 ```bash
-VEO_FLAG=""
-if [ -f "output/$DATE_DIR/veo_video.mp4" ]; then
-  VEO_FLAG="--veo-video output/$DATE_DIR/veo_video.mp4"
-fi
-
-SHOTSTACK_FLAG=""
-if [ -n "$SHOTSTACK_API_KEY" ]; then
-  SHOTSTACK_FLAG="--shotstack-key $SHOTSTACK_API_KEY"
-fi
-
-python3 scripts/compose_video.py \
-  --manifest "output/$DATE_DIR/image_manifest.json" \
-  --sector "$SECTOR" \
-  --topic "$TOPIC" \
-  --post-text "$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/post.json'))['post_text'])" 2>/dev/null || echo 'Post not saved')" \
-  --output-dir "output/$DATE_DIR" \
-  $SHOTSTACK_FLAG \
-  $VEO_FLAG
+POST_TEXT=$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/post.json'))['post_text'])" 2>/dev/null || echo "Post not saved")
 ```
+
+Then pass `--post-text` to compose (see Phase 6) — it will auto-extract slide content.
 
 ---
 
-## Phase 6: Upload to Google Drive
+## Phase 6: Compose Video
+
+Generates a professional HTML video slideshow. No API keys needed.
+
+```bash
+SLIDES_FLAG=""
+if [ -f "output/$DATE_DIR/slides.json" ]; then
+  SLIDES_FLAG="--slides output/$DATE_DIR/slides.json"
+fi
+
+python3 scripts/compose_video.py \
+  $SLIDES_FLAG \
+  --topic "$TOPIC" \
+  --sector "$SECTOR" \
+  --post-text "$(python3 -c "import json; print(json.load(open('output/$DATE_DIR/post.json'))['post_text'])" 2>/dev/null || echo 'Post not saved')" \
+  --output-dir "output/$DATE_DIR"
+```
+
+The output is `output/$DATE_DIR/video.html` — a self-contained, auto-advancing video slideshow with:
+- Branded EDGE design (dark theme, cyan accents, Inter font)
+- 3 slide types: title, content (with animated bullets), and CTA
+- Progress bar, dot navigation, keyboard arrow controls
+- Slide crossfade + scale transitions with staggered element animations
+- Responsive (works on mobile and desktop)
+
+---
+
+## Phase 7: Upload to Google Drive
 
 Upload all generated files to a dated subfolder in the EDGE Smart Video Drive folder.
 
@@ -200,7 +257,7 @@ echo "Drive folder: $DRIVE_URL"
 
 ---
 
-## Phase 7: Update Sheet Status
+## Phase 8: Update Sheet Status
 
 Update the topic status in Google Sheets:
 
@@ -217,7 +274,7 @@ python3 scripts/sheets_handler.py update \
 
 ---
 
-## Phase 8: Create Summary and Deliver (post-Telegram finalisation)
+## Phase 9: Create Summary and Deliver (post-Telegram finalisation)
 
 ### Summary file
 
@@ -242,10 +299,9 @@ cat > "output/$DATE_DIR/summary.md" << SUMMARYEOF
 
 ## Assets
 
-- Images: slide1, slide2, slide3, cta
-- Veo AI Video: veo_video.mp4
-- Shotstack Video URL: [check video_result.json]
-- HTML Slideshow: slideshow.html
+- HTML Video Slideshow: video.html
+- Slide Data: slides.json
+- Veo AI Video: veo_video.mp4 (if generated)
 - Google Drive: $DRIVE_URL
 
 ## Status
@@ -291,7 +347,7 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 
 ---
 
-## Phase 8: Report
+## Phase 10: Report
 
 ```
 ╔═══════════════════════════════════════╗
@@ -316,9 +372,8 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 |---------|--------|
 | Sheets OAuth fails | Retry `agent-job-secrets get GOOGLE_DRIVE_OAUTH` |
 | No pending topics | Report and exit cleanly |
-| Image generation fails | Retry once, skip failed, continue with fewer |
 | Veo API quota exceeded | Skip Veo, continue without AI video |
-| Shotstack fails | Falls back to HTML slideshow automatically |
+| Compose has no post-text | Use LLM-generated `slides.json` (Option A) instead |
 | Drive upload fails | Log error, continue — files still exist locally |
 | Telegram fails | Log message, continue |
 
@@ -326,8 +381,7 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 
 - **GEMINI_API_KEY** must be set in thepopebot admin panel (not in this repo)
 - **GOOGLE_DRIVE_OAUTH** is auto-injected for scoped agent jobs
-- **Pollinations.ai** is free but rate-limited (1.5s between requests)
-- **Nano Banana** free tier: 60 images/min for Gemini 2.5 Flash
 - **Veo 3.1 Lite**: ~$0.05/sec, or free tier with quota limits
-- **Shotstack stage**: free tier, 5 renders/day
-- The HTML slideshow is always created as a guaranteed deliverable
+- The HTML video slideshow is always created as the primary deliverable — no API keys needed
+- For best results, generate `slides.json` using LLM (Phase 5 Option A) with structured slide content extracted from the LinkedIn post
+- The slideshow auto-advances every 5 seconds, supports keyboard navigation, and works on any browser

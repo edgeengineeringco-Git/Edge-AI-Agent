@@ -110,22 +110,25 @@ agents/edge-kuth-portal/
 
 ### edge-smart-video
 
-EDGE Smart Video Content Agent — LinkedIn-ready video content from a topic queue. Generates LinkedIn posts via LLM, images via Pollinations.ai (free) or Nano Banana (Gemini API), and composes videos via Shotstack API (free stage tier) with HTML slideshow fallback.
+EDGE Smart Video Content Agent — LinkedIn-ready video content from a topic queue. Generates LinkedIn posts via LLM, produces a professional text-first HTML video slideshow with structured slide content, and optionally generates Veo 3.1 AI video clips.
 
 - **Scope:** `agents/edge-smart-video`
 - **Schedule:** Wednesdays at 10:00 AM (cron: `0 10 * * 3`)
 - **System prompt:** `agents/edge-smart-video/SYSTEM.md`
 - **Jobs:** `agents/edge-smart-video/jobs/generate-content.md`
-- **Pipeline:** Topic fetch → Post + image prompt generation → 4-slide image generation → Video composition → Telegram delivery
-- **Fallbacks:** HTML slideshow if Shotstack unavailable; local CSV if sheets unavailable
+- **Pipeline:** Topic fetch → Post + slide generation → Optional images/Veo → HTML video composition → Drive upload → Telegram delivery
+- **Primary output:** Self-contained HTML slideshow (`video.html`) — no API keys or external dependencies needed
 
 ```
 agents/edge-smart-video/
 ├── SYSTEM.md
 ├── CLAUDE.md
 ├── scripts/
+│   ├── compose_video.py      # Professional HTML video slideshow (primary output)
 │   ├── generate_images.py    # Pollinations (free) or Nano Banana (Gemini) backend
-│   └── compose_video.py      # Shotstack API + HTML slideshow fallback
+│   ├── generate_video.py     # Veo 3.1 AI video generation
+│   ├── sheets_handler.py     # Google Sheets topic queue CRUD
+│   └── drive_upload.py       # Google Drive upload of generated assets
 ├── jobs/
 │   └── generate-content.md
 ├── input/
