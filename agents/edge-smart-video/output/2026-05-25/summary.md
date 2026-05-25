@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-25
 **Topic:** Real-time soil specification via portable XRF
-**Sector:** Civil Engineering
+**Sector:** Geotechnical Engineering
 **Sheet ID:** 3
 
 ## LinkedIn Post
@@ -11,10 +11,9 @@
 
 ## Assets
 
-- Images: slide1.png, slide2.png, slide3.png, cta.png
-- Veo AI Video: Not generated (no GEMINI_API_KEY quota)
-- Shotstack Video: Not generated (HTML only)
-- HTML Slideshow: slideshow.html
+- HTML Video Slideshow: video.html (10KB, 5 slides)
+- Slide Data: slides.json
+- Google Drive: https://drive.google.com/drive/folders/1_3sveNjOpbQ4XwaTyowW2a5N75iA-N5R
 
 ## Status
 

@@ -1,0 +1,41 @@
+[
+  {
+    "type": "title",
+    "headline": "Real-Time Soil Specification via Portable XRF",
+    "subtitle": "Geotechnical Engineering | EDGE Engineers",
+    "sector": "Geotechnical Engineering"
+  },
+  {
+    "type": "content",
+    "headline": "The Problem: Lab Delays Cost Millions",
+    "bullets": [
+      "Soil samples sent to labs take days for results \u2014 delaying critical path decisions",
+      "Idle plant, redesign cycles, and avoidable risk burn through project budgets",
+      "Portable XRF has been field-proven for years, yet most projects still rely on slow lab workflows"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution: Real-Time XRF",
+    "bullets": [
+      "Simultaneous multi-element analysis with zero sample preparation \u2014 results in minutes, not days",
+      "Data feeds directly into your geotechnical model while the rig is still turning",
+      "Deployable workflow on major infrastructure projects \u2014 not a pilot, proven at scale"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "Measurable Impact for Project Directors",
+    "bullets": [
+      "Faster decisions on excavation class and material handling \u2014 cut 72-hour waits to minutes",
+      "Reduce laboratory dependency and logistics overhead from your critical path",
+      "Audit-ready digital records from day one, regulator-ready before the next inspection"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Can you still afford to wait?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
