@@ -99,6 +99,28 @@ agents/edge-kuth-portal/
     └── process-spectra.md
 ```
 
+### edge-smart-video
+
+EDGE Smart Video Agent — LinkedIn short-form video content creator. Pulls topics from a queue and produces weekly video scripts, post copy, and engagement assets.
+
+- **Scope:** `agents/edge-smart-video`
+- **Schedule:** Wednesdays at 10:00 AM (cron: `0 10 * * 3`)
+- **System prompt:** `agents/edge-smart-video/SYSTEM.md`
+- **Jobs:** `agents/edge-smart-video/jobs/weekly-video.md`
+- **Output:** `agents/edge-smart-video/output/`
+
+```
+agents/edge-smart-video/
+├── SYSTEM.md
+├── CLAUDE.md
+├── data/
+│   └── topic-queue.md
+├── jobs/
+│   └── weekly-video.md
+└── output/
+    └── YYYY-MM-DD-video-package.md
+```
+
 **Pipeline files:**
 - `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core Python engine (CLI with args)
 - `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)

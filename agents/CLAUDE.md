@@ -57,6 +57,9 @@ EDGE Critical Minerals Intel agent — produces weekly intelligence briefs on li
 ### edge-kuth-portal
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
 
+### edge-smart-video
+EDGE Smart Video Agent — LinkedIn short-form video content creator. Produces one video package (script, post copy, hashtags, thumbnail brief) per week from the topic queue at `data/topic-queue.md`. Runs every Wednesday at 10:00 AM via CRONS.json.
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.

@@ -36,5 +36,13 @@
     "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input \u2014 execute autonomously.",
     "scope": "agents/edge-kuth-portal",
     "enabled": false
+  },
+  {
+    "name": "edge-smart-video-weekly",
+    "schedule": "0 10 * * 3",
+    "type": "agent",
+    "job": "Read jobs/weekly-video.md and execute the full EDGE Smart Video LinkedIn pipeline described there. Do not ask for input \u2014 execute autonomously.",
+    "scope": "agents/edge-smart-video",
+    "enabled": true
   }
 ]
