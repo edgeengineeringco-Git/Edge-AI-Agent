@@ -27,21 +27,22 @@ Defined in `agent-job/CRONS.json`:
 ```json
 {
   "name": "edge-weekly-critical-minerals",
-  "schedule": "0 8 * * 1",
+  "schedule": "0 7 * * 1",
   "type": "agent",
   "scope": "agents/edge-critical-minerals",
-  "job": "Read jobs/weekly-report.md and execute the full pipeline described there.",
+  "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full pipeline described there.",
+  "user_id": "4ab4ba80-a095-4c07-bb61-3e3471545055",
   "enabled": true
 }
 ```
 
-Schedule: Every Monday at 08:00 Ireland time (Europe/Dublin).
+Schedule: Every Monday at 08:00 Ireland time (07:00 UTC during summer).
 
 ## Pipeline Steps
 
 1. Research (7 sections) using web search
 2. Compute metadata fields (report_date, week_number, filename)
 3. Build styled HTML report
-4. Upload to Google Drive (folder ID: `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T`)
-5. Send Telegram notification via agent-job-dm (broadcast to admins)
+4. Send report to Telegram via Bot API (sendDocument)
+5. Upload to Google Drive (folder ID: `1ECFvfIafuyRqgU4fV9jFMt9GXzTRLO5T`)
 6. Archive the HTML file in `agents/edge-critical-minerals/reports/`

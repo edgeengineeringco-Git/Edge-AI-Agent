@@ -14,19 +14,28 @@
     "enabled": true
   },
   {
-    "name": "edge-critical-minerals-weekly",
-    "schedule": "0 9 * * 1",
+    "name": "edge-weekly-critical-minerals",
+    "schedule": "0 7 * * 1",
     "type": "agent",
-    "job": "Read jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-critical-minerals",
+    "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input \u2014 execute autonomously.",
+    "user_id": "4ab4ba80-a095-4c07-bb61-3e3471545055",
     "enabled": true
   },
   {
-    "name": "edge-weekly-critical-minerals",
+    "name": "agent-backend-override-example",
+    "schedule": "0 10 * * *",
+    "type": "agent",
+    "job": "Summarize open pull requests.",
+    "agent_backend": "codex-cli",
+    "enabled": false
+  },
+  {
+    "name": "edge-kuth-portal-batch",
     "schedule": "0 8 * * 1",
     "type": "agent",
-    "scope": "agents/edge-critical-minerals",
-    "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
-    "enabled": true
+    "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input \u2014 execute autonomously.",
+    "scope": "agents/edge-kuth-portal",
+    "enabled": false
   }
 ]
