@@ -1,5 +1,17 @@
 # agents/ — Custom Agent Definitions
 
+## Active Agents
+
+### edge-critical-minerals
+
+The EDGE Weekly Critical Minerals Intel pipeline. Runs every Monday at 08:00 Ireland time. See `agents/edge-critical-minerals/CLAUDE.md` for full documentation.
+
+- **Cron**: `edge-weekly-critical-minerals` in `agent-job/CRONS.json`
+- **Job**: `agents/edge-critical-minerals/jobs/weekly-report.md`
+- **System prompt**: `agents/edge-critical-minerals/SYSTEM.md`
+- **Skills**: Inherits root skills (agent-job-dm, agent-job-secrets, google-drive-upload)
+- **Secrets needed**: `GOOGLE_DRIVE_OAUTH` (OAuth refresh token JSON — client_id, client_secret, refresh_token)
+
 ## Adding an Agent
 
 Each subdirectory defines an agent. At minimum create a folder with a `SYSTEM.md` file:
@@ -48,11 +60,6 @@ Add a cron entry in `agent-job/CRONS.json` with a `scope` field pointing at the 
 `scope` activates the agent's identity (`SYSTEM.md`), skills, and working directory — the cron runs as the scoped agent, not from the repo root. `job` is the task prompt the agent receives.
 
 For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.md` and reference it from `job` — the agent's working directory is the scoped folder, so the relative path resolves. For one-off tasks, write the prompt inline.
-
-## Current Agents
-
-### edge-critical-minerals
-EDGE Critical Minerals Intel agent — produces weekly intelligence briefs on lithium, rare earths, cobalt, nickel, copper, graphite, policy, and geopolitics. Runs every Monday at 9:00 AM.
 
 ### edge-kuth-portal
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).

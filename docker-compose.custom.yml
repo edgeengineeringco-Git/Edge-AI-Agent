@@ -56,6 +56,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TRAEFIK_CONFIG_DIR=/traefik-config
+      - TZ=Europe/Dublin
     labels:
       - traefik.enable=true
       - traefik.http.routers.event-handler.rule=Host(`${APP_HOSTNAME}`)
