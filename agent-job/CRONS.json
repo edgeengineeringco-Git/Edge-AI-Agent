@@ -4,7 +4,7 @@
     "schedule": "*/30 * * * *",
     "type": "agent",
     "job": "Read the file at agent-job/HEARTBEAT.md and complete the tasks described there.",
-    "enabled": false
+    "enabled": true
   },
   {
     "name": "ping",
