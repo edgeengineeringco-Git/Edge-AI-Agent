@@ -42,47 +42,34 @@
           <div class="field-group">
             <label>Tool</label>
             <div class="inline-actions">
-              <button type="button" class="btn-outline" id="btn-draw-polygon">Draw polygon</button>
+              <button type="button" class="btn-outline" id="btn-draw-rectangle">Select area on map</button>
               <span class="separator">or</span>
               <label class="file-upload-label">
                 Upload boundary file
                 <input type="file" id="boundary_file" name="boundary_file" accept=".zip,.shp,.geojson,.kml,.csv" hidden />
               </label>
             </div>
-            <div class="helper">Draw a polygon on the interactive satellite map, or upload a boundary file (SHP, GeoJSON, KML, CSV).</div>
+            <div class="helper">Click the map to set two opposite corners of your survey area. The rectangle and area will be calculated automatically.</div>
           </div>
 
-          <!-- Interactive satellite map placeholder -->
-          <div class="map-placeholder" id="map">
-            <div class="map-inner">
-              <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" class="map-svg">
-                <defs>
-                  <linearGradient id="satellite" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#2d5a2d" />
-                    <stop offset="50%" stop-color="#3a6b34" />
-                    <stop offset="100%" stop-color="#4a7c3f" />
-                  </linearGradient>
-                </defs>
-                <rect width="400" height="220" fill="url(#satellite)" />
-                <path d="M60,90 Q100,60 160,80 Q220,50 280,70 Q340,90 350,140 Q330,180 270,175 Q200,195 140,170 Q80,180 50,150 Z" fill="#5a9c4a" opacity="0.6" />
-                <path d="M20,170 Q90,150 160,160 Q240,150 320,140 Q380,150 390,170 L390,220 L20,220 Z" fill="#2e4a28" opacity="0.5" />
-                <!-- Grid lines -->
-                <line x1="0" y1="55" x2="400" y2="55" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-                <line x1="0" y1="110" x2="400" y2="110" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-                <line x1="0" y1="165" x2="400" y2="165" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-                <line x1="100" y1="0" x2="100" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-                <line x1="200" y1="0" x2="200" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-                <line x1="300" y1="0" x2="300" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
-              </svg>
-              <div class="map-overlay-text">Interactive satellite map</div>
+          <!-- Google Maps satellite selector -->
+          <div class="map-container" id="map-container">
+            <div class="map-loading" id="map-loading">
+              <div class="spinner"></div>
+              <span>Loading satellite map…</span>
+            </div>
+            <div class="map-canvas" id="map-canvas"></div>
+            <div class="map-controls">
+              <span class="map-hint" id="map-hint">Click to place first corner</span>
+              <button type="button" class="btn-outline btn-small" id="btn-clear-area" disabled>Clear selection</button>
             </div>
           </div>
 
-          <div class="settings-grid">
+          <div class="settings-grid" style="margin-top: 14px;">
             <div class="field-group">
               <label for="calculated_area">Calculated area</label>
               <input type="text" id="calculated_area" name="calculated_area" readonly placeholder="km² / ha" />
-              <div class="helper">Auto-filled when polygon is drawn or file is uploaded.</div>
+              <div class="helper">Auto-filled when two points are selected on the map.</div>
             </div>
 
             <div class="field-group">
@@ -100,6 +87,10 @@
               </datalist>
             </div>
           </div>
+
+          <!-- Hidden inputs for rectangle coordinates -->
+          <input type="hidden" id="rect_sw" name="rect_sw" />
+          <input type="hidden" id="rect_ne" name="rect_ne" />
         </fieldset>
 
         <!-- 3. Service selection -->
@@ -219,7 +210,6 @@
   <script>
     // Free quote toggle — disable other sections if checked
     const freeQuote = document.getElementById('free_quote');
-    const otherSections = document.querySelectorAll('.section:not(:nth-of-type(3)) input, .section:not(:nth-of-type(3)) select, .section:not(:nth-of-type(3)) textarea');
 
     freeQuote.addEventListener('change', function () {
       const disabled = this.checked;
@@ -231,36 +221,170 @@
       });
     });
 
-    // Map placeholder — simple polygon draw simulation
-    const map = document.getElementById('map');
-    const areaInput = document.getElementById('calculated_area');
-    const btnDraw = document.getElementById('btn-draw-polygon');
-    let drawing = false;
-    let points = [];
+    // Google Maps satellite rectangle selector
+    (function () {
+      const mapContainer = document.getElementById('map-container');
+      const mapLoading = document.getElementById('map-loading');
+      const mapCanvas = document.getElementById('map-canvas');
+      const mapHint = document.getElementById('map-hint');
+      const btnClear = document.getElementById('btn-clear-area');
+      const areaInput = document.getElementById('calculated_area');
+      const rectSwInput = document.getElementById('rect_sw');
+      const rectNeInput = document.getElementById('rect_ne');
 
-    btnDraw.addEventListener('click', function () {
-      drawing = !points.length;
-      btnDraw.textContent = drawing ? 'Click points on map (double-click to finish)' : 'Draw polygon';
-    });
+      let map = null;
+      let drawingManager = null;
+      let rectangle = null;
+      let placedFirst = false;
 
-    map.addEventListener('click', function (e) {
-      if (!drawing) return;
-      const rect = map.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width * 400).toFixed(0);
-      const y = ((e.clientY - rect.top) / rect.height * 220).toFixed(0);
-      points.push({ x, y });
-      areaInput.value = 'Polygon (' + points.length + ' vertices)';
-    });
-
-    map.addEventListener('dblclick', function () {
-      if (drawing && points.length >= 3) {
-        drawing = false;
-        // Fake area calc
-        const fakeArea = (Math.random() * 50 + 5).toFixed(2);
-        areaInput.value = fakeArea + ' km²';
-        btnDraw.textContent = 'Edit polygon';
+      // Haversine distance in km between two lat/lng points
+      function haversineKm(lat1, lng1, lat2, lng2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       }
-    });
+
+      // Approximate area of a lat/lng rectangle in km²
+      function rectangleAreaKm2(swLat, swLng, neLat, neLng) {
+        const widthKm = haversineKm(swLat, swLng, swLat, neLng);
+        const heightKm = haversineKm(swLat, swLng, neLat, swLng);
+        return widthKm * heightKm;
+      }
+
+      function updateArea( bounds) {
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const areaKm2 = rectangleAreaKm2(sw.lat(), sw.lng(), ne.lat(), ne.lng());
+        const areaHa = areaKm2 * 100;
+
+        if (areaKm2 >= 1) {
+          areaInput.value = areaKm2.toFixed(2) + ' km²';
+        } else {
+          areaInput.value = areaHa.toFixed(1) + ' ha';
+        }
+
+        rectSwInput.value = sw.lat().toFixed(6) + ',' + sw.lng().toFixed(6);
+        rectNeInput.value = ne.lat().toFixed(6) + ',' + ne.lng().toFixed(6);
+      }
+
+      function clearSelection() {
+        if (rectangle) {
+          rectangle.setMap(null);
+          rectangle = null;
+        }
+        areaInput.value = '';
+        rectSwInput.value = '';
+        rectNeInput.value = '';
+        mapHint.textContent = 'Click to place first corner';
+        mapHint.classList.remove('corner-placed');
+        btnClear.disabled = true;
+        placedFirst = false;
+      }
+
+      function initMap() {
+        map = new google.maps.Map(mapCanvas, {
+          center: { lat: 53.5, lng: -8.0 },  // Default: Ireland
+          zoom: 7,
+          mapTypeId: 'satellite',
+          disableDefaultUI: true,
+          zoomControl: true,
+          mapTypeControl: true,
+          mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+            position: google.maps.ControlPosition.TOP_RIGHT
+          },
+          zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_BOTTOM
+          },
+          gestureHandling: 'greedy'
+        });
+
+        drawingManager = new google.maps.drawing.DrawingManager({
+          drawingMode: google.maps.drawing.OverlayType.RECTANGLE,
+          drawingControl: false,  // We trigger it via our own button
+          rectangleOptions: {
+            fillColor: '#4a7c3f',
+            fillOpacity: 0.25,
+            strokeColor: '#233321',
+            strokeWeight: 2,
+            clickable: false,
+            editable: true,
+            draggable: true,
+            zIndex: 1
+          }
+        });
+
+        drawingManager.setMap(map);
+
+        google.maps.event.addListener(drawingManager, 'rectanglecomplete', function (rect) {
+          rectangle = rect;
+          updateArea(rect.getBounds());
+          mapHint.textContent = 'Area selected — drag corners to adjust';
+          mapHint.classList.add('corner-placed');
+          btnClear.disabled = false;
+          placedFirst = false;
+        });
+
+        // Update area while dragging/resizing
+        google.maps.event.addListener(rectangle || map, 'bounds_changed', function () {
+          if (rectangle) {
+            updateArea(rectangle.getBounds());
+          }
+        });
+
+        // Hide loading spinner
+        mapLoading.classList.add('is-hidden');
+        setTimeout(function () { mapLoading.style.display = 'none'; }, 300);
+      }
+
+      // "Select area on map" button — activates drawing mode
+      document.getElementById('btn-draw-rectangle').addEventListener('click', function () {
+        if (!drawManager) return;
+        clearSelection();
+        drawingManager.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+        mapHint.textContent = 'Click to place first corner';
+        mapHint.classList.remove('corner-placed');
+        this.textContent = 'Click map to start drawing';
+      });
+
+      // Clear button
+      btnClear.addEventListener('click', function () {
+        clearSelection();
+        if (drawingManager) {
+          drawingManager.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+        }
+        document.getElementById('btn-draw-rectangle').textContent = 'Select area on map';
+      });
+
+      // Load Google Maps API — replace YOUR_API_KEY with a real key
+      window.initMap = initMap;
+
+      function loadGoogleMaps() {
+        if (window.google && window.google.maps) {
+          initMap();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing&callback=initMap';
+        script.async = true;
+        script.defer = true;
+        script.onerror = function () {
+          mapLoading.innerHTML = '<span style="color:#c00">Failed to load Google Maps.<br>Please check your API key and internet connection.</span>';
+        };
+        document.head.appendChild(script);
+      }
+
+      // Auto-init if API key is already present (for testing)
+      if (window.google && window.google.maps) {
+        initMap();
+      } else {
+        loadGoogleMaps();
+      }
+    })();
   </script>
 </body>
 </html>
