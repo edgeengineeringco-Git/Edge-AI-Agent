@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Edge GeoIntelligence – Project Setup & Service Selection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Edge GeoIntelligence – Project Setup &amp; Service Selection</h1>
+      <p class="subhead">Tell us about your project and choose the services you need.</p>
+      <p class="brand-line">EDGE Geointelligence</p>
+
+      <form action="#" method="POST" enctype="multipart/form-data">
+
+        <!-- 1. Project details -->
+        <fieldset class="section">
+          <legend>1. Project details</legend>
+
+          <div class="field-group">
+            <label for="project_name">Project name</label>
+            <input type="text" id="project_name" name="project_name" placeholder="e.g. Donegal REE Survey 2026" required />
+          </div>
+
+          <div class="field-group">
+            <label for="organisation">Organisation / client</label>
+            <input type="text" id="organisation" name="organisation" placeholder="Company or client name" required />
+          </div>
+
+          <div class="field-group">
+            <label for="project_description">Short project description</label>
+            <textarea id="project_description" name="project_description" rows="3" placeholder="2–3 lines describing the project scope, location, and objectives…"></textarea>
+          </div>
+        </fieldset>
+
+        <!-- 2. Area of interest -->
+        <fieldset class="section">
+          <legend>2. Area of interest</legend>
+
+          <div class="field-group">
+            <label>Tool</label>
+            <div class="inline-actions">
+              <button type="button" class="btn-outline" id="btn-draw-polygon">Draw polygon</button>
+              <span class="separator">or</span>
+              <label class="file-upload-label">
+                Upload boundary file
+                <input type="file" id="boundary_file" name="boundary_file" accept=".zip,.shp,.geojson,.kml,.csv" hidden />
+              </label>
+            </div>
+            <div class="helper">Draw a polygon on the interactive satellite map, or upload a boundary file (SHP, GeoJSON, KML, CSV).</div>
+          </div>
+
+          <!-- Interactive satellite map placeholder -->
+          <div class="map-placeholder" id="map">
+            <div class="map-inner">
+              <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" class="map-svg">
+                <defs>
+                  <linearGradient id="satellite" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#2d5a2d" />
+                    <stop offset="50%" stop-color="#3a6b34" />
+                    <stop offset="100%" stop-color="#4a7c3f" />
+                  </linearGradient>
+                </defs>
+                <rect width="400" height="220" fill="url(#satellite)" />
+                <path d="M60,90 Q100,60 160,80 Q220,50 280,70 Q340,90 350,140 Q330,180 270,175 Q200,195 140,170 Q80,180 50,150 Z" fill="#5a9c4a" opacity="0.6" />
+                <path d="M20,170 Q90,150 160,160 Q240,150 320,140 Q380,150 390,170 L390,220 L20,220 Z" fill="#2e4a28" opacity="0.5" />
+                <!-- Grid lines -->
+                <line x1="0" y1="55" x2="400" y2="55" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+                <line x1="0" y1="110" x2="400" y2="110" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+                <line x1="0" y1="165" x2="400" y2="165" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+                <line x1="100" y1="0" x2="100" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+                <line x1="200" y1="0" x2="200" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+                <line x1="300" y1="0" x2="300" y2="220" stroke="#88a07a" stroke-width="0.3" opacity="0.4" />
+              </svg>
+              <div class="map-overlay-text">Interactive satellite map</div>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="field-group">
+              <label for="calculated_area">Calculated area</label>
+              <input type="text" id="calculated_area" name="calculated_area" readonly placeholder="km² / ha" />
+              <div class="helper">Auto-filled when polygon is drawn or file is uploaded.</div>
+            </div>
+
+            <div class="field-group">
+              <label for="country">Country / region</label>
+              <input type="text" id="country" name="country" placeholder="e.g. Ireland, Connemara" list="country-list" />
+              <datalist id="country-list">
+                <option value="Ireland"></option>
+                <option value="United Kingdom"></option>
+                <option value="Sweden"></option>
+                <option value="Finland"></option>
+                <option value="Canada"></option>
+                <option value="Australia"></option>
+                <option value="United States"></option>
+                <option value="Brazil"></option>
+              </datalist>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- 3. Service selection -->
+        <fieldset class="section">
+          <legend>3. Service selection</legend>
+          <p class="helper" style="margin-bottom:10px">Choose one or more services.</p>
+
+          <div class="checkbox-group">
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_remote_ree" name="services[]" value="remote_ree_kuth" />
+              <label for="svc_remote_ree">Remote REE–KUTH Modelling</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_onsite" name="services[]" value="onsite_survey" />
+              <label for="svc_onsite">On-Site Survey + Platform Outputs</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_3d" name="services[]" value="3d_deposit_modelling" />
+              <label for="svc_3d">3D Deposit Modelling (Leapfrog)</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_subscription" name="services[]" value="platform_subscription" />
+              <label for="svc_subscription">Platform Subscription</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_full" name="services[]" value="full_instruments" />
+              <label for="svc_full">Full Instruments + Platform Suite</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="svc_expert" name="services[]" value="expert_modelling" />
+              <label for="svc_expert">Expert Geo-Modelling Support</label>
+            </div>
+          </div>
+
+          <p class="helper note" style="margin-top: 10px; font-style: italic;">Select at least one core service.</p>
+
+          <hr class="divider" />
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="free_quote" name="free_quote" value="true" />
+            <label for="free_quote"><strong>I just want a free initial quote</strong> — tick this box to skip data upload on the next page.</label>
+          </div>
+        </fieldset>
+
+        <!-- 4. Detector and data options -->
+        <fieldset class="section">
+          <legend>4. Detector and data options</legend>
+          <p class="helper" style="margin-bottom:10px">Detector type:</p>
+
+          <div class="radio-group">
+            <div class="radio-row">
+              <input type="radio" id="det_high" name="detector_type" value="high_resolution_gamma" />
+              <label for="det_high">High-resolution gamma</label>
+            </div>
+            <div class="radio-row">
+              <input type="radio" id="det_low" name="detector_type" value="low_resolution_gamma" />
+              <label for="det_low">Low-resolution gamma</label>
+            </div>
+            <div class="radio-row">
+              <input type="radio" id="det_own" name="detector_type" value="client_own" />
+              <label for="det_own">Client's own detector</label>
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-top: 12px;">
+            <label for="detector_model">Model / name <span class="optional">(if client's own)</span></label>
+            <input type="text" id="detector_model" name="detector_model" placeholder="e.g. RS-230, Exploranium GR-135" />
+          </div>
+        </fieldset>
+
+        <!-- 5. Contact & timing -->
+        <fieldset class="section">
+          <legend>5. Contact &amp; timing</legend>
+
+          <div class="settings-grid">
+            <div class="field-group">
+              <label for="contact_name">Primary contact name</label>
+              <input type="text" id="contact_name" name="contact_name" placeholder="Full name" required />
+            </div>
+
+            <div class="field-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="name@example.com" required />
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="field-group">
+              <label for="start_date">Preferred start date</label>
+              <input type="date" id="start_date" name="start_date" />
+            </div>
+
+            <div class="field-group">
+              <label for="referral">How did you hear about us?</label>
+              <select id="referral" name="referral">
+                <option value="">— Please select —</option>
+                <option value="conference">Conference</option>
+                <option value="referral">Referral</option>
+                <option value="web">Web search</option>
+                <option value="existing_client">Existing client</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit">Submit &amp; continue</button>
+          <div class="footer-note">
+            EDGE Geointelligence · info@edgeengineers.net
+          </div>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // Free quote toggle — disable other sections if checked
+    const freeQuote = document.getElementById('free_quote');
+    const otherSections = document.querySelectorAll('.section:not(:nth-of-type(3)) input, .section:not(:nth-of-type(3)) select, .section:not(:nth-of-type(3)) textarea');
+
+    freeQuote.addEventListener('change', function () {
+      const disabled = this.checked;
+      document.querySelectorAll('.section').forEach(function (section) {
+        const legend = section.querySelector('legend');
+        if (legend && !legend.textContent.includes('Free') && !legend.textContent.includes('3. Service')) {
+          section.classList.toggle('is-disabled', disabled);
+        }
+      });
+    });
+
+    // Map placeholder — simple polygon draw simulation
+    const map = document.getElementById('map');
+    const areaInput = document.getElementById('calculated_area');
+    const btnDraw = document.getElementById('btn-draw-polygon');
+    let drawing = false;
+    let points = [];
+
+    btnDraw.addEventListener('click', function () {
+      drawing = !points.length;
+      btnDraw.textContent = drawing ? 'Click points on map (double-click to finish)' : 'Draw polygon';
+    });
+
+    map.addEventListener('click', function (e) {
+      if (!drawing) return;
+      const rect = map.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width * 400).toFixed(0);
+      const y = ((e.clientY - rect.top) / rect.height * 220).toFixed(0);
+      points.push({ x, y });
+      areaInput.value = 'Polygon (' + points.length + ' vertices)';
+    });
+
+    map.addEventListener('dblclick', function () {
+      if (drawing && points.length >= 3) {
+        drawing = false;
+        // Fake area calc
+        const fakeArea = (Math.random() * 50 + 5).toFixed(2);
+        areaInput.value = fakeArea + ' km²';
+        btnDraw.textContent = 'Edit polygon';
+      }
+    });
+  </script>
+</body>
+</html>
