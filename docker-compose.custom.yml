@@ -59,6 +59,7 @@ services:
     environment:
       - TRAEFIK_CONFIG_DIR=/traefik-config
       - TZ=Europe/Dublin
+      - NEXTAUTH_URL=https://pbot.edgeengineers.net
     labels:
       - traefik.enable=true
       - traefik.http.routers.event-handler.rule=Host(`${APP_HOSTNAME}`)
