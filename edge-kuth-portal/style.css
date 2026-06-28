@@ -1,0 +1,280 @@
+/* Edge GeoIntelligence – Project Setup form styles */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f4f5f3;
+  color: #1e2a1c;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 760px;
+  margin: 32px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 18px rgba(0,0,0,0.04);
+  padding: 28px 30px 22px;
+}
+
+h1 {
+  font-size: 1.45rem;
+  margin: 0 0 4px;
+  color: #233321;
+}
+
+.subhead {
+  margin: 0 0 2px;
+  color: #4d5a48;
+}
+
+.brand-line {
+  margin: 0 0 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: #4a7c3f;
+}
+
+.section {
+  border: 1px solid #e0e3db;
+  border-radius: 8px;
+  padding: 16px 18px 18px;
+  margin: 0 0 18px;
+}
+
+.section legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #233321;
+  padding: 0 6px;
+}
+
+.section.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.field-group {
+  margin-bottom: 14px;
+}
+
+.field-group:last-child {
+  margin-bottom: 0;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #c8ccbf;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #4a7c3f;
+  box-shadow: 0 0 0 3px rgba(74,124,63,0.12);
+}
+
+textarea { resize: vertical; }
+
+.helper {
+  font-size: 0.8rem;
+  color: #6b7563;
+  margin-top: 4px;
+}
+
+.helper.note { font-size: 0.78rem; }
+
+.optional { color: #8a9282; font-weight: 400; font-size: 0.8rem; }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 560px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+/* Inline actions (draw / upload) */
+.inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.separator { color: #8a9282; font-size: 0.85rem; }
+
+.btn-outline {
+  background: #fff;
+  border: 1.5px solid #4a7c3f;
+  color: #233321;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-outline:hover { background: #eef4ec; }
+
+.btn-small {
+  background: #fff;
+  border: 1px solid #c8ccbf;
+  color: #233321;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-small:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-small:not(:disabled):hover { background: #f4f5f3; }
+
+.file-upload-label {
+  display: inline-block;
+  background: #f4f5f3;
+  border: 1px dashed #b5bbb0;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: #4d5a48;
+}
+.file-upload-label:hover { background: #eef4ec; border-color: #4a7c3f; }
+
+/* Map container — explicit height is REQUIRED for Leaflet */
+.map-container {
+  position: relative;
+  border: 1px solid #d3d8cc;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 10px;
+  height: 380px;
+  background: #e8eae4;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #e8eae4;
+  color: #4d5a48;
+  font-size: 0.88rem;
+  transition: opacity 0.3s;
+}
+
+.map-loading.is-hidden { opacity: 0; pointer-events: none; }
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #c8ccbf;
+  border-top-color: #4a7c3f;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.map-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255,255,255,0.92);
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  font-size: 0.82rem;
+}
+
+.map-hint { color: #4d5a48; }
+.map-hint.corner-placed { color: #2e6b2a; font-weight: 500; }
+
+/* Checkbox / radio groups */
+.checkbox-group, .radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-row, .radio-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-row input, .radio-row input { width: auto; }
+.checkbox-row label, .radio-row label { margin: 0; font-weight: 400; cursor: pointer; }
+
+.divider { border: none; border-top: 1px solid #e0e3db; margin: 16px 0; }
+
+/* Actions */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.actions button[type="submit"] {
+  background: #233321;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 7px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.actions button[type="submit"]:hover { background: #2e4a29; }
+
+.footer-note {
+  font-size: 0.78rem;
+  color: #8a9282;
+}
