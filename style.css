@@ -140,7 +140,7 @@ textarea {
   gap: 0 22px;
 }
 
-/* Google Maps satellite selector */
+/* Leaflet satellite map container */
 .map-container {
   position: relative;
   margin-bottom: 6px;
@@ -154,8 +154,22 @@ textarea {
   width: 100%;
   height: 400px;
   min-height: 300px;
+  z-index: 0;
 }
 
+/* Leaflet overrides for EDGE theme */
+.leaflet-container {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #1a2e1a;
+}
+
+/* leaflet-geoman toolbar positioning */
+.leaflet-top.leaflet-left {
+  top: 10px;
+  left: 10px;
+}
+
+/* Drawing hint overlay */
 .map-loading {
   position: absolute;
   inset: 0;
@@ -167,7 +181,7 @@ textarea {
   background: #f0f0f0;
   color: #666;
   font-size: 0.88rem;
-  z-index: 1;
+  z-index: 1000;
   transition: opacity 0.3s ease;
 }
 
@@ -192,12 +206,12 @@ textarea {
 .map-controls {
   position: absolute;
   top: 10px;
-  left: 10px;
+  left: 50px;
   right: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 2;
+  z-index: 500;
   pointer-events: none;
 }
 
