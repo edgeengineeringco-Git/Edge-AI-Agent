@@ -201,24 +201,29 @@ def main():
         print(f"  [{i+1}/{len(slides)}] {slide_type}: {headline[:50]}...")
         sys.stdout.flush()
 
-        try:
-            svg = generate_schematic(slide, args.topic, args.sector, api_key, args.model)
-            schematics.append({
-                "slide_index": i,
-                "slide_type": slide_type,
-                "headline": headline,
-                "svg": svg
-            })
-            print(f"    Generated SVG ({len(svg)} chars)")
-        except Exception as e:
-            print(f"    Failed: {e}", file=sys.stderr)
-            schematics.append({
-                "slide_index": i,
-                "slide_type": slide_type,
-                "headline": headline,
-                "svg": None,
-                "error": str(e)
-            })
+        svg = None
+        last_error = None
+        for attempt in range(1, 3):  # up to 2 attempts
+            try:
+                svg = generate_schematic(slide, args.topic, args.sector, api_key, args.model)
+                if svg and len(svg.strip()) > 100:
+                    print(f"    Generated SVG ({len(svg)} chars)")
+                    break
+                else:
+                    print(f"    Attempt {attempt}: empty/short SVG, retrying...")
+                    svg = None
+            except Exception as e:
+                last_error = str(e)
+                print(f"    Attempt {attempt} failed: {e}", file=sys.stderr)
+                svg = None
+
+        schematics.append({
+            "slide_index": i,
+            "slide_type": slide_type,
+            "headline": headline,
+            "svg": svg,
+            **({"error": last_error} if svg is None and last_error else {})
+        })
         sys.stdout.flush()
 
     # Save schematics manifest

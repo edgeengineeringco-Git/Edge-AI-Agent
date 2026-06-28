@@ -11,8 +11,14 @@ Execute the following pipeline sequentially. Each phase builds on the previous.
 
 1. Get secrets via `agent-job-secrets`:
    - `GOOGLE_DRIVE_OAUTH` — for Google Sheets access (already in env for scoped agent jobs)
-   - `GEMINI_API_KEY` — for Nano Banana images + Veo video (set in admin panel)
-   - `SHOTSTACK_API_KEY` — optional, for MP4 video output
+   - `MOONSHOT_API_KEY` — for SVG schematic generation (set in admin panel as agent-job-secret)
+
+   Note: agent-job-secrets returns the full JSON object. Extract the value like this:
+   ```bash
+   MOONSHOT_JSON=$(node skills/agent-job-secrets/agent-job-secrets.js get MOONSHOT_API_KEY 2>/dev/null || echo "")
+   MOONSHOT_API_KEY=$(echo "$MOONSHOT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])" 2>/dev/null || echo "")
+   export MOONSHOT_API_KEY
+   ```
 
 2. Create dated output directory:
    ```bash
@@ -22,10 +28,10 @@ Execute the following pipeline sequentially. Each phase builds on the previous.
 
 3. Verify Python3 and scripts:
    ```bash
-   python3 scripts/generate_images.py --help > /dev/null && echo "OK"
-   python3 scripts/generate_video.py --help > /dev/null && echo "OK"
    python3 scripts/compose_video.py --help > /dev/null && echo "OK"
+   python3 scripts/generate_schematics.py --help > /dev/null && echo "OK"
    python3 scripts/sheets_handler.py --help > /dev/null && echo "OK"
+   python3 scripts/drive_upload.py --help > /dev/null && echo "OK"
    ```
 
 ---
@@ -90,68 +96,7 @@ EOF
 
 ---
 
-## Phase 3: Generate Images
-
-### Option A: Pollinations.ai (free, no key needed)
-
-```bash
-python3 scripts/generate_images.py \
-  --topic "$TOPIC" \
-  --sector "$SECTOR" \
-  --output-dir "output/$DATE_DIR" \
-  --backend pollinations
-```
-
-### Option B: Nano Banana (Gemini, better quality)
-
-```bash
-# Need GEMINI_API_KEY in env
-python3 scripts/generate_images.py \
-  --topic "$TOPIC" \
-  --sector "$SECTOR" \
-  --output-dir "output/$DATE_DIR" \
-  --backend nano-banana \
-  --gemini-key "$GEMINI_API_KEY"
-```
-
-Backend options:
-- `pollinations` — Free, no key, variable quality
-- `nano-banana` — Gemini 2.5 Flash Image (60/min free tier)
-- `nano-banana-2` — Gemini 3.1 Flash Image Preview (higher quality)
-- `nano-banana-pro` — Gemini 3 Pro Image (best quality, paid)
-
-### Verify
-
-Check `output/$DATE_DIR/image_manifest.json` has at least 2/4 success.
-
----
-
-## Phase 4: Generate Veo 3.1 AI Video (Optional — skip if no GEMINI_API_KEY)
-
-This generates a short AI video clip for use as background/visual content.
-
-```bash
-if [ -n "$GEMINI_API_KEY" ]; then
-  python3 scripts/generate_video.py \
-    --topic "$TOPIC" \
-    --sector "$SECTOR" \
-    --model veo-3.1-lite-generate-preview \
-    --duration 5 \
-    --output-dir "output/$DATE_DIR" \
-    --gemini-key "$GEMINI_API_KEY"
-fi
-```
-
-Model options (cheapest first):
-- `veo-3.1-lite-generate-preview` — Cost-effective Lite
-- `veo-3.1-fast-generate-preview` — Faster, lower quality
-- `veo-3.1-generate-preview` — Standard quality
-
-Note: Veo generation takes 30-120 seconds. Check `output/$DATE_DIR/veo_result.json` for status.
-
----
-
-## Phase 5: Generate Structured Slide Content
+## Phase 3: Generate Structured Slide Content
 
 Generate structured slide content for the video. Two approaches:
 
@@ -206,7 +151,7 @@ Then pass `--post-text` to compose (see Phase 7) — it will auto-extract slide 
 
 ---
 
-## Phase 6: Generate SVG Schematics via Moonshot Kimi
+## Phase 4: Generate SVG Schematics via Moonshot Kimi
 
 Generates professional SVG diagrams and info-graphics using the Moonshot Kimi API.
 These are embedded directly into the video slideshow — no image hosting needed.
@@ -214,20 +159,16 @@ These are embedded directly into the video slideshow — no image hosting needed
 **Requires:** MOONSHOT_API_KEY set in environment or admin panel.
 
 ```bash
-MOONSHOT_KEY_FLAG=""
-if [ -f "output/$DATE_DIR/slides.json" ]; then
-  MOONSHOT_KEY=$(node skills/agent-job-secrets/agent-job-secrets.js get MOONSHOT_API_KEY 2>/dev/null || echo "")
-  if [ -n "$MOONSHOT_KEY" ]; then
-    python3 scripts/generate_schematics.py \
-      --slides "output/$DATE_DIR/slides.json" \
-      --topic "$TOPIC" \
-      --sector "$SECTOR" \
-      --model kimi-k2.6 \
-      --moonshot-key "$MOONSHOT_KEY" \
-      --output-dir "output/$DATE_DIR"
-  else
-    echo "  MOONSHOT_API_KEY not available — skipping schematics"
-  fi
+if [ -f "output/$DATE_DIR/slides.json" ] && [ -n "$MOONSHOT_API_KEY" ]; then
+  python3 scripts/generate_schematics.py \
+    --slides "output/$DATE_DIR/slides.json" \
+    --topic "$TOPIC" \
+    --sector "$SECTOR" \
+    --model kimi-k2.6 \
+    --moonshot-key "$MOONSHOT_API_KEY" \
+    --output-dir "output/$DATE_DIR"
+else
+  echo "  MOONSHOT_API_KEY not available — skipping schematics"
 fi
 ```
 
@@ -236,7 +177,7 @@ Content slides get technical diagrams (flowcharts, comparison charts), title/CTA
 
 ---
 
-## Phase 7: Compose Video
+## Phase 5: Compose Video
 
 Generates a professional HTML video slideshow. No API keys needed.
 
@@ -271,7 +212,7 @@ The output is `output/$DATE_DIR/video.html` — a self-contained, auto-advancing
 
 ---
 
-## Phase 8: Upload to Google Drive
+## Phase 6: Upload to Google Drive
 
 Upload all generated files to a dated subfolder in the EDGE Smart Video Drive folder.
 
@@ -295,7 +236,7 @@ echo "Drive folder: $DRIVE_URL"
 
 ---
 
-## Phase 9: Update Sheet Status
+## Phase 7: Update Sheet Status
 
 Update the topic status in Google Sheets:
 
@@ -312,7 +253,7 @@ python3 scripts/sheets_handler.py update \
 
 ---
 
-## Phase 10: Create Summary and Deliver (post-Telegram finalisation)
+## Phase 8: Create Summary and Deliver (post-Telegram finalisation)
 
 ### Summary file
 
@@ -340,7 +281,6 @@ cat > "output/$DATE_DIR/summary.md" << SUMMARYEOF
 - HTML Video Slideshow: video.html
 - Slide Data: slides.json
 - SVG Schematics: schematics.json (diagrams + graphics)
-- Veo AI Video: veo_video.mp4 (if generated)
 - Google Drive: $DRIVE_URL
 
 ## Status
@@ -362,10 +302,16 @@ fi
 
 DRIVE_LINE=""
 if [ -n "$DRIVE_URL" ]; then
-  DRIVE_LINE="📁 Drive: \$DRIVE_URL"
+  DRIVE_LINE="📁 Drive: $DRIVE_URL"
 fi
 
-node skills/agent-job-dm/agent-job-dm.js send --broadcast \
+# Use canonical skills-library path (works in scoped cron environments)
+DM_SCRIPT="../../skills-library/agent-job-dm/agent-job-dm.js"
+if [ ! -f "$DM_SCRIPT" ]; then
+  DM_SCRIPT="skills/agent-job-dm/agent-job-dm.js"
+fi
+
+node "$DM_SCRIPT" send --broadcast \
   "🛰 *EDGE Smart Video — Draft Ready*
 ━━━━━━━━━━━━━━━━━━━━━
 📌 *Topic:* $TOPIC
@@ -386,7 +332,7 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 
 ---
 
-## Phase 11: Report
+## Phase 9: Report
 
 ```
 ╔═══════════════════════════════════════╗
@@ -395,9 +341,9 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 
 📌 Topic:        $TOPIC_ID - $TOPIC
 🏭 Sector:       $SECTOR
-🖼 Images:       [check manifest]
-🎬 Veo Video:    [check veo_result.json]
-🎥 Composition:  [check video_result.json]
+📊 Slides:       [count from slides.json]
+🎨 SVGs:         [count from schematics.json]
+📹 Video:        video.html
 📊 Sheet:        Updated to Draft Ready
 📁 Drive:         Uploaded
 📨 Telegram:     Sent
@@ -411,21 +357,19 @@ Reply: APPROVE / IMPROVE :suggestion / REJECT :reason"
 |---------|--------|
 | Sheets OAuth fails | Retry `agent-job-secrets get GOOGLE_DRIVE_OAUTH` |
 | No pending topics | Report and exit cleanly |
-| Veo API quota exceeded | Skip Veo, continue without AI video |
 | Moonshot API unavailable | Skip schematics, continue without SVG diagrams |
-| Moonshot schematic fails for a slide | Continue with remaining schematics — compose handles missing entries |
+| Moonshot schematic fails for a slide | Retry once, then continue — compose handles missing entries |
 | Compose has no post-text | Use LLM-generated `slides.json` (Option A) instead |
 | Drive upload fails | Log error, continue — files still exist locally |
 | Telegram fails | Log message, continue |
 
 ## Important Notes
 
-- **GEMINI_API_KEY** must be set in thepopebot admin panel (not in this repo)
+- **MOONSHOT_API_KEY** must be added as an agent-job-secret in the admin panel (key: `MOONSHOT_API_KEY`)
 - **GOOGLE_DRIVE_OAUTH** is auto-injected for scoped agent jobs
-- **MOONSHOT_API_KEY** should be added as an agent-job-secret in the admin panel (key: `MOONSHOT_API_KEY`)
 - **Moonshot Kimi K2.6** is the recommended model — strong at technical diagrams, 262K context, supports reasoning
-- **Veo 3.1 Lite**: ~$0.05/sec, or free tier with quota limits
+- **agent-job-secrets returns JSON** — always pipe through `python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"` to extract the actual key value
 - The HTML video slideshow is always created as the primary deliverable — no API keys needed
 - SVG schematics are embedded directly in the HTML — no image hosting, always crisp
-- For best results, generate `slides.json` using LLM (Phase 5 Option A) with structured slide content extracted from the LinkedIn post
+- For best results, generate `slides.json` using LLM (Phase 3 Option A) with structured slide content extracted from the LinkedIn post
 - The slideshow auto-advances every 5 seconds, supports keyboard navigation, and works on any browser
