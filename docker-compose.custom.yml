@@ -54,6 +54,8 @@ services:
       - ./logs:/app/logs
       - ./traefik-config:/traefik-config
       - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - .env
     environment:
       - TRAEFIK_CONFIG_DIR=/traefik-config
       - TZ=Europe/Dublin
