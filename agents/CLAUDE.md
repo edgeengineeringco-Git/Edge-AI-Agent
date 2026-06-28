@@ -78,7 +78,7 @@ GeoSync Expert — geochemical survey processing pipeline for REE prospecting. P
 - **Cron:** `geosync-process-survey` in `agent-job/CRONS.json`
 - **Job:** `agents/geosync-expert/jobs/process-survey.md`
 - **System prompt:** `agents/geosync-expert/SYSTEM.md`
-- **Skills:** Inherits root skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration)
+- **Skills:** Inherits all 10 root geoscience skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration, drone-survey, ore-grade, ree-database, spectral-interpret)
 
 ## Removing an Agent
 

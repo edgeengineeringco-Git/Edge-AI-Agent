@@ -189,6 +189,22 @@ Pure reference — REE element tables, deposit-type TREO ranges, pathfinder elem
 
 Pure reference — sampling best practices, grid spacing guidelines, field QA/QC checklist, and continue vs. cease decision criteria. See `skills-library/geochem-exploration/SKILL.md`.
 
+### drone-survey
+
+Aerial survey planning and interpretation for REE and critical minerals — platform selection (multirotor / fixed-wing / hybrid VTOL), sensor specs (gamma / pXRF / hyperspectral / LiDAR), flight grid design, weather constraints, cost analysis, data processing workflows, regulatory framework, and troubleshooting. See `skills-library/drone-survey/SKILL.md`.
+
+### ore-grade
+
+Ore grade economic assessment — confidence tier verification, uncertainty ranges, tonnage and contained metal, cut-off grade assessment with HREE premium, JORC-aligned resource classification, 3-axis risk matrix, and regulation-safe reporting language. See `skills-library/ore-grade/SKILL.md`.
+
+### ree-database
+
+Comprehensive REE reference — full 17-element lanthanide data (crustal abundance, ionic radii, electron configuration, magnetic properties, redox chemistry), market prices and correlations, global production and reserve statistics, processing and separation technologies, substitutability matrix, magnet specifications, environmental radioactivity, and 2025–2035 demand scenarios. See `skills-library/ree-database/SKILL.md`.
+
+### spectral-interpret
+
+Gamma-ray and pXRF spectral interpretation — data quality assessment, background characterization, REE pattern analysis, chondrite normalization, Ce/Eu anomaly interpretation, deposit-type fingerprinting, and radiometric ratio analysis (Th/U, F-parameter). See `skills-library/spectral-interpret/SKILL.md`.
+
 ## Security Note
 
 The original n8n workflow used a hardcoded password (`Edge12345`). This thepopebot-native deployment handles auth through the platform's standard webhook authentication and agent scoping. No credentials are embedded in code.

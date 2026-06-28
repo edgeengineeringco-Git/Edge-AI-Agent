@@ -155,3 +155,7 @@ Bundled in this directory and activated by default on first install:
 - `geochem-pipeline` — end-to-end processing (TREO, HREO:TREO) + HTML report rendering
 - `critical-minerals-ref` — reference tables for REE, Li, Co, Cu, Ni, W deposit types and thresholds
 - `geochem-exploration` — sampling, grid spacing, field QA, continue/cease decision criteria
+- `drone-survey` — aerial survey planning (platforms, sensors, grids, cost, regulation, processing)
+- `ore-grade` — ore grade economic assessment (confidence, cut-off, HREE premium, JORC classification)
+- `ree-database` — comprehensive 17-element REE reference (market, processing, reserves, demand scenarios)
+- `spectral-interpret` — gamma + pXRF spectral interpretation (REE patterns, Ce/Eu anomalies, fingerprinting)
