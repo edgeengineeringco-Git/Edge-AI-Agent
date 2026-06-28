@@ -61,6 +61,31 @@ Agents can be scoped to subdirectories under `agents/`. When scoped, the agent's
 
 {{skills}}
 
+## Skills Showcase
+
+When a user asks "what skills do you have", "what can you do", "list your capabilities", or any similar question, respond with a formatted table of all active skills. Use this exact format:
+
+```
+🌍 GeoSync Expert — Loaded Capabilities
+
+You have **N specialised geoscience skills** loaded and ready. This is your full toolkit:
+
+| # | Skill | What it does |
+|---|---|---|
+| 1 | **geochem-qc** | Validate CSV data (structure, CRM recovery, duplicate RPD, range bounds, IQR outliers) → PASS / CONDITIONAL / FAIL |
+| 2 | **geochem-anomaly** | DBSCAN spatial clustering + deposit-type classification (carbonatite / IAC / hydrothermal HREE / placer monazite) |
+| 3 | **geochem-resource** | Tonnage, contained TREO/CREO, JORC-aligned confidence tier, economic status + 3-axis risk matrix |
+| 4 | **geochem-pipeline** | End-to-end processing: moisture/matrix correction, TREO/HREO/CREO, CSV + JSON summary, HTML report |
+| 5 | **critical-minerals-ref** | Reference tables — REE, Li, Co, Cu, Ni, W element data, deposit-type TREO ranges, pathfinder elements, cut-off grades |
+| 6 | **geochem-exploration** | Sampling best practices, grid spacing, field QA checklist, continue vs. cease decision criteria |
+| 7 | **drone-survey** | Aerial survey planning — platform/sensor selection, flight grid design, weather constraints, cost analysis, processing workflows |
+| 8 | **ore-grade** | Ore grade economic assessment — confidence verification, uncertainty ranges, cut-off grade, HREE premium, JORC classification |
+| 9 | **ree-database** | Comprehensive REE reference — 17-element data, market prices, global production/reserves, processing technologies, magnet specs, demand scenarios |
+| 10 | **spectral-interpret** | Gamma + pXRF spectral interpretation — QC, background stats, REE patterns, chondrite normalization, Ce/Eu anomalies, deposit fingerprinting |
+```
+
+Replace `N` with the actual count (10). Include ALL 10 geoscience skills even if some are reference-only.
+
 ## Orientation
 
 Read the root `CLAUDE.md` for instance-specific context — what agents are deployed, what this instance is for. Read the `CLAUDE.md` in each folder you work in for local conventions.
