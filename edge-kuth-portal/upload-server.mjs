@@ -185,17 +185,58 @@ EDGE Geointelligence`;
   }
 }
 
+// ── Static file serving (for the upload-page form + assets) ───────────────
+
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".css":  "text/css; charset=utf-8",
+  ".js":   "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png":  "image/png",
+  ".svg":  "image/svg+xml",
+  ".ico":  "image/x-icon",
+};
+
+function serveStatic(req, res) {
+  // Map /edge-kuth/upload-page → upload-form.html, / → upload-form.html
+  let urlPath = decodeURIComponent((req.url || "").split("?")[0]);
+  if (urlPath === "/" || urlPath === "/edge-kuth/upload-page" || urlPath === "/edge-kuth/") {
+    urlPath = "/upload-form.html";
+  }
+  // Only serve files inside the edge-kuth-portal directory
+  const safePath = path.normalize(path.join(__dirname, urlPath));
+  if (!safePath.startsWith(__dirname)) {
+    res.writeHead(403); res.end("Forbidden"); return;
+  }
+  fs.readFile(safePath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found");
+      return;
+    }
+    const ext = path.extname(safePath).toLowerCase();
+    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+    res.end(data);
+  });
+}
+
 // ── HTTP Server ───────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // GET / HEAD → serve the form page and its static assets (CSS, JS, lib/)
+  if (req.method === "GET" || req.method === "HEAD") {
+    serveStatic(req, res);
     return;
   }
 
