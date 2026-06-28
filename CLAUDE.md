@@ -139,11 +139,55 @@ agents/edge-smart-video/
     └── YYYY-MM-DD-topic/     # Generated assets per run
 ```
 
+### geosync-expert
+
+**GeoSync Expert** — geochemical survey processing pipeline for REE prospecting. Processes pXRF / gamma-ray / ICP-MS CSV data through QC → anomaly detection → resource estimation → HTML report generation. Triggered on schedule or manually.
+
+- **Scope:** `agents/geosync-expert`
+- **Cron:** `geosync-process-survey` in `agent-job/CRONS.json` (disabled by default)
+- **System prompt:** `agents/geosync-expert/SYSTEM.md`
+- **Jobs:** `agents/geosync-expert/jobs/process-survey.md`
+- **Pipeline:** Raw CSV → QC gate → TREO/HREO computation → DBSCAN clustering → deposit classification → resource estimate → risk matrix → HTML report → Telegram notification
+- **Skills:** `geochem-qc`, `geochem-anomaly`, `geochem-resource`, `geochem-pipeline`, `critical-minerals-ref`, `geochem-exploration` (all root skills, inherited by scope)
+
+```
+agents/geosync-expert/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── process-survey.md
+└── (data + reports written to data/ and reports/ at repo root)
+```
+
 ## Skills
 
 ### edge-kuth-analysis
 
 K/U/Th spectral analysis skill. Any agent can invoke this skill for instructions on running the estimation engine. See `skills-library/edge-kuth-analysis/SKILL.md` for details.
+
+### geochem-qc
+
+Automated QC validation for geochemical CSV data. Returns PASS / CONDITIONAL / FAIL based on structure, CRM recovery, duplicate RPD, range bounds, and IQR outlier detection. See `skills-library/geochem-qc/SKILL.md`.
+
+### geochem-anomaly
+
+Spatial anomaly clustering (DBSCAN, median + 3×MAD threshold) and deposit-type classification (carbonatite / ion-adsorption clay / hydrothermal HREE / placer monazite) from REE patterns. See `skills-library/geochem-anomaly/SKILL.md`.
+
+### geochem-resource
+
+Quick resource estimation (tonnage, contained TREO/CREO, JORC-aligned confidence tier, economic status) and geological/analytical/economic risk matrix with recommendations. See `skills-library/geochem-resource/SKILL.md`.
+
+### geochem-pipeline
+
+End-to-end geochemical processing — moisture/matrix correction, TREO/HREO/CREO computation, CSV + JSON summary output, and HTML report generation via Jinja2. See `skills-library/geochem-pipeline/SKILL.md`.
+
+### critical-minerals-ref
+
+Pure reference — REE element tables, deposit-type TREO ranges, pathfinder elements, Li/Co/Cu/Ni/W occurrence patterns and cut-off grades, multi-commodity associations. See `skills-library/critical-minerals-ref/SKILL.md`.
+
+### geochem-exploration
+
+Pure reference — sampling best practices, grid spacing guidelines, field QA/QC checklist, and continue vs. cease decision criteria. See `skills-library/geochem-exploration/SKILL.md`.
 
 ## Security Note
 

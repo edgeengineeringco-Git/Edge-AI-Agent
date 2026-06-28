@@ -149,3 +149,9 @@ Bundled in this directory and activated by default on first install:
 - `agent-job-dm` — list users + send DMs/broadcasts via the recipient's default channel
 - `agent-job-background` — spawn/check background agent jobs (defaults `--user-id` to the running container's `USER_ID`)
 - `playwright-cli` — browser automation via Playwright CLI
+- `geochem-qc` — automated QC validation for geochemical CSV data (PASS/CONDITIONAL/FAIL)
+- `geochem-anomaly` — DBSCAN spatial clustering + deposit-type classification from REE patterns
+- `geochem-resource` — tonnage / contained metal / risk matrix for anomaly clusters
+- `geochem-pipeline` — end-to-end processing (TREO, HREO:TREO) + HTML report rendering
+- `critical-minerals-ref` — reference tables for REE, Li, Co, Cu, Ni, W deposit types and thresholds
+- `geochem-exploration` — sampling, grid spacing, field QA, continue/cease decision criteria

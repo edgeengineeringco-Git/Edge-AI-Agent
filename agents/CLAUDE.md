@@ -71,6 +71,15 @@ EDGE Smart Video Content Agent — produces LinkedIn-ready video content from a 
 - **Primary output**: Self-contained HTML slideshow (`video.html`) — no API keys needed
 - **Skills**: `agent-job-dm` for Telegram notifications
 
+### geosync-expert
+
+GeoSync Expert — geochemical survey processing pipeline for REE prospecting. Processes pXRF / gamma-ray / ICP-MS data through QC → anomaly detection → resource estimation → HTML report generation.
+
+- **Cron:** `geosync-process-survey` in `agent-job/CRONS.json`
+- **Job:** `agents/geosync-expert/jobs/process-survey.md`
+- **System prompt:** `agents/geosync-expert/SYSTEM.md`
+- **Skills:** Inherits root skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration)
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.

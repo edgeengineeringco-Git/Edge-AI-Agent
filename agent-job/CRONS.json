@@ -23,6 +23,14 @@
     "enabled": true
   },
   {
+    "name": "geosync-process-survey",
+    "schedule": "0 8 * * 2",
+    "type": "agent",
+    "scope": "agents/geosync-expert",
+    "job": "Read agents/geosync-expert/jobs/process-survey.md and execute the full geochemical survey processing pipeline. Do not ask for input — execute autonomously.",
+    "enabled": false
+  },
+  {
     "name": "agent-backend-override-example",
     "schedule": "0 10 * * *",
     "type": "agent",
