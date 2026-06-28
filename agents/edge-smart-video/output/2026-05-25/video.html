@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDGE | Geo-intelligence platform for mineral exploration subscriptions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #f0f4f0;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.player {
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16/9;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow:
+        0 0 0 1px rgba(26, 122, 58, 0.1),
+        0 30px 80px rgba(0, 0, 0, 0.6);
+    z-index: 1;
+}
+
+/* Progress bar */
+.progress-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(0,0,0,0.04);
+    z-index: 100;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1a7a3a, #145c2d);
+    transition: width 0.1s linear;
+    width: 0%;
+}
+
+/* Slides */
+.slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: scale(0.97);
+    padding: 60px 80px;
+}
+.slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Brand watermark */
+.brand-watermark {
+    position: absolute;
+    top: 24px;
+    left: 32px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.brand-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #1a7a3a;
+}
+.brand-name {
+    color: #1a7a3a;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+/* Title slide */
+.slide-title {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.slide-title .sector-tag {
+    color: #1a7a3a;
+    font-size: clamp(12px, 1.4vw, 18px);
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+}
+.slide-title h1 {
+    color: #1e293b;
+    font-size: clamp(28px, 4vw, 56px);
+    font-weight: 800;
+    line-height: 1.15;
+    max-width: 800px;
+    margin: 0 auto 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s forwards;
+}
+.slide-title .subtitle {
+    color: #64748b;
+    font-size: clamp(14px, 1.5vw, 22px);
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s forwards;
+}
+.slide-title .tagline-bar {
+    margin-top: 32px;
+    width: 60px;
+    height: 2px;
+    background: #1a7a3a;
+    margin-left: auto;
+    margin-right: auto;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+}
+
+/* Content slide */
+.slide-content {
+    justify-content: center;
+}
+.slide-content .slide-header {
+    margin-bottom: 32px;
+}
+.slide-content .slide-number {
+    color: #1a7a3a;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 6px;
+}
+.slide-content h2 {
+    color: #1e293b;
+    font-size: clamp(22px, 2.8vw, 40px);
+    font-weight: 700;
+    line-height: 1.2;
+    position: relative;
+    padding-bottom: 16px;
+}
+.slide-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 50px;
+    height: 3px;
+    background: #1a7a3a;
+    border-radius: 2px;
+}
+.slide-content .bullets {
+    margin-top: 28px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.slide-content .bullets li {
+    color: #64748b;
+    font-size: clamp(13px, 1.3vw, 20px);
+    line-height: 1.5;
+    padding-left: 28px;
+    position: relative;
+    opacity: 0;
+    animation: fadeUp 0.4s forwards;
+}
+.slide-content .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #1a7a3a;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+.slide-content .bullets li:nth-child(1) { animation-delay: 0.2s; }
+.slide-content .bullets li:nth-child(2) { animation-delay: 0.35s; }
+.slide-content .bullets li:nth-child(3) { animation-delay: 0.5s; }
+.slide-content .bullets li:nth-child(4) { animation-delay: 0.65s; }
+
+/* Content slide with SVG schematic */
+.slide-content.has-svg {
+    flex-direction: row;
+    align-items: center;
+    gap: 40px;
+}
+.slide-text {
+    flex: 1;
+    min-width: 0;
+}
+.slide-svg {
+    flex: 0 0 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 0.6s 0.3s forwards;
+}
+.slide-svg svg {
+    width: 100%;
+    height: auto;
+    max-height: 340px;
+    border-radius: 8px;
+}
+
+/* Background SVG for title and CTA slides */
+.slide-bg-svg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.06;
+    z-index: -1;
+    overflow: hidden;
+}
+.slide-bg-svg svg {
+    width: 80%;
+    height: 80%;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* CTA slide */
+.slide-cta {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.slide-cta h2 {
+    color: #1e293b;
+    font-size: clamp(24px, 3vw, 44px);
+    font-weight: 800;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+}
+.slide-cta .cta-url {
+    color: #1a7a3a;
+    font-size: clamp(18px, 2vw, 32px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.5s forwards;
+}
+.slide-cta .cta-sub {
+    color: #64748b;
+    font-size: clamp(11px, 1vw, 16px);
+    margin-top: 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+    opacity: 0.4;
+}
+
+/* Navigation */
+.nav {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+}
+.nav-dot.active {
+    background: #1a7a3a;
+    box-shadow: 0 0 12px rgba(26, 122, 58, 0.4);
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* Animations */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .slide { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+<div class="player" id="player" tabindex="0">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="brand-watermark">
+        <div class="brand-dot"></div>
+        <div class="brand-name">EDGE Engineers</div>
+    </div>
+    <div id="slidesContainer"></div>
+    <div class="nav" id="nav"></div>
+</div>
+
+<script>
+const slides = [{"type": "title", "headline": "Geo-Intelligence Platform for Mineral Exploration", "subtitle": "Energy Resources | EDGE Engineers", "sector": "Energy Resources"}, {"type": "content", "headline": "The Problem: Fragmented Exploration Data", "bullets": ["Satellite imagery, geochem surveys, and drilling data spread across six different platforms", "Critical signals buried in spreadsheet noise \u2014 weeks of interpretation time lost per target", "Desktop GIS silos prevent real-time collaboration between field teams and office interpreters"]}, {"type": "content", "headline": "The EDGE Solution: Unified Intelligence", "bullets": ["AI-powered target generation cross-referencing geology, geochem, and geophysics in one view", "Satellite-derived alteration mapping updated weekly \u2014 not quarterly", "Cloud-native platform eliminating six-figure software CAPEX with subscription access"]}, {"type": "content", "headline": "Measurable Impact for Exploration Teams", "bullets": ["40% faster target generation cycles reported by early adopters", "Significantly lower data management overhead and software costs", "Collaborative workspace where field and office work from the same live data"]}, {"type": "cta", "headline": "Is your exploration team keeping pace?", "url": "www.edgeengineers.net", "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"}];
+const schematics = [{"slide_index": 0, "slide_type": "title", "headline": "Geo-Intelligence Platform for Mineral Exploration", "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 600 400\" width=\"600\" height=\"400\">\n  <defs>\n    <!-- Background Gradient -->\n    <radialGradient id=\"bg-grad\" cx=\"50%\" cy=\"50%\" r=\"75%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\" />\n      <stop offset=\"100%\" stop-color=\"#f0f4f0\" />\n    </radialGradient>\n\n    <!-- 3D Globe Gradient -->\n    <linearGradient id=\"globe-grad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n      <stop offset=\"0%\" stop-color=\"#d1e7d6\" />\n      <stop offset=\"100%\" stop-color=\"#1a7a3a\" />\n    </linearGradient>\n\n    <!-- Amber Glow for Target -->\n    <radialGradient id=\"amber-glow\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n      <stop offset=\"0%\" stop-color=\"#d97706\" stop-opacity=\"0.4\" />\n      <stop offset=\"100%\" stop-color=\"#d97706\" stop-opacity=\"0\" />\n    </radialGradient>\n\n    <!-- Card Glass Gradient -->\n    <linearGradient id=\"glass-grad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\"0.9\" />\n      <stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0.4\" />\n    </linearGradient>\n\n    <!-- Clipping Paths -->\n    <clipPath id=\"clip-globe\">\n      <circle cx=\"300\" cy=\"210\" r=\"105\" />\n    </clipPath>\n    <clipPath id=\"clip-mountains\">\n      <path d=\"M 60 380 L 130 260 L 175 340 L 220 260 L 310 380 Z\" />\n    </clipPath>\n    <clipPath id=\"clip-card\">\n      <rect x=\"380\" y=\"240\" width=\"140\" height=\"110\" rx=\"12\" />\n    </clipPath>\n    <clipPath id=\"clip-graph\">\n      <rect x=\"380\" y=\"240\" width=\"140\" height=\"110\" rx=\"12\" />\n    </clipPath>\n  </defs>\n\n  <!-- Base Background -->\n  <rect width=\"100%\" height=\"100%\" fill=\"url(#bg-grad)\" />\n\n  <!-- Animated Dashed Rings -->\n  <circle cx=\"300\" cy=\"200\" r=\"150\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1\" stroke-dasharray=\"6 6\" opacity=\"0.6\">\n    <animateTransform attributeName=\"transform\" type=\"rotate\" from=\"0 300 200\" to=\"360 300 200\" dur=\"60s\" repeatCount=\"indefinite\" />\n  </circle>\n  <circle cx=\"300\" cy=\"200\" r=\"195\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1\" stroke-dasharray=\"8 8\" opacity=\"0.4\">\n    <animateTransform attributeName=\"transform\" type=\"rotate\" from=\"360 300 200\" to=\"0 300 200\" dur=\"80s\" repeatCount=\"indefinite\" />\n  </circle>\n\n  <!-- Ambient Data Grid Lines -->\n  <path d=\"M -40 100 Q 300 180 640 60\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"2\" stroke-dasharray=\"4 8\" opacity=\"0.8\" />\n  <path d=\"M 660 300 Q 300 220 -40 340\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"2\" stroke-dasharray=\"4 8\" opacity=\"0.8\" />\n\n  <!-- ================= 3D GEOSPHERE ================= -->\n  <g id=\"geosphere\" transform=\"translate(0, 10)\">\n    <!-- Amber Crosshair/Glow Behind Globe -->\n    <circle cx=\"300\" cy=\"210\" r=\"25\" fill=\"url(#amber-glow)\">\n      <animate attributeName=\"r\" values=\"25; 32; 25\" dur=\"3s\" repeatCount=\"indefinite\" />\n    </circle>\n    <circle cx=\"300\" cy=\"210\" r=\"45\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"1.5\" opacity=\"0.6\">\n      <animate attributeName=\"r\" values=\"45; 52; 45\" dur=\"3s\" repeatCount=\"indefinite\" />\n      <animate attributeName=\"opacity\" values=\"0.6; 0.1; 0.6\" dur=\"3s\" repeatCount=\"indefinite\" />\n    </circle>\n    <circle cx=\"300\" cy=\"210\" r=\"60\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"1\" opacity=\"0.3\">\n      <animate attributeName=\"r\" values=\"60; 70; 60\" dur=\"3s\" repeatCount=\"indefinite\" />\n    </circle>\n    \n    <!-- Crosshair Lines -->\n    <line x1=\"280\" y1=\"210\" x2=\"320\" y2=\"210\" stroke=\"#d97706\" stroke-width=\"1.5\" />\n    <line x1=\"300\" y1=\"190\" x2=\"300\" y2=\"230\" stroke=\"#d97706\" stroke-width=\"1.5\" />\n\n    <!-- Main Globe Base -->\n    <circle cx=\"300\" cy=\"210\" r=\"105\" fill=\"url(#globe-grad)\" />\n    \n    <!-- Globe Clipped Surface Details -->\n    <g clip-path=\"url(#clip-globe)\">\n      <!-- Data Latitude & Longitude Lines -->\n      <path d=\"M 195 210 A 105 35 0 0 0 405 210\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" opacity=\"0.7\" />\n      <path d=\"M 195 210 A 105 35 0 0 1 405 210\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" opacity=\"0.5\" />\n      <path d=\"M 195 180 A 105 70 0 0 0 405 180\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.4\" />\n      <path d=\"M 300 105 L 300 315\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" opacity=\"0.7\" />\n      <path d=\"M 270 108 L 270 312\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.5\" />\n      <path d=\"M 330 108 L 330 312\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.5\" />\n      <path d=\"M 240 120 L 240 300\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.4\" />\n      <path d=\"M 360 120 L 360 300\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.4\" />\n\n      <!-- Abstract Landmass / Data Blobs -->\n      <path d=\"M 220 180 Q 260 160 290 190 T 330 210 T 270 250 T 210 220 Z\" fill=\"#f0f4f0\" opacity=\"0.25\" />\n      <path d=\"M 320 140 Q 360 130 380 170 T 340 190 Z\" fill=\"#f0f4f0\" opacity=\"0.25\" />\n      <path d=\"M 210 260 Q 240 280 280 260 T 250 230 Z\" fill=\"#f0f4f0\" opacity=\"0.25\" />\n      \n      <!-- Bottom Hemisphere Darkening Overlay for 3D effect -->\n      <rect x=\"195\" y=\"210\" width=\"210\" height=\"105\" fill=\"#1e293b\" opacity=\"0.15\" />\n    </g>\n\n    <!-- Edge Highlight for 3D Sphere effect -->\n    <circle cx=\"300\" cy=\"210\" r=\"105\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" opacity=\"0.6\" />\n    <path d=\"M 210 140 Q 300 90 390 140\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"4\" stroke-linecap=\"round\" opacity=\"0.5\" />\n  </g>\n\n  <!-- ================= FLOATING UI CARDS ================= -->\n  \n  <!-- Card 1: Mountains (Left) -->\n  <g id=\"card-mountains\" transform=\"translate(0, 10)\">\n    <rect x=\"40\" y=\"240\" width=\"140\" height=\"110\" rx=\"12\" fill=\"url(#glass-grad)\" stroke=\"#ffffff\" stroke-width=\"2\" filter=\"drop-shadow(0px 8px 12px rgba(26, 122, 58, 0.15))\" />\n    <g clip-path=\"url(#clip-mountains)\">\n      <!-- Background Gradient inside card -->\n      <rect x=\"40\" y=\"240\" width=\"140\" height=\"110\" fill=\"#d1e7d6\" opacity=\"0.5\" />\n      \n      <!-- Mountain Ridges -->\n      <path d=\"M 40 380 L 100 280 L 140 340 L 180 280 L 220 320 L 260 260 L 320 380 Z\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" opacity=\"0.4\" />\n      <path d=\"M 40 380 L 115 300 L 155 360 L 200 300 L 240 340 L 280 280 L 320 380 Z\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" opacity=\"0.6\" />\n      \n      <!-- Radar Scan Line -->\n      <line x1=\"60\" y1=\"380\" x2=\"310\" y2=\"260\" stroke=\"#d97706\" stroke-width=\"2\" opacity=\"0.9\">\n        <animate attributeName=\"x1\" values=\"60; 100; 60\" dur=\"4s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y1\" values=\"380; 260; 380\" dur=\"4s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"x2\" values=\"310; 350; 310\" dur=\"4s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y2\" values=\"260; 140; 260\" dur=\"4s\" repeatCount=\"indefinite\" />\n      </line>\n    </g>\n  </g>\n\n  <!-- Card 2: Analytics Graph (Right) -->\n  <g id=\"card-analytics\" transform=\"translate(0, 10)\">\n    <rect x=\"380\" y=\"240\" width=\"140\" height=\"110\" rx=\"12\" fill=\"url(#glass-grad)\" stroke=\"#ffffff\" stroke-width=\"2\" filter=\"drop-shadow(0px 8px 12px rgba(26, 122, 58, 0.15))\" />\n    <g clip-path=\"url(#clip-graph)\">\n      <!-- Background Gradient inside card -->\n      <rect x=\"380\" y=\"240\" width=\"140\" height=\"110\" fill=\"#d1e7d6\" opacity=\"0.5\" />\n      \n      <!-- Grid Lines -->\n      <line x1=\"380\" y1=\"270\" x2=\"520\" y2=\"270\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n      <line x1=\"380\" y1=\"300\" x2=\"520\" y2=\"300\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n      <line x1=\"380\" y1=\"330\" x2=\"520\" y2=\"330\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n      \n      <!-- Chart Bars (Growing animation) -->\n      <rect x=\"395\" y=\"330\" width=\"14\" height=\"0\" fill=\"#1a7a3a\" opacity=\"0.8\" rx=\"2\">\n        <animate attributeName=\"height\" values=\"0; 50; 0\" dur=\"2s\" begin=\"0s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y\" values=\"330; 280; 330\" dur=\"2s\" begin=\"0s\" repeatCount=\"indefinite\" />\n      </rect>\n      <rect x=\"420\" y=\"330\" width=\"14\" height=\"0\" fill=\"#1a7a3a\" opacity=\"0.8\" rx=\"2\">\n        <animate attributeName=\"height\" values=\"0; 80; 0\" dur=\"2s\" begin=\"0.4s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y\" values=\"330; 250; 330\" dur=\"2s\" begin=\"0.4s\" repeatCount=\"indefinite\" />\n      </rect>\n      <rect x=\"445\" y=\"330\" width=\"14\" height=\"0\" fill=\"#d97706\" opacity=\"0.9\" rx=\"2\">\n        <animate attributeName=\"height\" values=\"0; 100; 0\" dur=\"2s\" begin=\"0.8s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y\" values=\"330; 230; 330\" dur=\"2s\" begin=\"0.8s\" repeatCount=\"indefinite\" />\n      </rect>\n      <rect x=\"470\" y=\"330\" width=\"14\" height=\"0\" fill=\"#1a7a3a\" opacity=\"0.8\" rx=\"2\">\n        <animate attributeName=\"height\" values=\"0; 60; 0\" dur=\"2s\" begin=\"1.2s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y\" values=\"330; 270; 330\" dur=\"2s\" begin=\"1.2s\" repeatCount=\"indefinite\" />\n      </rect>\n      <rect x=\"495\" y=\"330\" width=\"14\" height=\"0\" fill=\"#1a7a3a\" opacity=\"0.8\" rx=\"2\">\n        <animate attributeName=\"height\" values=\"0; 40; 0\" dur=\"2s\" begin=\"1.6s\" repeatCount=\"indefinite\" />\n        <animate attributeName=\"y\" values=\"330; 290; 330\" dur=\"2s\" begin=\"1.6s\" repeatCount=\"indefinite\" />\n      </rect>\n    </g>\n  </g>\n\n  <!-- ================= DATA CONNECTION LINES ================= -->\n  <g id=\"connection-lines\" stroke-linecap=\"round\" fill=\"none\">\n    <!-- Line 1: Globe Center to Card 1 (Mountains) -->\n    <path d=\"M 210 260 L 180 295\" stroke=\"#1a7a3a\" stroke-width=\"2\" stroke-dasharray=\"4 4\" opacity=\"0.6\" />\n    <circle cx=\"210\" cy=\"260\" r"}, {"slide_index": 1, "slide_type": "content", "headline": "The Problem: Fragmented Exploration Data", "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 500 340\" width=\"500\" height=\"340\">\n  <defs>\n    <marker id=\"a\" markerWidth=\"10\" markerHeight=\"10\" refX=\"9\" refY=\"5\" orient=\"auto\">\n      <path d=\"M 0 0 L 10 5 L 0 10 z\" fill=\"#64748b\" />\n    </marker>\n    <marker id=\"b\" markerWidth=\"10\" markerHeight=\"10\" refX=\"9\" refY=\"5\" orient=\"auto\">\n      <path d=\"M 0 0 L 10 5 L 0 10 z\" fill=\"#d97706\" />\n    </marker>\n    <clipPath id=\"c\">\n      <rect x=\"0\" y=\"25\" width=\"500\" height=\"315\" rx=\"8\" />\n    </clipPath>\n  </defs>\n\n  <rect x=\"0\" y=\"25\" width=\"500\" height=\"315\" fill=\"#ffffff\" rx=\"8\" stroke=\"#e8f4ec\" stroke-width=\"2\"/>\n\n  <text x=\"250\" y=\"18\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"14\" font-weight=\"700\" fill=\"#1e293b\" text-anchor=\"middle\">The Problem: Fragmented Exploration Data</text>\n\n  <text x=\"250\" y=\"42\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#145c2d\" text-anchor=\"middle\">DATA SOURCES</text>\n  <line x1=\"218\" y1=\"46\" x2=\"115\" y2=\"46\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n  <line x1=\"282\" y1=\"46\" x2=\"385\" y2=\"46\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n\n  <g id=\"source-cards\">\n    <rect x=\"30\" y=\"54\" width=\"98\" height=\"52\" rx=\"5\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\"/>\n    <rect x=\"34\" y=\"58\" width=\"4\" height=\"44\" rx=\"2\" fill=\"#1a7a3a\"/>\n    <rect x=\"42\" y=\"64\" width=\"28\" height=\"3\" rx=\"1.5\" fill=\"#1e293b\"/>\n    <rect x=\"42\" y=\"72\" width=\"78\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"42\" y=\"78\" width=\"52\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"42\" y=\"84\" width=\"64\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <text x=\"44\" y=\"62\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"8\" font-weight=\"600\" fill=\"#1e293b\">Satellite Imagery</text>\n\n    <rect x=\"136\" y=\"54\" width=\"98\" height=\"52\" rx=\"5\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\"/>\n    <rect x=\"140\" y=\"58\" width=\"4\" height=\"44\" rx=\"2\" fill=\"#1a7a3a\"/>\n    <rect x=\"148\" y=\"64\" width=\"40\" height=\"3\" rx=\"1.5\" fill=\"#1e293b\"/>\n    <rect x=\"148\" y=\"72\" width=\"78\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"148\" y=\"78\" width=\"52\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"148\" y=\"84\" width=\"64\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <text x=\"150\" y=\"62\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"8\" font-weight=\"600\" fill=\"#1e293b\">Geochem Surveys</text>\n\n    <rect x=\"242\" y=\"54\" width=\"98\" height=\"52\" rx=\"5\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\"/>\n    <rect x=\"246\" y=\"58\" width=\"4\" height=\"44\" rx=\"2\" fill=\"#1a7a3a\"/>\n    <rect x=\"254\" y=\"64\" width=\"34\" height=\"3\" rx=\"1.5\" fill=\"#1e293b\"/>\n    <rect x=\"254\" y=\"72\" width=\"78\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"254\" y=\"78\" width=\"52\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"254\" y=\"84\" width=\"64\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <text x=\"256\" y=\"62\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"8\" font-weight=\"600\" fill=\"#1e293b\">Drilling Data</text>\n\n    <rect x=\"348\" y=\"54\" width=\"116\" height=\"52\" rx=\"5\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\"/>\n    <rect x=\"352\" y=\"58\" width=\"4\" height=\"44\" rx=\"2\" fill=\"#1a7a3a\"/>\n    <rect x=\"360\" y=\"64\" width=\"22\" height=\"3\" rx=\"1.5\" fill=\"#1e293b\"/>\n    <rect x=\"360\" y=\"72\" width=\"96\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"360\" y=\"78\" width=\"72\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <rect x=\"360\" y=\"84\" width=\"84\" height=\"2.5\" rx=\"1.25\" fill=\"#d1e7d6\"/>\n    <text x=\"362\" y=\"62\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"8\" font-weight=\"600\" fill=\"#1e293b\">Grav / Mag Data</text>\n    <text x=\"362\" y=\"94\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"7\" font-weight=\"500\" fill=\"#64748b\">...and 2+ others</text>\n\n    <text x=\"250\" y=\"115\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"8\" font-weight=\"700\" fill=\"#d97706\" text-anchor=\"middle\">SCATTERED ACROSS 6 DISPARATE PLATFORMS</text>\n  </g>\n\n  <g id=\"down-arrows\">\n    <path d=\"M 79 106 L 79 120\" fill=\"none\" stroke=\"#64748b\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\"/>\n    <path d=\"M 185 106 L 185 120\" fill=\"none\" stroke=\"#64748b\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\"/>\n    <path d=\"M 291 106 L 291 120\" fill=\"none\" stroke=\"#64748b\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\"/>\n    <path d=\"M 406 106 L 406 120\" fill=\"none\" stroke=\"#64748b\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\"/>\n  </g>\n\n  <rect x=\"25\" y=\"123\" width=\"450\" height=\"60\" rx=\"5\" fill=\"#e8f4ec\" stroke=\"none\"/>\n  <text x=\"250\" y=\"136\" font-family=\"'Segoe UI', Arial, sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#145c2d\" text-anchor=\"middle\">SIGNAL EXTRACTION BOTTLENECK</text>\n\n  <g id=\"spreadsheets\">\n    <g transform=\"translate(40, 143)\">\n      <rect x=\"0\" y=\"0\" width=\"50\" height=\"34\" rx=\"2\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n      <rect x=\"3\" y=\"3\" width=\"30\" height=\"2.5\" rx=\"1\" fill=\"#1a7a3a\" opacity=\"0.7\"/>\n      <rect x=\"3\" y=\"7.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"11\" width=\"38\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"14.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"18\" width=\"32\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"21.5\" width=\"40\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"25\" width=\"28\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"28.5\" width=\"36\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n    </g>\n    <g transform=\"translate(98, 143)\">\n      <rect x=\"0\" y=\"0\" width=\"50\" height=\"34\" rx=\"2\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n      <rect x=\"3\" y=\"3\" width=\"30\" height=\"2.5\" rx=\"1\" fill=\"#1a7a3a\" opacity=\"0.7\"/>\n      <rect x=\"3\" y=\"7.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"11\" width=\"38\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"14.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"18\" width=\"32\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"21.5\" width=\"40\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"25\" width=\"28\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"28.5\" width=\"36\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n    </g>\n    <g transform=\"translate(156, 143)\">\n      <rect x=\"0\" y=\"0\" width=\"50\" height=\"34\" rx=\"2\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n      <rect x=\"3\" y=\"3\" width=\"30\" height=\"2.5\" rx=\"1\" fill=\"#1a7a3a\" opacity=\"0.7\"/>\n      <rect x=\"3\" y=\"7.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"11\" width=\"38\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"14.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"18\" width=\"32\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"21.5\" width=\"40\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"25\" width=\"28\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"28.5\" width=\"36\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n    </g>\n    <g transform=\"translate(214, 143)\">\n      <rect x=\"0\" y=\"0\" width=\"50\" height=\"34\" rx=\"2\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n      <rect x=\"3\" y=\"3\" width=\"30\" height=\"2.5\" rx=\"1\" fill=\"#1a7a3a\" opacity=\"0.7\"/>\n      <rect x=\"3\" y=\"7.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"11\" width=\"38\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"14.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"18\" width=\"32\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"21.5\" width=\"40\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"25\" width=\"28\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"28.5\" width=\"36\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n    </g>\n    <g transform=\"translate(272, 143)\">\n      <rect x=\"0\" y=\"0\" width=\"50\" height=\"34\" rx=\"2\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\"/>\n      <rect x=\"3\" y=\"3\" width=\"30\" height=\"2.5\" rx=\"1\" fill=\"#1a7a3a\" opacity=\"0.7\"/>\n      <rect x=\"3\" y=\"7.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"11\" width=\"38\" height=\"2\" rx=\"1\" fill=\"#e8f4ec\"/>\n      <rect x=\"3\" y=\"14.5\" width=\"44\" height=\"2\" rx=\"1\" fill=\"#e8f4ec"}, {"slide_index": 2, "slide_type": "content", "headline": "The EDGE Solution: Unified Intelligence", "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 500 340\">\n  <defs>\n    <linearGradient id=\"bgGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n      <stop offset=\"0%\" stop-color=\"#f8fafc\"/>\n      <stop offset=\"100%\" stop-color=\"#e2e8f0\"/>\n    </linearGradient>\n    <filter id=\"shadow\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"120%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"3\" flood-color=\"#1e293b\" flood-opacity=\"0.1\"/>\n    </filter>\n  </defs>\n\n  <!-- Background & Frame -->\n  <rect width=\"500\" height=\"340\" fill=\"white\"/>\n  <rect x=\"10\" y=\"10\" width=\"480\" height=\"320\" rx=\"12\" fill=\"#fafcfb\" stroke=\"#d1e7d6\" stroke-width=\"2\"/>\n\n  <!-- Title -->\n  <text x=\"250\" y=\"38\" font-family=\"Arial, sans-serif\" font-size=\"18\" font-weight=\"bold\" fill=\"#1a7a3a\" text-anchor=\"middle\" letter-spacing=\"1\">THE EDGE SOLUTION: UNIFIED INTELLIGENCE</text>\n  <rect x=\"170\" y=\"45\" width=\"160\" height=\"3\" fill=\"#d97706\"/>\n\n  <!-- Column Headers -->\n  <text x=\"90\" y=\"68\" font-family=\"Arial, sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#64748b\" text-anchor=\"middle\">TRADITIONAL APPROACH</text>\n  <text x=\"410\" y=\"68\" font-family=\"Arial, sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#145c2d\" text-anchor=\"middle\">EDGE PLATFORM</text>\n\n  <!-- LEFT SECTION: Traditional Problems -->\n  <g opacity=\"0.4\">\n    <!-- Problem Box -->\n    <rect x=\"20\" y=\"80\" width=\"140\" height=\"240\" rx=\"8\" fill=\"#f1f5f9\" stroke=\"#cbd5e1\" stroke-width=\"1\" stroke-dasharray=\"4 2\"/>\n    \n    <!-- Siloed Data Icons -->\n    <rect x=\"30\" y=\"90\" width=\"35\" height=\"30\" rx=\"3\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n    <text x=\"47\" y=\"109\" font-family=\"Arial, sans-serif\" font-size=\"9\" fill=\"#64748b\" text-anchor=\"middle\">GEO</text>\n    <text x=\"47\" y=\"128\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Silo</text>\n\n    <rect x=\"72\" y=\"90\" width=\"35\" height=\"30\" rx=\"3\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n    <text x=\"89\" y=\"109\" font-family=\"Arial, sans-serif\" font-size=\"9\" fill=\"#64748b\" text-anchor=\"middle\">GEOCHEM</text>\n    <text x=\"89\" y=\"128\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Silo</text>\n\n    <rect x=\"114\" y=\"90\" width=\"35\" height=\"30\" rx=\"3\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n    <text x=\"131\" y=\"109\" font-family=\"Arial, sans-serif\" font-size=\"9\" fill=\"#64748b\" text-anchor=\"middle\">GEOPHYS</text>\n    <text x=\"131\" y=\"128\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Silo</text>\n\n    <!-- Slow Updates Icon -->\n    <circle cx=\"90\" cy=\"165\" r=\"14\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n    <text x=\"90\" y=\"169\" font-family=\"Arial, sans-serif\" font-size=\"16\" fill=\"#64748b\" text-anchor=\"middle\">\ud83d\udd70</text>\n    <text x=\"90\" y=\"192\" font-family=\"Arial, sans-serif\" font-size=\"9\" font-weight=\"bold\" fill=\"#64748b\" text-anchor=\"middle\">Quarterly</text>\n    <text x=\"90\" y=\"205\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Updates</text>\n\n    <!-- High CAPEX Icon -->\n    <path d=\"M 75 225 L 105 225 L 100 250 L 80 250 Z\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n    <text x=\"90\" y=\"242\" font-family=\"Arial, sans-serif\" font-size=\"10\" fill=\"#64748b\" text-anchor=\"middle\">$$$</text>\n    <text x=\"90\" y=\"265\" font-family=\"Arial, sans-serif\" font-size=\"9\" font-weight=\"bold\" fill=\"#64748b\" text-anchor=\"middle\">High CAPEX</text>\n    <text x=\"90\" y=\"278\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Six-Figure Costs</text>\n  </g>\n\n  <!-- Arrows Pointing to Solution -->\n  <path d=\"M 160 135 L 190 135 L 185 130 M 190 135 L 185 140\" stroke=\"#145c2d\" stroke-width=\"2\" fill=\"none\"/>\n  <path d=\"M 160 200 L 190 200 L 185 195 M 190 200 L 185 205\" stroke=\"#145c2d\" stroke-width=\"2\" fill=\"none\"/>\n  <path d=\"M 160 265 L 190 265 L 185 260 M 190 265 L 185 270\" stroke=\"#145c2d\" stroke-width=\"2\" fill=\"none\"/>\n\n  <!-- CENTER: Core Platform -->\n  <g filter=\"url(#shadow)\">\n    <!-- Main Platform Container -->\n    <rect x=\"200\" y=\"80\" width=\"100\" height=\"240\" rx=\"10\" fill=\"#1a7a3a\" stroke=\"#145c2d\" stroke-width=\"2\"/>\n    \n    <!-- Internal Glow/Highlight -->\n    <rect x=\"204\" y=\"84\" width=\"92\" height=\"232\" rx=\"8\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1\" opacity=\"0.4\"/>\n\n    <!-- Cloud Platform Base -->\n    <path d=\"M 220 125 C 220 110, 235 105, 245 110 C 250 100, 270 100, 275 110 C 285 105, 300 115, 300 125 C 310 125, 315 135, 310 145 C 315 155, 300 165, 295 160 L 225 160 C 215 165, 205 155, 210 145 C 205 135, 215 125, 220 125 Z\" fill=\"#d1e7d6\"/>\n    <text x=\"250\" y=\"143\" font-family=\"Arial, sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#145c2d\" text-anchor=\"middle\">CLOUD-NATIVE</text>\n\n    <!-- AI Core Symbol -->\n    <circle cx=\"250\" cy=\"185\" r=\"22\" fill=\"#d97706\"/>\n    <path d=\"M 250 167 L 250 173 M 250 197 L 250 203 M 232 185 L 238 185 M 262 185 L 268 185 M 237 172 L 242 177 M 258 193 L 263 198 M 263 172 L 258 177 M 242 193 L 237 198\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n    <circle cx=\"250\" cy=\"185\" r=\"6\" fill=\"#fff\"/>\n    <text x=\"250\" y=\"218\" font-family=\"Arial, sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#fff\" text-anchor=\"middle\">AI ENGINE</text>\n\n    <!-- Satellite Symbol -->\n    <path d=\"M 240 240 L 245 240 L 250 235 L 255 240 L 260 240 L 255 250 L 260 255 L 250 260 L 240 255 L 245 250 Z\" fill=\"#d1e7d6\"/>\n    <line x1=\"235\" y1=\"235\" x2=\"240\" y2=\"240\" stroke=\"#d1e7d6\" stroke-width=\"2\"/>\n    <line x1=\"265\" y1=\"235\" x2=\"260\" y2=\"240\" stroke=\"#d1e7d6\" stroke-width=\"2\"/>\n    <circle cx=\"250\" cy=\"248\" r=\"2\" fill=\"#145c2d\"/>\n    <text x=\"250\" y=\"272\" font-family=\"Arial, sans-serif\" font-size=\"10\" font-weight=\"bold\" fill=\"#fff\" text-anchor=\"middle\">SATELLITE</text>\n    <text x=\"250\" y=\"285\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#d1e7d6\" text-anchor=\"middle\">WEEKLY FEEDS</text>\n  </g>\n\n  <!-- RIGHT SECTION: The EDGE Value Propositions -->\n  <g>\n    <!-- Box 1: Unified Intelligence -->\n    <rect x=\"330\" y=\"80\" width=\"150\" height=\"75\" rx=\"6\" fill=\"#e8f4ec\" stroke=\"#145c2d\" stroke-width=\"1.5\" filter=\"url(#shadow)\"/>\n    <text x=\"405\" y=\"98\" font-family=\"Arial, sans-serif\" font-size=\"10\" font-weight=\"bold\" fill=\"#145c2d\" text-anchor=\"middle\">UNIFIED INTELLIGENCE</text>\n    \n    <!-- Merged Data Icons -->\n    <rect x=\"340\" y=\"108\" width=\"50\" height=\"18\" rx=\"3\" fill=\"#1a7a3a\" opacity=\"0.9\"/>\n    <text x=\"365\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#fff\" text-anchor=\"middle\">GEOLOGY</text>\n    \n    <rect x=\"390\" y=\"108\" width=\"40\" height=\"18\" rx=\"3\" fill=\"#145c2d\" opacity=\"0.9\"/>\n    <text x=\"410\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#fff\" text-anchor=\"middle\">GEOCHEM</text>\n    \n    <rect x=\"435\" y=\"108\" width=\"35\" height=\"18\" rx=\"3\" fill=\"#d97706\" opacity=\"0.9\"/>\n    <text x=\"452\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#fff\" text-anchor=\"middle\">GEOPHYS</text>\n\n    <path d=\"M 365 132 L 365 138 L 410 138 L 410 132\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" fill=\"none\"/>\n    <text x=\"387\" y=\"148\" font-family=\"Arial, sans-serif\" font-size=\"9\" fill=\"#64748b\" text-anchor=\"middle\">One View</text>\n\n    <!-- Box 2: Weekly Updates -->\n    <rect x=\"330\" y=\"162\" width=\"150\" height=\"75\" rx=\"6\" fill=\"#e8f4ec\" stroke=\"#145c2d\" stroke-width=\"1.5\" filter=\"url(#shadow)\"/>\n    <text x=\"405\" y=\"180\" font-family=\"Arial, sans-serif\" font-size=\"10\" font-weight=\"bold\" fill=\"#145c2d\" text-anchor=\"middle\">ALTERATION MAPPING</text>\n    \n    <!-- Week Cycle Graphic -->\n    <circle cx=\"375\" cy=\"200\" r=\"12\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"2\"/>\n    <path d=\"M 375 200 L 375 190\" stroke=\"#d97706\" stroke-width=\"2\"/>\n    <path d=\"M 375 200 L 383 205\" stroke=\"#d97706\" stroke-width=\"2\"/>\n    <text x=\"375\" y=\"204\" font-family=\"Arial, sans-serif\" font-size=\"10\" font-weight=\"bold\" fill=\"#d97706\" text-anchor=\"middle\">7</text>\n    \n    <text x=\"405\" y=\"200\" font-family=\"Arial, sans-serif\" font-size=\"11\" font-weight=\"bold\" fill=\"#d97706\" text-anchor=\"middle\">WEEKLY</text>\n    \n    <rect x=\"345\" y=\"215\" width=\"120\" height=\"16\" rx=\"8\" fill=\"#d1e7d6\"/>\n    <text x=\"405\" y=\"227\" font-family=\"Arial, sans-serif\" font-size=\"9\" fill=\"#145c2d\" text-anchor=\"middle\">Satellite-Derived Updates</text>\n\n    <!-- Box 3: Subscription Model -->\n    <rect x=\"330\" y=\"245\" width=\"150\" height=\"75\" rx=\"6\" fill=\"#e8f4ec\" stroke=\"#145c2d\" stroke-width=\"1.5\" filter=\"url(#shadow)\"/>\n    <text x=\"405\" y=\"263\" font-family=\"Arial, sans-serif\" font-size=\"10\" font-weight=\"bold\" fill=\"#145c2d\" text-anchor=\"middle\">SUBSCRIPTION ACCESS</text>\n    \n    <!-- Cost Comparison Bar -->\n    <rect x=\"340\" y=\"272\" width=\"70\" height=\"8\" rx=\"4\" fill=\"#64748b\" opacity=\"0.3\"/>\n    <rect x=\"340\" y=\"272\" width=\"20\" height=\"8\" rx=\"4\" fill=\"#1a7a3a\"/>\n    \n    <text x=\"405\" y=\"277\" font-family=\"Arial, sans-serif\" font-size=\"8\" fill=\"#64748b\" text-anchor=\"middle\">Eliminates 6-Figure CAPEX</text>\n    \n    <!-- Arrow pointing to low cost -->\n    <path d=\"M 355 280 L 355 288 L 375 288 L 375 283 M 375 288 L 370 293\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" fill=\"none\"/>\n    <text x=\"405\" y=\"305\" font-family=\"Arial, sans-serif\" font-size=\"9\" font-weight=\"bold\" fill=\"#d97706\" text-anchor=\"middle\">OPEX Model</text>\n  </g>\n</svg>"}, {"slide_index": 3, "slide_type": "content", "headline": "Measurable Impact for Exploration Teams", "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 500 340\" width=\"500\" height=\"340\">\n  <defs>\n    <!-- Markers for the primary arrows -->\n    <marker id=\"arrowHead\" markerWidth=\"8\" markerHeight=\"6\" refX=\"7\" refY=\"3\" orient=\"auto\">\n      <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#1a7a3a\" />\n    </marker>\n    <marker id=\"arrowHeadAccent\" markerWidth=\"8\" markerHeight=\"6\" refX=\"7\" refY=\"3\" orient=\"auto\">\n      <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#d97706\" />\n    </marker>\n\n    <!-- Soft Shadow for Depth -->\n    <filter id=\"shadow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"0\" dy=\"2\" stdDeviation=\"2\" flood-color=\"#1e293b\" flood-opacity=\"0.08\" />\n    </filter>\n  </defs>\n\n  <!-- Layer 1: Subtle Background Elements -->\n  <!-- Topographic Grid Mapping Lines -->\n  <path d=\"M 40 250 Q 80 220, 140 230 T 260 220 T 380 230 T 460 210\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" stroke-dasharray=\"4 4\" />\n  <path d=\"M 40 280 Q 90 250, 150 260 T 270 250 T 390 260 T 460 240\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" stroke-dasharray=\"4 4\" />\n  \n  <!-- Subtle Mining Cross-Section Geology Layers -->\n  <path d=\"M 20 310 Q 60 300, 120 310 T 250 300 T 380 310 T 480 290 L 480 340 L 20 340 Z\" fill=\"#e8f4ec\" />\n  <path d=\"M 20 320 Q 70 310, 140 325 T 280 315 T 420 325 T 480 300 L 480 340 L 20 340 Z\" fill=\"#d1e7d6\" opacity=\"0.5\" />\n\n  <!-- Layer 2: Title & Key Measurements -->\n  <!-- Headline -->\n  <text x=\"250\" y=\"36\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"800\" font-size=\"20\" fill=\"#1e293b\" letter-spacing=\"0.5\">Measurable Impact for Exploration Teams</text>\n  \n  <!-- Subtitle Descriptor -->\n  <text x=\"250\" y=\"56\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"500\" font-size=\"11\" fill=\"#64748b\">GEO-INTELLIGENCE SUBSCRIPTION MODEL</text>\n\n  <!-- Horizontal Rule under title -->\n  <line x1=\"110\" y1=\"66\" x2=\"390\" y2=\"66\" stroke=\"#d1e7d6\" stroke-width=\"2\" />\n\n  <!-- Metrics Sidebar (Left) -->\n  <rect x=\"15\" y=\"85\" width=\"125\" height=\"245\" rx=\"6\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" stroke-dasharray=\"6 3\" />\n  <text x=\"77.5\" y=\"103\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"11\" fill=\"#1a7a3a\">KEY METRICS</text>\n  \n  <!-- Metric 1 -->\n  <circle cx=\"32\" cy=\"125\" r=\"12\" fill=\"#d1e7d6\" />\n  <text x=\"32\" y=\"130\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"800\" font-size=\"12\" fill=\"#1a7a3a\">\u2191</text>\n  <text x=\"50\" y=\"121\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">Drill-Target</text>\n  <text x=\"50\" y=\"133\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Confidence</text>\n\n  <!-- Metric 2 -->\n  <circle cx=\"32\" cy=\"160\" r=\"12\" fill=\"#d1e7d6\" />\n  <text x=\"32\" y=\"165\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"800\" font-size=\"12\" fill=\"#1a7a3a\">\u2193</text>\n  <text x=\"50\" y=\"156\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">Dry Hole</text>\n  <text x=\"50\" y=\"168\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Risk</text>\n\n  <!-- Metric 3 -->\n  <circle cx=\"32\" cy=\"195\" r=\"12\" fill=\"#d1e7d6\" />\n  <text x=\"32\" y=\"200\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"800\" font-size=\"12\" fill=\"#1a7a3a\">\u2194</text>\n  <text x=\"50\" y=\"191\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">Project</text>\n  <text x=\"50\" y=\"203\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Cycle Time</text>\n\n  <!-- Dynamic Calculation Graph -->\n  <rect x=\"20\" y=\"215\" width=\"115\" height=\"105\" rx=\"4\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1\" filter=\"url(#shadow)\" />\n  <text x=\"30\" y=\"230\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"9\" fill=\"#1e293b\">ROI Calculation</text>\n  <path d=\"M 25 305 L 130 305\" stroke=\"#e2e8f0\" stroke-width=\"1\" />\n  <path d=\"M 28 305 Q 45 270, 65 285 T 95 245 T 128 210\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"2.5\" stroke-linecap=\"round\" />\n  <polygon points=\"128,210 124,217 131,217\" fill=\"#d97706\" />\n  <circle cx=\"65\" cy=\"285\" r=\"2.5\" fill=\"#1a7a3a\" />\n  <circle cx=\"95\" cy=\"245\" r=\"2.5\" fill=\"#1a7a3a\" />\n\n  <!-- Layer 3: Central Input Flow -->\n  <!-- Input 1: Data -->\n  <rect x=\"150\" y=\"85\" width=\"80\" height=\"45\" rx=\"6\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <text x=\"190\" y=\"100\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"11\" fill=\"#1e293b\">RAW DATA</text>\n  <text x=\"190\" y=\"115\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Geophysics / Drilling</text>\n  <!-- Arrow from Data to Platform -->\n  <path d=\"M 230 107 L 252 107\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" marker-end=\"url(#arrowHead)\" />\n\n  <!-- Input 2: Geospatial -->\n  <rect x=\"150\" y=\"140\" width=\"80\" height=\"45\" rx=\"6\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <text x=\"190\" y=\"155\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"11\" fill=\"#1e293b\">GEOSPATIAL</text>\n  <text x=\"190\" y=\"170\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Satellite / Layers</text>\n  <!-- Arrow from Geo to Platform -->\n  <path d=\"M 230 162 L 252 162\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" marker-end=\"url(#arrowHead)\" />\n\n  <!-- Input 3: Historical -->\n  <rect x=\"150\" y=\"195\" width=\"80\" height=\"45\" rx=\"6\" fill=\"#ffffff\" stroke=\"#d1e7d6\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <text x=\"190\" y=\"210\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"11\" fill=\"#1e293b\">HISTORICAL</text>\n  <text x=\"190\" y=\"225\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"9\" fill=\"#64748b\">Logs / Surveys</text>\n  <!-- Arrow from History to Platform -->\n  <path d=\"M 230 217 L 252 217\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" marker-end=\"url(#arrowHead)\" />\n\n  <!-- Layer 4: Core Platform System -->\n  <!-- Central Globe / Processing Body -->\n  <circle cx=\"285\" cy=\"162\" r=\"48\" fill=\"#e8f4ec\" stroke=\"#1a7a3a\" stroke-width=\"2\" filter=\"url(#shadow)\" />\n  \n  <!-- Globe Wireframe Grid -->\n  <ellipse cx=\"285\" cy=\"162\" rx=\"32\" ry=\"48\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n  <ellipse cx=\"285\" cy=\"162\" rx=\"48\" ry=\"32\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n  <line x1=\"237\" y1=\"162\" x2=\"333\" y2=\"162\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n  <line x1=\"285\" y1=\"114\" x2=\"285\" y2=\"210\" stroke=\"#1a7a3a\" stroke-width=\"1\" opacity=\"0.3\" />\n\n  <!-- Centered Drill Rig / Geo-Intel Icon -->\n  <!-- Base/Landmass -->\n  <path d=\"M 268 182 C 268 182, 275 172, 285 172 C 295 172, 302 182, 302 182 L 302 190 L 268 190 Z\" fill=\"#d97706\" />\n  <!-- Rig Tower -->\n  <path d=\"M 280 172 L 290 172 L 285 145 Z\" fill=\"#1a7a3a\" />\n  <!-- Drill Shaft/Bit -->\n  <line x1=\"285\" y1=\"172\" x2=\"285\" y2=\"190\" stroke=\"#1e293b\" stroke-width=\"2\" />\n  \n  <!-- Processing Pulse Rings -->\n  <circle cx=\"285\" cy=\"162\" r=\"55\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"1.5\" stroke-dasharray=\"3 3\" opacity=\"0.6\">\n  </circle>\n  <circle cx=\"285\" cy=\"162\" r=\"62\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"1\" opacity=\"0.3\" />\n\n  <!-- System Label -->\n  <rect x=\"247\" y=\"222\" width=\"76\" height=\"18\" rx=\"9\" fill=\"#1a7a3a\" />\n  <text x=\"285\" y=\"234\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#ffffff\">PLATFORM</text>\n\n  <!-- Layer 5: Outputs & Impact -->\n  <!-- Output Pipeline -->\n  <path d=\"M 335 162 L 355 162\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"2\" marker-end=\"url(#arrowHeadAccent)\" />\n\n  <!-- Output 1: Maps -->\n  <rect x=\"365\" y=\"90\" width=\"120\" height=\"50\" rx=\"6\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <!-- Mini Map Graphic -->\n  <path d=\"M 375 130 L 475 130 L 475 100 L 375 100 Z\" fill=\"none\" />\n  <path d=\"M 378 125 Q 400 105, 425 115 T 472 102\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"2\" />\n  <path d=\"M 378 128 Q 400 108, 425 118 T 472 105\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"2\" />\n  <circle cx=\"425\" cy=\"110\" r=\"4\" fill=\"#d97706\" />\n  <text x=\"425\" y=\"145\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">3D GEOLOGICAL MAPS</text>\n\n  <!-- Output 2: Drill Targets -->\n  <rect x=\"365\" y=\"155\" width=\"120\" height=\"50\" rx=\"6\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <!-- Mini Target Graphic -->\n  <circle cx=\"425\" cy=\"175\" r=\"12\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" />\n  <circle cx=\"425\" cy=\"175\" r=\"6\" fill=\"none\" stroke=\"#d97706\" stroke-width=\"2\" />\n  <circle cx=\"425\" cy=\"175\" r=\"1.5\" fill=\"#1e293b\" />\n  <text x=\"425\" y=\"210\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">DRILL TARGETS</text>\n\n  <!-- Output 3: Reports -->\n  <rect x=\"365\" y=\"220\" width=\"120\" height=\"50\" rx=\"6\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"1.5\" filter=\"url(#shadow)\" />\n  <!-- Mini Report Graphic -->\n  <rect x=\"410\" y=\"230\" width=\"30\" height=\"35\" rx=\"2\" fill=\"#e8f4ec\" />\n  <line x1=\"415\" y1=\"238\" x2=\"435\" y2=\"238\" stroke=\"#1a7a3a\" stroke-width=\"2\" />\n  <line x1=\"415\" y1=\"244\" x2=\"432\" y2=\"244\" stroke=\"#64748b\" stroke-width=\"1.5\" />\n  <line x1=\"415\" y1=\"250\" x2=\"428\" y2=\"250\" stroke=\"#64748b\" stroke-width=\"1.5\" />\n  <text x=\"425\" y=\"275\" text-anchor=\"middle\" font-family=\"sans-serif\" font-weight=\"700\" font-size=\"10\" fill=\"#1e293b\">RISK REPORTS</text>\n\n  <!-- Connectors from Platform to Outputs -->\n  <path d=\"M 325 115 Q 345 115, 355 115\" fill=\"none\" stroke=\"#145c2d\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\" marker-end=\"url(#arrowHead)\" />\n  <path d=\"M 325 180 Q 345 180, 355 180\" fill=\"none\" stroke=\"#145c2d\" stroke-width=\"1.5\" stroke-dasharray=\"4 2\" marker-end=\"url(#arrowHead)\" />\n  <path d=\"M 325 205 Q 345 205, 355 205\" fill=\"none\" stroke=\"#145c2d\" stroke"}, {"slide_index": 4, "slide_type": "cta", "headline": "Is your exploration team keeping pace?", "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 600 400\" width=\"600\" height=\"400\">\n  <defs>\n    <linearGradient id=\"bgGrad\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#ffffff\"/>\n      <stop offset=\"100%\" stop-color=\"#f0f7f2\"/>\n    </linearGradient>\n    \n    <linearGradient id=\"greenGrad\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n      <stop offset=\"0%\" stop-color=\"#d1e7d6\"/>\n      <stop offset=\"100%\" stop-color=\"#1a7a3a\"/>\n    </linearGradient>\n\n    <radialGradient id=\"glow\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n      <stop offset=\"0%\" stop-color=\"#1a7a3a\" stop-opacity=\"0.15\"/>\n      <stop offset=\"100%\" stop-color=\"#1a7a3a\" stop-opacity=\"0\"/>\n    </radialGradient>\n\n    <filter id=\"dropShadow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feDropShadow dx=\"2\" dy=\"4\" stdDeviation=\"3\" flood-color=\"#1a7a3a\" flood-opacity=\"0.15\"/>\n    </filter>\n  </defs>\n\n  <!-- Background -->\n  <rect width=\"600\" height=\"400\" fill=\"url(#bgGrad)\"/>\n\n  <!-- Background Map Grid -->\n  <g stroke=\"#d1e7d6\" stroke-width=\"1\" fill=\"none\" stroke-dasharray=\"2 4\" opacity=\"0.6\">\n    <line x1=\"50\" y1=\"0\" x2=\"50\" y2=\"400\"/>\n    <line x1=\"150\" y1=\"0\" x2=\"150\" y2=\"400\"/>\n    <line x1=\"250\" y1=\"0\" x2=\"250\" y2=\"400\"/>\n    <line x1=\"350\" y1=\"0\" x2=\"350\" y2=\"400\"/>\n    <line x1=\"450\" y1=\"0\" x2=\"450\" y2=\"400\"/>\n    <line x1=\"550\" y1=\"0\" x2=\"550\" y2=\"400\"/>\n    <line x1=\"0\" y1=\"50\" x2=\"600\" y2=\"50\"/>\n    <line x1=\"0\" y1=\"150\" x2=\"600\" y2=\"150\"/>\n    <line x1=\"0\" y1=\"250\" x2=\"600\" y2=\"250\"/>\n    <line x1=\"0\" y1=\"350\" x2=\"600\" y2=\"350\"/>\n  </g>\n\n  <!-- Abstract Geological / Topographic Isobars -->\n  <path d=\"M-20,350 Q150,300 300,350 T620,300\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" opacity=\"0.1\"/>\n  <path d=\"M-20,400 Q150,350 300,400 T620,350\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" opacity=\"0.1\"/>\n  <path d=\"M-20,300 Q150,250 300,300 T620,250\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"2\" opacity=\"0.1\"/>\n\n  <!-- Geological Fissure / Exploration Path -->\n  <path d=\"M580,430 C420,330 380,280 240,120\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"24\" stroke-linecap=\"round\"/>\n  <path d=\"M580,430 C420,330 380,280 240,120\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"10\" stroke-linecap=\"round\"/>\n\n  <!-- Bottom Right Data Bars -->\n  <g transform=\"translate(450, 320)\">\n    <rect x=\"0\" y=\"50\" width=\"12\" height=\"30\" rx=\"3\" fill=\"#d1e7d6\"/>\n    <rect x=\"20\" y=\"30\" width=\"12\" height=\"50\" rx=\"3\" fill=\"#d1e7d6\"/>\n    <rect x=\"40\" y=\"10\" width=\"12\" height=\"70\" rx=\"3\" fill=\"#1a7a3a\"/>\n    <rect x=\"60\" y=\"-10\" width=\"12\" height=\"90\" rx=\"3\" fill=\"#1a7a3a\" filter=\"url(#dropShadow)\"/>\n    <rect x=\"80\" y=\"-30\" width=\"12\" height=\"110\" rx=\"3\" fill=\"#1a7a3a\" filter=\"url(#dropShadow)\"/>\n  </g>\n\n  <!-- Central Growth Arrow Path & Data Points -->\n  <path d=\"M20,380 C160,340 260,240 340,120\" fill=\"none\" stroke=\"#d1e7d6\" stroke-width=\"60\" stroke-linecap=\"round\" filter=\"url(#dropShadow)\"/>\n  <path d=\"M20,380 C160,340 260,240 340,120\" fill=\"none\" stroke=\"#1a7a3a\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-dasharray=\"0 110\" stroke-dashoffset=\"-5\"/>\n\n  <circle cx=\"160\" cy=\"328\" r=\"6\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"3\"/>\n  <circle cx=\"240\" cy=\"224\" r=\"6\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"3\"/>\n  <circle cx=\"340\" cy=\"120\" r=\"8\" fill=\"#ffffff\" stroke=\"#1a7a3a\" stroke-width=\"4\"/>\n\n  <!-- Secondary Upward Curved Chart Line -->\n  <path d=\"M-10,420 C120,320 220,220 460,-20\" fill=\"none\" stroke=\"url(#greenGrad)\" stroke-width=\"3\" stroke-dasharray=\"8 6\" opacity=\"0.3\"/>\n\n  <!-- Left Substrate / Layering -->\n  <path d=\"M-20,200 Q100,150 200,220 T400,180 T620,250 L620,420 L-20,420 Z\" fill=\"#d1e7d6\" opacity=\"0.4\"/>\n  <path d=\"M-20,260 Q100,210 200,280 T400,240 T620,310 L620,420 L-20,420 Z\" fill=\"#1a7a3a\" opacity=\"0.15\"/>\n\n  <!-- Top Right Central Arrowhead -->\n  <polygon points=\"340,120 420,120 390,180\" fill=\"url(#greenGrad)\" opacity=\"0.85\" filter=\"url(#dropShadow)\"/>\n\n  <!-- Connecting Rays / Growth Lines -->\n  <g stroke=\"#1a7a3a\" stroke-width=\"2\" opacity=\"0.15\">\n    <line x1=\"340\" y1=\"120\" x2=\"240\" y2=\"80\"/>\n    <line x1=\"340\" y1=\"120\" x2=\"400\" y2=\"50\"/>\n    <line x1=\"340\" y1=\"120\" x2=\"480\" y2=\"100\"/>\n  </g>\n\n  <!-- Subtle Top Right Grid Nodes -->\n  <circle cx=\"240\" cy=\"80\" r=\"3\" fill=\"#d1e7d6\"/>\n  <circle cx=\"400\" cy=\"50\" r=\"3\" fill=\"#d1e7d6\"/>\n  <circle cx=\"480\" cy=\"100\" r=\"3\" fill=\"#d1e7d6\"/>\n\n</svg>"}];
+const SLIDE_DURATION = 5000;
+let current = 0;
+let timer = null;
+let progressInterval = null;
+
+function render() {
+    const container = document.getElementById('slidesContainer');
+    const nav = document.getElementById('nav');
+    container.innerHTML = '';
+    nav.innerHTML = '';
+
+    slides.forEach((slide, i) => {
+        const div = document.createElement('div');
+        div.className = 'slide' + (i === current ? ' active' : '');
+
+        const svgData = schematics && schematics[i] && schematics[i].svg;
+
+        if (slide.type === 'title') {
+            div.className += ' slide-title' + (svgData ? ' has-bg-svg' : '');
+            div.innerHTML = `
+                ${svgData ? `<div class="slide-bg-svg">${svgData}</div>` : ''}
+                <div class="sector-tag">${slide.sector || 'Energy Resources'}</div>
+                <h1>${slide.headline}</h1>
+                ${slide.subtitle ? `<div class="subtitle">${slide.subtitle}</div>` : ''}
+                <div class="tagline-bar"></div>
+            `;
+        } else if (slide.type === 'cta') {
+            div.className += ' slide-cta' + (svgData ? ' has-bg-svg' : '');
+            div.innerHTML = `
+                ${svgData ? `<div class="slide-bg-svg">${svgData}</div>` : ''}
+                <h2>${slide.headline}</h2>
+                <div class="cta-url">${slide.url || 'www.edgeengineers.net'}</div>
+                ${slide.subtitle ? `<div class="cta-sub">${slide.subtitle}</div>` : ''}
+            `;
+        } else {
+            div.className += ' slide-content' + (svgData ? ' has-svg' : '');
+            const bullets = (slide.bullets || []).map(b => `<li>${b}</li>`).join('');
+            div.innerHTML = `
+                <div class="slide-text">
+                    <div class="slide-header">
+                        <div class="slide-number">${slide.number || (i + 1)} / ${slides.length}</div>
+                        <h2>${slide.headline}</h2>
+                    </div>
+                    ${bullets ? `<ul class="bullets">${bullets}</ul>` : ''}
+                </div>
+                ${svgData ? `<div class="slide-svg">${svgData}</div>` : ''}
+            `;
+        }
+
+        container.appendChild(div);
+
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot' + (i === current ? ' active' : '');
+        dot.onclick = () => goTo(i);
+        nav.appendChild(dot);
+    });
+}
+
+function goTo(i) {
+    current = i;
+    render();
+    resetTimer();
+}
+
+function next() {
+    current = (current + 1) % slides.length;
+    render();
+    resetTimer();
+}
+
+function resetTimer() {
+    if (timer) clearInterval(timer);
+    if (progressInterval) clearInterval(progressInterval);
+    timer = setInterval(next, SLIDE_DURATION);
+    updateProgress();
+}
+
+function updateProgress() {
+    const bar = document.getElementById('progressFill');
+    let start = Date.now();
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const pct = Math.min((elapsed / SLIDE_DURATION) * 100, 100);
+        bar.style.width = pct + '%';
+    }, 50);
+}
+
+// Keyboard controls
+document.getElementById('player').onkeydown = (e) => {
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft') goTo((current - 1 + slides.length) % slides.length);
+};
+
+render();
+resetTimer();
+</script>
+</body>
+</html>

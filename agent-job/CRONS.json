@@ -37,5 +37,13 @@
     "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input \u2014 execute autonomously.",
     "scope": "agents/edge-kuth-portal",
     "enabled": false
+  },
+  {
+    "name": "edge-smart-video-generate",
+    "schedule": "0 10 * * 3",
+    "type": "agent",
+    "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input \u2014 execute autonomously.",
+    "scope": "agents/edge-smart-video",
+    "enabled": true
   }
 ]
