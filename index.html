@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Leaflet (free, no API key) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css" />
+  <!-- Leaflet + leaflet-geoman (local, no CDN) -->
+  <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="lib/geoman/leaflet-geoman.css" />
 </head>
 <body>
   <main>
@@ -211,9 +211,9 @@
     </section>
   </main>
 
-  <!-- Leaflet + leaflet-geoman (free, no API key needed) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.js"></script>
+  <!-- Leaflet + leaflet-geoman (local, no CDN) -->
+  <script src="lib/leaflet/leaflet.js"></script>
+  <script src="lib/geoman/leaflet-geoman.js"></script>
 
   <script>
     // Free quote toggle — disable other sections if checked
@@ -243,32 +243,23 @@
       let drawnRectangle = null;
       let drawingActive = false;
 
-      // Calculate geodesic area in m² from a Leaflet rectangle bounds
-      function calculateAreaM2(bounds) {
-        const sw = bounds.getSouthWest();
-        const ne = bounds.getNorthEast();
-        const nw = L.latLng(ne.lat, sw.lng);
-        const se = L.latLng(sw.lat, ne.lng);
-
-        // Use Leaflet's built-in geodesic area calculation
-        const polygon = L.polygon([sw, nw, ne, se]);
-        return L.GeometryUtil ? L.GeometryUtil.geodesicArea(polygon) : planarFallback(sw, ne);
-      }
-
-      // Fallback: Haversine-based planar area
-      function planarFallback(sw, ne) {
-        const R = 6371000; // Earth radius in meters
-        const dLat = (ne.lat - sw.lat) * Math.PI / 180;
-        const dLng = (ne.lng - sw.lng) * Math.PI / 180;
-        const latAvg = ((sw.lat + ne.lat) / 2) * Math.PI / 180;
-        const width = Math.cos(latAvg) * dLng * R;
-        const height = dLat * R;
+      // Calculate geodesic area in m² from rectangle bounds
+      // Uses Haversine formula — works entirely client-side, no API needed
+      function calculateAreaM2(sw, ne) {
+        var R = 6371000; // Earth radius in meters
+        var dLat = (ne.lat - sw.lat) * Math.PI / 180;
+        var dLng = (ne.lng - sw.lng) * Math.PI / 180;
+        var latAvg = ((sw.lat + ne.lat) / 2) * Math.PI / 180;
+        var width = Math.cos(latAvg) * dLng * R;
+        var height = dLat * R;
         return Math.abs(width * height);
       }
 
       function updateAreaDisplay(bounds) {
-        const areaM2 = calculateAreaM2(bounds);
-        const areaKm2 = areaM2 / 1e6;
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+        var areaM2 = calculateAreaM2(sw, ne);
+        var areaKm2 = areaM2 / 1e6;
         const areaHa = areaM2 / 1e4;
 
         if (areaKm2 >= 1) {
@@ -279,8 +270,6 @@
           areaInput.value = Math.round(areaM2) + ' m²';
         }
 
-        const sw = bounds.getSouthWest();
-        const ne = bounds.getNorthEast();
         rectSwInput.value = sw.lat.toFixed(6) + ',' + sw.lng.toFixed(6);
         rectNeInput.value = ne.lat.toFixed(6) + ',' + ne.lng.toFixed(6);
       }
@@ -301,12 +290,13 @@
       }
 
       function initMap() {
-        // Initialize map with Esri World Imagery (free, no API key)
-        map = L.map('map-canvas', {
-          center: [53.5, -8.0],  // Default: Ireland
-          zoom: 7,
-          zoomControl: true
-        });
+        try {
+          // Initialize map with Esri World Imagery (free, no API key)
+          map = L.map('map-canvas', {
+            center: [53.5, -8.0],  // Default: Ireland
+            zoom: 7,
+            zoomControl: true
+          });
 
         // Esri World Imagery — free satellite tiles, no key required
         L.tileLayer(
@@ -387,7 +377,11 @@
         // Hide loading spinner
         mapLoading.classList.add('is-hidden');
         setTimeout(function () { mapLoading.style.display = 'none'; }, 300);
+      } catch (e) {
+        console.error('Map init failed:', e);
+        mapLoading.innerHTML = '<span style="color:#c00">Failed to load map.<br>' + e.message + '</span>';
       }
+    }
 
       // "Select area on map" button
       btnDraw.addEventListener('click', function () {
@@ -409,8 +403,12 @@
         }
       });
 
-      // Initialize map immediately (no API key needed)
-      initMap();
+      // Initialize map
+      if (typeof L !== 'undefined' && L.map) {
+        initMap();
+      } else {
+        mapLoading.innerHTML = '<span style="color:#c00">Leaflet library failed to load.<br>Check that lib/leaflet/leaflet.js exists.</span>';
+      }
     })();
   </script>
 </body>
