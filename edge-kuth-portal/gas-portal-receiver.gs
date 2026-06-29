@@ -33,6 +33,17 @@ function doGet(e) {
 }
 
 /**
+ * Handle CORS preflight (OPTIONS) — safety net for browsers that send it
+ */
+function doOptions() {
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', '*');
+}
+
+/**
  * Main entry — receive form submission from browser
  *
  * The browser sends JSON with this shape:
