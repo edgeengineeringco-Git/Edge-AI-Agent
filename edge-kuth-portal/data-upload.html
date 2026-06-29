@@ -246,6 +246,11 @@
       <h1>Data Upload</h1>
       <p class="subhead">Upload ZIP files of only the blocks relevant to your project. You can skip any section that doesn't apply.</p>
       <div class="note"><strong>Tip:</strong> ZIP multiple files together per block. Accepted formats: .zip, .csv, .pdf, .geojson, .kml, .shp, .dxf, .tiff, .las, .jpg, .png</div>
+      <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <label style="font-weight:500;font-size:0.88rem;color:#344054;">Project name <span style="color:#b42318;">*</span></label>
+        <input type="text" name="project_name" placeholder="e.g. Donegal REE Survey 2026" required
+               style="flex:1;min-width:200px;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:0.92rem;font-family:inherit;" />
+      </div>
     </section>
 
     <form action="https://pbot.edgeengineers.net/edge-kuth/upload" method="POST" enctype="multipart/form-data" id="data-upload-form">

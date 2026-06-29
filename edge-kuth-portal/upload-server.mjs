@@ -27,6 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
+import { spawn } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -268,33 +269,113 @@ const server = http.createServer(async (req, res) => {
     // Extract form fields and files
     const fields = {};
     const files = [];
+    const allFiles = [];
     let doseCsv = null;
 
     for (const part of parts) {
       if (part.filename) {
         // It's a file
         const entry = { field: part.name, filename: part.filename, data: part.body };
+        allFiles.push(entry);
         if (part.filename.endsWith(".spc")) {
           files.push(entry);
         } else if (part.filename.endsWith(".csv")) {
           doseCsv = entry;
         }
       } else if (part.name) {
-        fields[part.name] = part.body.toString("utf-8").trim();
+        const value = part.body.toString("utf-8").trim();
+        // Handle duplicate field names as arrays (e.g. services[] checkboxes)
+        if (fields[part.name] !== undefined) {
+          if (!Array.isArray(fields[part.name])) {
+            fields[part.name] = [fields[part.name]];
+          }
+          fields[part.name].push(value);
+        } else {
+          fields[part.name] = value;
+        }
       }
     }
 
-    // Validate password
-    if (fields.password !== UPLOAD_PASSWORD) {
-      res.writeHead(403, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Invalid access password" }));
-      return;
+    // Normalize array field names (e.g. services[] -> services)
+    for (const key of Object.keys(fields)) {
+      const cleanKey = key.replace(/\[\]$/, '');
+      if (cleanKey !== key) {
+        const val = fields[key];
+        delete fields[key];
+        fields[cleanKey] = Array.isArray(val) ? val.join(', ') : val;
+      }
     }
 
-    // Validate files
-    if (files.length === 0) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "No .spc files found in upload" }));
+    // Detect portal form submissions
+    const formStep = fields.form_step;
+    const isPortal = formStep === 'project_setup' || formStep === 'data_upload';
+
+    // Validate password and .spc files (skip for portal submissions)
+    if (!isPortal) {
+      if (fields.password !== UPLOAD_PASSWORD) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid access password" }));
+        return;
+      }
+      if (files.length === 0) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "No .spc files found in upload" }));
+        return;
+      }
+    }
+
+    // === Portal form submission (project setup / data upload) ===
+    if (isPortal) {
+      const ts = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 15);
+      const safeProject = (fields.project_name || "portal").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const jobId = `portal_${safeProject}_${ts}`;
+      const jobDir = path.join(JOBS_DIR, jobId);
+      const filesDir = path.join(jobDir, "files");
+      fs.mkdirSync(filesDir, { recursive: true });
+
+      // Save all uploaded files
+      const uploadedFiles = [];
+      for (const f of allFiles) {
+        const dest = path.join(filesDir, f.filename);
+        fs.writeFileSync(dest, f.data);
+        uploadedFiles.push({
+          field: f.field,
+          filename: f.filename,
+          local_path: dest,
+          size: f.data.length,
+        });
+      }
+
+      // Build submission metadata
+      const submission = {
+        form_step: formStep,
+        timestamp: new Date().toISOString(),
+        fields: { ...fields },
+        files: uploadedFiles,
+      };
+
+      // Save submission.json
+      fs.writeFileSync(
+        path.join(jobDir, "submission.json"),
+        JSON.stringify(submission, null, 2),
+      );
+
+      console.log(`[portal] Job ${jobId}: ${uploadedFiles.length} files from ${fields.project_name || "anonymous"}`);
+
+      // Spawn portal-processor.py (non-blocking)
+      spawn("python3", [
+        path.join(__dirname, "portal-processor.py"), "--job-dir", jobDir,
+      ], { stdio: "inherit" });
+
+      // Respond to client
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        status: "submitted",
+        job_id: jobId,
+        form_step: formStep,
+        files: uploadedFiles.length,
+        message: `Thank you! Your ${formStep === "project_setup" ? "project details" : "data upload"} have been received.`,
+      }));
       return;
     }
 
