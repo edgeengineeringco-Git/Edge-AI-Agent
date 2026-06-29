@@ -7,6 +7,21 @@
     "reset-auth": "thepopebot reset-auth"
   },
   "dependencies": {
+    "@google/clasp": "^3.3.0",
     "thepopebot": "^1.0.0"
-  }
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edgeengineeringco-Git/Edge-AI-Agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edgeengineeringco-Git/Edge-AI-Agent/issues"
+  },
+  "homepage": "https://github.com/edgeengineeringco-Git/Edge-AI-Agent#readme"
 }
