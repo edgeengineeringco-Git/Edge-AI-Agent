@@ -200,9 +200,13 @@ const MIME = {
 };
 
 function serveStatic(req, res) {
-  // Map /edge-kuth/upload-page → upload-form.html, / → upload-form.html
+  // Map friendly URLs → actual files
   let urlPath = decodeURIComponent((req.url || "").split("?")[0]);
   if (urlPath === "/" || urlPath === "/edge-kuth/upload-page" || urlPath === "/edge-kuth/") {
+    urlPath = "/upload-form.html";
+  } else if (urlPath === "/edge-kuth/data-upload") {
+    urlPath = "/data-upload.html";
+  } else if (urlPath === "/edge-kuth/upload-form") {
     urlPath = "/upload-form.html";
   }
   // Only serve files inside the edge-kuth-portal directory
