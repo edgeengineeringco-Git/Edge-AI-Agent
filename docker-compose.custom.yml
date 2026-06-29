@@ -90,6 +90,8 @@ services:
       - FROM_EMAIL=${FROM_EMAIL:-noreply@edgeengineers.net}
       - SUBMISSIONS_FOLDER_ID=${SUBMISSIONS_FOLDER_ID:-1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO}
       - GOOGLE_DRIVE_OAUTH=${GOOGLE_DRIVE_OAUTH:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
     labels:
       - traefik.enable=true
       - traefik.http.routers.upload-server.rule=Host(`${APP_HOSTNAME}`) && Path(`/edge-kuth/upload-page`)

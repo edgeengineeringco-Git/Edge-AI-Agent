@@ -23,6 +23,7 @@
  */
 
 import http from "node:http";
+import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -363,8 +364,11 @@ const server = http.createServer(async (req, res) => {
       console.log(`[portal] Job ${jobId}: ${uploadedFiles.length} files from ${fields.project_name || "anonymous"}`);
 
       // Spawn portal-processor.py (non-blocking)
-      // Pass OAuth credentials as CLI arg so it works inside Docker
-      const oauthJson = process.env.GOOGLE_DRIVE_OAUTH || "";
+      // Read OAuth from env or fallback to file (for zero-redeploy injection)
+      let oauthJson = process.env.GOOGLE_DRIVE_OAUTH || "";
+      if (!oauthJson) {
+        try { oauthJson = fs.readFileSync("/tmp/.drive_oauth.json", "utf-8").trim(); } catch (e) {}
+      }
       const subFolderId = process.env.SUBMISSIONS_FOLDER_ID || "1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO";
       spawn("python3", [
         path.join(__dirname, "portal-processor.py"), "--job-dir", jobDir,
@@ -372,15 +376,37 @@ const server = http.createServer(async (req, res) => {
         "--folder-id", subFolderId,
       ], { stdio: "inherit", env: process.env });
 
-      // Send Telegram notification to admins (non-blocking)
-      const dmScript = path.join(ROOT, "skills", "agent-job-dm", "agent-job-dm.js");
+      // Send Telegram notification (non-blocking, direct API call)
       const projectName = fields.project_name || "Unnamed";
       const formType = formStep === "data_upload" ? "Data Upload" : "Project Setup";
       const notifyMsg = `📋 New portal submission: ${formType} from "${projectName}" — ${uploadedFiles.length} file(s). Job: ${jobId}`;
-      spawn("node", [dmScript, "send", notifyMsg, "--broadcast"], {
-        stdio: "inherit",
-        env: process.env,
-      });
+      // Read creds from env or fallback to files (for zero-redeploy injection)
+      let tgToken = process.env.TELEGRAM_BOT_TOKEN || "";
+      let tgChatId = process.env.TELEGRAM_CHAT_ID || "";
+      if (!tgToken || !tgChatId) {
+        try {
+          if (!tgToken) tgToken = fs.readFileSync("/tmp/.tg_token", "utf-8").trim();
+          if (!tgChatId) tgChatId = fs.readFileSync("/tmp/.tg_chat_id", "utf-8").trim();
+        } catch (e) {}
+      }
+      if (tgToken && tgChatId) {
+        const postData = JSON.stringify({ chat_id: tgChatId, text: notifyMsg });
+        const req = https.request({
+          hostname: "api.telegram.org",
+          path: `/bot${tgToken}/sendMessage`,
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(postData) },
+        }, (res) => {
+          let body = "";
+          res.on("data", (c) => { body += c; });
+          res.on("end", () => { console.log(`[portal] Telegram notification: ${res.statusCode} ${body.slice(0, 80)}`); });
+        });
+        req.on("error", (e) => { console.log(`[portal] Telegram error: ${e.message}`); });
+        req.write(postData);
+        req.end();
+      } else {
+        console.log("[portal] Telegram credentials not available — skipping notification");
+      }
 
       // Respond to client
       res.writeHead(200, { "Content-Type": "application/json" });
