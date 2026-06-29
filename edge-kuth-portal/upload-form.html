@@ -369,15 +369,11 @@
     window.addEventListener('scroll', updateProgress, { passive: true });
     updateProgress();
 
-    // ---- Free quote toggle — disable other sections if checked ----
+    // ---- Free quote toggle — no sections disabled; just a badge hint ----
+    // (all sections stay active so the user can fill in everything)
     const freeQuote = document.getElementById('free_quote');
     freeQuote.addEventListener('change', function () {
-      document.querySelectorAll('.section').forEach(function (section) {
-        const legend = section.querySelector('legend');
-        if (legend && !legend.textContent.includes('3. Service')) {
-          section.classList.toggle('is-disabled', freeQuote.checked);
-        }
-      });
+      // No-op: intentionally keep all sections active
     });
 
     // ---- Checkbox / radio "is-checked" highlight ----
