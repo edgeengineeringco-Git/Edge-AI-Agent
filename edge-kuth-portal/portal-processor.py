@@ -867,7 +867,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="EDGE Portal Form Submission Processor")
     parser.add_argument("--job-dir", required=True, help="Job directory with submission.json and files/")
+    parser.add_argument("--oauth", default="", help="Google Drive OAuth JSON (overrides env var)")
+    parser.add_argument("--folder-id", default="", help="Google Drive submissions folder ID")
     args = parser.parse_args()
+
+    # Apply CLI overrides
+    if args.oauth:
+        os.environ["GOOGLE_DRIVE_OAUTH"] = args.oauth
+    if args.folder_id:
+        os.environ["SUBMISSIONS_FOLDER_ID"] = args.folder_id
 
     success = process_submission(args.job_dir)
     sys.exit(0 if success else 1)

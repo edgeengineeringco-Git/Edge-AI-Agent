@@ -363,9 +363,24 @@ const server = http.createServer(async (req, res) => {
       console.log(`[portal] Job ${jobId}: ${uploadedFiles.length} files from ${fields.project_name || "anonymous"}`);
 
       // Spawn portal-processor.py (non-blocking)
+      // Pass OAuth credentials as CLI arg so it works inside Docker
+      const oauthJson = process.env.GOOGLE_DRIVE_OAUTH || "";
+      const subFolderId = process.env.SUBMISSIONS_FOLDER_ID || "1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO";
       spawn("python3", [
         path.join(__dirname, "portal-processor.py"), "--job-dir", jobDir,
-      ], { stdio: "inherit" });
+        "--oauth", oauthJson,
+        "--folder-id", subFolderId,
+      ], { stdio: "inherit", env: process.env });
+
+      // Send Telegram notification to admins (non-blocking)
+      const dmScript = path.join(ROOT, "skills", "agent-job-dm", "agent-job-dm.js");
+      const projectName = fields.project_name || "Unnamed";
+      const formType = formStep === "data_upload" ? "Data Upload" : "Project Setup";
+      const notifyMsg = `📋 New portal submission: ${formType} from "${projectName}" — ${uploadedFiles.length} file(s). Job: ${jobId}`;
+      spawn("node", [dmScript, "send", notifyMsg, "--broadcast"], {
+        stdio: "inherit",
+        env: process.env,
+      });
 
       // Respond to client
       res.writeHead(200, { "Content-Type": "application/json" });
