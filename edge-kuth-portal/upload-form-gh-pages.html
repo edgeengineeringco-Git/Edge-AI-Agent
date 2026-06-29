@@ -142,6 +142,8 @@
   }
   .confirm-card .icon--green { background: var(--green-500); }
   .confirm-card .icon--blue { background: var(--blue-500); }
+  .confirm-card .icon--red { background: var(--required); color: var(--white); }
+  #confirm-error { border-left-color: var(--required); }
   .confirm-card h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 700; color: var(--ink); }
   .confirm-card p { margin: 0 0 20px; color: var(--ink-soft); font-size: 0.95rem; }
   .confirm-card .btn-primary { margin-top: 8px; }
@@ -165,7 +167,7 @@
       <p class="subhead">Tell us about your project and choose the services you need. We'll get back to you within 1–2 business days.</p>
     </section>
 
-    <form action="https://pbot.edgeengineers.net/edge-kuth/upload" method="POST" enctype="multipart/form-data" id="setup-form">
+    <form action="javascript:void(0)" method="POST" enctype="multipart/form-data" id="setup-form">
 
       <!-- 1. Project details -->
       <fieldset class="section" data-step="1">
@@ -366,7 +368,7 @@
     <div class="confirm-card" id="confirm-quote">
       <div class="icon icon--green">&#10003;</div>
       <h2>Thank you — we'll be in touch</h2>
-      <p>Your project details have been received. We'll review and get back to you within 1–2 business days with a free initial quote.</p>
+      <p>Your project details have been received and saved to our secure Drive folder. We'll review and get back to you within 1–2 business days with a free initial quote.</p>
       <a href="index.html" class="btn-primary" style="display:inline-block;text-decoration:none;">Back to portal</a>
     </div>
 
@@ -374,14 +376,30 @@
     <div class="confirm-card" id="confirm-continue">
       <div class="icon icon--blue">&#10003;</div>
       <h2>Project details received</h2>
-      <p>Now upload your exploration data so we can prepare an accurate quote.</p>
+      <p>Your data has been saved to our secure Drive folder. Now upload your exploration files so we can prepare an accurate quote.</p>
       <a href="data-upload.html" class="btn-primary" id="continue-btn" style="display:inline-block;text-decoration:none;">Continue to data upload &rarr;</a>
+    </div>
+
+    <!-- Submission error card -->
+    <div class="confirm-card" id="confirm-error" style="border-left-color:#b42318;">
+      <div class="icon icon--red" style="background:#b42318;color:#fff;">!</div>
+      <h2>Submission could not be delivered</h2>
+      <p id="error-detail">Something went wrong. Please try again or email info@edgeengineers.net.</p>
+      <button type="button" class="btn-outline" onclick="document.getElementById('confirm-error').classList.remove('is-visible');document.getElementById('setup-form').classList.remove('form-is-submitted');" style="display:inline-block;">Try again</button>
     </div>
   </main>
 
   <!-- Leaflet + leaflet-geoman (CDN — works on GitHub Pages) -->
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.14.1/dist/leaflet-geoman.min.js"></script>
+
+  <!--
+    Google Apps Script Web App URL
+    ─── DEPLOY gas-portal-receiver.gs at https://script.google.com → Deploy as Web App → paste URL below ───
+  -->
+  <script>
+    var GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+  </script>
 
   <script>
     // ---- Progress bar ----
@@ -403,46 +421,116 @@
       // No-op: intentionally keep all sections active
     });
 
-    // ---- Form submission: intercept, POST via fetch, show inline confirmation ----
+    // ---- Form submission: convert to JSON+base64, POST to Google Apps Script → Drive ----
     const setupForm = document.getElementById('setup-form');
     const confirmQuote = document.getElementById('confirm-quote');
     const confirmContinue = document.getElementById('confirm-continue');
+    const confirmError = document.getElementById('confirm-error');
 
-    setupForm.addEventListener('submit', function (e) {
+    // Collect text fields into a plain object
+    function collectFields(formEl) {
+      const fields = {};
+      const els = formEl.querySelectorAll('input:not([type=file]), textarea, select');
+      els.forEach(function (el) {
+        if (!el.name) return;
+        if (el.type === 'checkbox') {
+          fields[el.name] = el.checked;
+        } else if (el.type === 'radio') {
+          if (el.checked) fields[el.name] = el.value;
+        } else {
+          fields[el.name] = el.value;
+        }
+      });
+      // Checkbox groups (services[])
+      const checks = formEl.querySelectorAll('input[type=checkbox][name="services[]"]:checked');
+      fields.services = Array.from(checks).map(function (c) { return c.value; }).join(',');
+      return fields;
+    }
+
+    // Read a file as base64 string
+    function fileToBase64(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          // Remove "data:...;base64," prefix — send raw base64
+          const b64 = reader.result.split(',')[1];
+          resolve(b64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Convert form to JSON payload with base64 files
+    async function buildPayload(formEl) {
+      const fields = collectFields(formEl);
+      const files = [];
+      const fileInputs = formEl.querySelectorAll('input[type=file]');
+      for (let i = 0; i < fileInputs.length; i++) {
+        const input = fileInputs[i];
+        for (let j = 0; j < input.files.length; j++) {
+          const f = input.files[j];
+          const b64 = await fileToBase64(f);
+          files.push({
+            name: input.name || ('file_' + i),
+            filename: f.name,
+            mimeType: f.type || 'application/octet-stream',
+            size: f.size,
+            data: b64,
+          });
+        }
+      }
+      return { fields: fields, files: files };
+    }
+
+    setupForm.addEventListener('submit', async function (e) {
       e.preventDefault();
+
+      // Guard: GAS_URL must be configured
+      if (!GAS_URL || GAS_URL.indexOf('YOUR_DEPLOYMENT_ID') !== -1) {
+        confirmError.querySelector('#error-detail').textContent =
+          'Form receiver not configured. Please set GAS_URL in the page source to your Google Apps Script deployment URL.';
+        confirmError.classList.add('is-visible');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
 
       var submitBtn = setupForm.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting…';
 
-      var formData = new FormData(setupForm);
+      try {
+        const payload = await buildPayload(setupForm);
 
-      fetch(setupForm.action, {
-        method: 'POST',
-        body: formData,
-      })
-      .then(function () {
-        setupForm.classList.add('form-is-submitted');
-        if (freeQuote.checked) {
-          confirmQuote.classList.add('is-visible');
+        const resp = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight
+          body: JSON.stringify(payload),
+        });
+
+        const result = await resp.json();
+
+        if (result.ok) {
+          setupForm.classList.add('form-is-submitted');
+          if (freeQuote.checked) {
+            confirmQuote.classList.add('is-visible');
+          } else {
+            confirmContinue.classList.add('is-visible');
+            sessionStorage.setItem('portal_step', 'data_upload');
+          }
         } else {
-          confirmContinue.classList.add('is-visible');
-          sessionStorage.setItem('portal_step', 'data_upload');
+          confirmError.querySelector('#error-detail').textContent =
+            (result.error || 'Unknown error') + ' — please try again or email info@edgeengineers.net.';
+          confirmError.classList.add('is-visible');
         }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      })
-      .catch(function (err) {
+      } catch (err) {
         console.error('Submit error:', err);
-        // Proceed anyway — upload server may have received it
-        setupForm.classList.add('form-is-submitted');
-        if (freeQuote.checked) {
-          confirmQuote.classList.add('is-visible');
-        } else {
-          confirmContinue.classList.add('is-visible');
-          sessionStorage.setItem('portal_step', 'data_upload');
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
+        confirmError.querySelector('#error-detail').textContent =
+          'Network error: ' + err.message + '. Please check your connection and try again.';
+        confirmError.classList.add('is-visible');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // ---- Checkbox / radio highlight ----

@@ -488,7 +488,7 @@
       <p class="subhead">Tell us about your project and choose the services you need. We'll get back to you within 1–2 business days.</p>
     </section>
 
-    <form action="https://pbot.edgeengineers.net/edge-kuth/upload" method="POST" enctype="multipart/form-data" id="setup-form">
+    <form action="javascript:void(0)" method="POST" enctype="multipart/form-data" id="setup-form">
 
       <!-- 1. Project details -->
       <fieldset class="section" data-step="1">
@@ -689,6 +689,14 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman@2.16.0/dist/leaflet-geoman.js"></script>
 
+  <!--
+    Google Apps Script Web App URL
+    ─── DEPLOY gas-portal-receiver.gs at https://script.google.com → Deploy as Web App → paste URL below ───
+  -->
+  <script>
+    var GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+  </script>
+
   <script>
     // ---- Progress bar: highlight current section based on scroll ----
     const sections = document.querySelectorAll('.section');
@@ -856,6 +864,85 @@
         mapLoading.innerHTML = '<span style="color:#c00">Failed to load Leaflet from CDN.<br>Check your internet connection.</span>';
       }
     })();
+
+    // ---- Form submit: JSON+base64 → Google Apps Script → Drive ----
+    var setupForm = document.getElementById('setup-form');
+
+    function fileToBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result.split(',')[1]); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function collectFields(formEl) {
+      var fields = {};
+      var els = formEl.querySelectorAll('input:not([type=file]), textarea, select');
+      els.forEach(function (el) {
+        if (!el.name) return;
+        if (el.type === 'checkbox') { fields[el.name] = el.checked; }
+        else if (el.type === 'radio') { if (el.checked) fields[el.name] = el.value; }
+        else { fields[el.name] = el.value; }
+      });
+      var checks = formEl.querySelectorAll('input[type=checkbox][name="services[]"]:checked');
+      fields.services = Array.from(checks).map(function (c) { return c.value; }).join(',');
+      return fields;
+    }
+
+    async function buildPayload(formEl) {
+      var fields = collectFields(formEl);
+      var files = [];
+      var fileInputs = formEl.querySelectorAll('input[type=file]');
+      for (var i = 0; i < fileInputs.length; i++) {
+        var input = fileInputs[i];
+        for (var j = 0; j < input.files.length; j++) {
+          var f = input.files[j];
+          var b64 = await fileToBase64(f);
+          files.push({ name: input.name || ('file_' + i), filename: f.name, mimeType: f.type || 'application/octet-stream', size: f.size, data: b64 });
+        }
+      }
+      return { fields: fields, files: files };
+    }
+
+    setupForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!GAS_URL || GAS_URL.indexOf('YOUR_DEPLOYMENT_ID') !== -1) {
+        alert('Form receiver not configured. Please set GAS_URL to your Google Apps Script deployment URL.');
+        return;
+      }
+      var submitBtn = setupForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+      try {
+        var payload = await buildPayload(setupForm);
+        var resp = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload),
+        });
+        var result = await resp.json();
+        if (result.ok) {
+          setupForm.style.display = 'none';
+          var note = document.createElement('div');
+          note.className = 'card-intro';
+          note.style.cssText = 'text-align:center;';
+          note.innerHTML = '<h2 style="color:#2d6a4f">&#10003; Submission received</h2>' +
+            '<p>' + result.fileCount + ' file(s) saved to Drive.<br>' +
+            '<a href="' + result.folderUrl + '" target="_blank" style="color:#2d6a4f;font-weight:600">View Drive folder &rarr;</a></p>';
+          setupForm.parentElement.appendChild(note);
+        } else {
+          alert('Failed: ' + (result.error || 'Unknown error'));
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit & continue';
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit & continue';
+      }
+    });
   </script>
 </body>
 </html>
