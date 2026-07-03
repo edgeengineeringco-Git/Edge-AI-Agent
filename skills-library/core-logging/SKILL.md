@@ -1,87 +1,141 @@
 ---
 name: core-logging
-description: Digital core logging workflows for REE exploration — lithology codes, alteration logging, geotechnical measurements, photo interpretation, and automated structure extraction.
+description: Digital drill core logging for REE and critical mineral exploration — lithology, alteration, mineralization, structure, geotechnical parameters, and automated photo interpretation.
 ---
 
-# Core Logging for REE Exploration
+# Drill Core Logging for REE Exploration
 
 ## When to use
 
-- You have drill core that needs systematic geological logging.
-- You want standardized lithology, alteration, and structural codes.
-- You need to correlate core logging with geochemistry and geophysics.
-- You want to use computer vision to extract structures from core photos.
+- You need to log drill core for lithology, alteration, and mineralization.
+- You want standardized logging codes for database entry.
+- You have core photos and want automated feature detection.
+- You need to calculate RQD, fracture density, and other geotechnical parameters.
 
-## Lithology Codes for REE Systems
+## Standard Logging Codes
 
-| Code | Lithology | REE Relevance |
+### Lithology Codes (Simplified)
+| Code | Description | REE Relevance |
 |---|---|---|
-| **CBT** | Carbonatite | Primary ore host |
-| **FEN** | Fenite (Na-metasomatized) | Alteration aureole, pathfinder |
-| **SYE** | Syenite | Associated alkaline rock |
-| **NPH** | Nepheline syenite | Associated alkaline rock |
-| **ALK** | Alkali feldspar granite | Potential IAC source |
-| **GRN** | Granite (biotite/muscovite) | IAC source rock |
-| **PEGM** | Pegmatite | Li-Cs-Ta ± REE |
-| **APB** | Apatite-biotite rock | REE-bearing accessory |
-| **BRT** | Barite vein | Hydrothermal HREE pathfinder |
-| **FLU** | Fluorite vein | F-rich hydrothermal system |
-| **HMC** | Heavy mineral concentrate | Placer monazite/xenotime |
-| **SAP** | Saprolite | Laterite Ni-Co, clay-hosted REE |
-| **LIM** | Limonite | Laterite zone |
-| **QFP** | Quartz-feldspar porphyry | Potential host |
-| **BAS** | Basalt / mafic volcanic | Host in some systems |
-| **ARG** | Argillite / shale | Sedimentary host |
-| **CHT** | Chert | Banded iron formation assoc. |
+| **CARB** | Carbonatite (sövite, beforsite, rauhaugite) | Primary ore host |
+| **FEN** | Fenite (Na-K metasomatized host rock) | Alteration aureole, pathfinder |
+| **SYEN** | Syenite / Nepheline syenite | Common alkaline association |
+| **PHON** | Phonolite | Alkaline volcanic association |
+| **GRAN** | Granite / Leucogranite | Parent of IAC weathering |
+| **PEGM** | Pegmatite | LCT (Li-Cs-Ta) mineralization |
+| **SHAL** | Shale / Mudstone | SEDEX host |
+| **BREC** | Breccia | Hydrothermal / IOCG ore |
+| **OXID** | Oxidized zone / Gossan | Secondary enrichment |
+| **SAPR** | Saprolite / Laterite | Ni-Co, IAC weathering |
 
-## Alteration Codes
+### Alteration Codes
+| Code | Minerals | Interpretation |
+|---|---|---|
+| **FENI** | Albite, orthoclase, aegirine, arfvedsonite | Fenitization — carbonatite proximity |
+| **HEMI** | Hematite, goethite | Oxidation — near-surface or fluid flow |
+| **SILI** | Quartz, chalcedony | Silicification — hydrothermal |
+| **CHLO** | Chlorite, epidote | Propylitic — distal alteration |
+| **ARGI** | Kaolinite, smectite | Argillic — acid alteration |
+| **PHYL** | Sericite, pyrite | Phyllic — intermediate alteration |
+| **POTA** | K-feldspar, biotite | Potassic — proximal porphyry |
+| **FLUO** | Fluorite, apatite | F-rich hydrothermal — REE association |
+| **BARI** | Barite, celestine | Ba-Sr enrichment — carbonatite |
 
-| Code | Alteration | Minerals | REE Significance |
-|---|---|---|---|
-| **ALB** | Albitization | Albite, ± scapolite | Fenitization, Na-metasomatism |
-| **POT** | Potassic | K-feldspar, biotite | Carbonatite-related |
-| **SIL** | Silicification | Quartz, chalcedony | Hydrothermal overprint |
-| **SER** | Sericitization | Sericite, illite | Phyllic alteration |
-| **CARB** | Carbonatization | Calcite, dolomite | Carbonatite emplacement |
-| **FELD** | Feldspathization | K-feldspar, albite | Alkaline metasomatism |
-| **CHL** | Chloritization | Chlorite, epidote | Propylitic, retrograde |
-| **HEM** | Hematization | Hematite, goethite | Oxidation, gossan |
-| **SAPR** | Saprolitization | Clay, goethite | Weathering, IAC formation |
-| **GRE** | Greisenization | Muscovite, topaz, fluorite | Sn-W-REE association |
-| **ARGI** | Argillic | Kaolinite, smectite | Advanced weathering |
+### Mineralization Codes
+| Code | Description | Grade Indicator |
+|---|---|---|
+| **BAST** | Bastnäsite visible | High LREE |
+| **MONA** | Monazite visible | High Th, LREE-MREE |
+| **XENO** | Xenotime visible | High HREE, Y |
+| **ALLA** | Allanite visible | LREE in silicate |
+| **APAT** | Apatite — fluorapatite | P-REE association |
+| **SYNC** | Synchysite, parisite | Secondary REE carbonate |
+| **SPOD** | Spodumene visible | Li pegmatite |
+| **COBA** | Cobaltite, erythrite | Co mineralization |
+| **PENT** | Pentlandite | Ni-Co sulfide |
 
-## Logging Template
+## Digital Logging Form
 
 ```python
-CORE_LOG_SCHEMA = {
-    "hole_id": "string",
-    "from_m": "float",
-    "to_m": "float",
-    "lithology_code": "string",
-    "lithology_description": "text",
-    "alteration_codes": "list[string]",
-    "alteration_intensity": "int (0-10)",
-    "mineralization_codes": "list[string]",
-    "mineralization_pct": "float",
-    "texture": "string",
-    "grain_size": "string",
-    "color": "string",
-    "hardness": "string",
-    "fracture_count_per_m": "int",
-    "rqd_pct": "float",
-    "core_recovery_pct": "float",
-    "structural_features": "list[dict]",
-    "vein_description": "text",
-    "oxidation_depth_m": "float",
-    "photo_references": "list[string]",
-    "logged_by": "string",
-    "logged_date": "date",
-    "reviewed_by": "string",
-    "notes": "text"
-}
+from dataclasses import dataclass
+from typing import Optional, List
+from datetime import datetime
+
+@dataclass
+class CoreLogInterval:
+    hole_id: str
+    from_m: float
+    to_m: float
+    lith_code: str
+    lith_description: str
+    
+    # Alteration
+    alt_code: Optional[str] = None
+    alt_intensity: int = 0  # 0-100%
+    
+    # Mineralization
+    min_code: Optional[str] = None
+    min_form: str = "disseminated"  # disseminated, vein, massive, stockwork, replacement
+    min_abundance: int = 0  # 0-100%
+    
+    # Structure
+    foliation_dip: Optional[float] = None
+    foliation_strike: Optional[float] = None
+    fracture_density: Optional[float] = None  # per metre
+    fracture_fill: Optional[str] = None
+    
+    # Geotechnical
+    rqd: Optional[float] = None  # Rock Quality Designation
+    core_recovery: Optional[float] = None  # %
+    hardness: str = "medium"  # very_soft, soft, medium, hard, very_hard
+    
+    # Color (Munsell or simple)
+    color: str = ""
+    
+    # Photos
+    photo_ids: List[str] = None
+    
+    # Assay link
+    sample_id: Optional[str] = None
+    
+    # Logger info
+    logged_by: str = ""
+    logged_date: str = ""
+    reviewed_by: Optional[str] = None
+    
+    def thickness(self):
+        return self.to_m - self.from_m
 ```
 
-## Automated Photo Analysis
+## RQD Calculation
+
+```python
+def calculate_rqd(core_pieces: list, interval_length: float):
+    """
+    Calculate Rock Quality Designation
+    core_pieces: list of piece lengths in metres
+    interval_length: total interval length in metres
+    """
+    # Sum of core pieces > 10 cm (0.1 m)
+    sum_qualifying = sum(p for p in core_pieces if p >= 0.1)
+    rqd = (sum_qualifying / interval_length) * 100
+    
+    # Classification
+    if rqd > 90:
+        quality = "Excellent"
+    elif rqd > 75:
+        quality = "Good"
+    elif rqd > 50:
+        quality = "Fair"
+    elif rqd > 25:
+        quality = "Poor"
+    else:
+        quality = "Very Poor"
+    
+    return rqd, quality
+```
+
+## Automated Core Photo Analysis
 
 ```python
 import cv2
@@ -90,112 +144,98 @@ from sklearn.cluster import KMeans
 
 def analyze_core_photo(image_path):
     """
-    Extract color, texture, and structure from core tray photos
+    Automated analysis of core tray photo
     """
     img = cv2.imread(image_path)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # Resize for processing
-    img_small = cv2.resize(img_rgb, (400, 300))
-    pixels = img_small.reshape(-1, 3)
+    # 1. Core recovery estimation
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     
-    # Dominant colors (K-means)
+    # Count core pixels vs tray pixels
+    core_pixels = np.sum(binary > 0)
+    total_pixels = binary.size
+    recovery_estimate = (core_pixels / total_pixels) * 100
+    
+    # 2. Color analysis (alteration/mineralization indicator)
+    pixels = img_rgb.reshape(-1, 3)
     kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
     kmeans.fit(pixels)
+    
     colors = kmeans.cluster_centers_.astype(int)
+    labels = kmeans.labels_
+    color_percentages = np.bincount(labels) / len(labels)
     
-    # Texture analysis (GLCM)
-    gray = cv2.cvtColor(img_small, cv2.COLOR_RGB2GRAY)
+    # Identify dominant colors
+    dominant_colors = []
+    for color, pct in zip(colors, color_percentages):
+        dominant_colors.append({
+            'rgb': color.tolist(),
+            'percentage': float(pct),
+            'description': describe_color(color)
+        })
     
-    # Simple edge density as texture proxy
+    # 3. Texture analysis (fracture density proxy)
     edges = cv2.Canny(gray, 50, 150)
     edge_density = np.sum(edges > 0) / edges.size
     
-    # Fracture detection (horizontal lines in tray photo)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=50, maxLineGap=10)
-    n_fractures = len(lines) if lines is not None else 0
+    # 4. Fluorescence detection (scheelite, fluorite)
+    # Would need UV photo separately
     
     return {
-        'dominant_colors': colors.tolist(),
+        'recovery_estimate': float(recovery_estimate),
+        'dominant_colors': dominant_colors,
         'edge_density': float(edge_density),
-        'detected_fractures': n_fractures,
-        'brightness_mean': float(np.mean(gray)),
-        'brightness_std': float(np.std(gray))
+        'fracture_proxy': 'high' if edge_density > 0.1 else 'low'
     }
 
-def detect_core_boxes(image_path):
-    """
-    Detect individual core boxes in a tray photo for auto-segmentation
-    """
-    img = cv2.imread(image_path)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    # Threshold to find boxes
-    _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-    
-    # Find contours
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    boxes = []
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        if w > 100 and h > 50:  # Filter small noise
-            boxes.append({'x': x, 'y': y, 'w': w, 'h': h})
-    
-    return boxes
+def describe_color(rgb):
+    """Simple color descriptor for geological logging"""
+    r, g, b = rgb
+    if r > 150 and g < 100 and b < 100:
+        return "red_brown (hematite/oxidized)"
+    elif r > 150 and g > 150 and b < 100:
+        return "yellow_brown (goethite/limonite)"
+    elif g > 150 and r < 100:
+        return "green (chlorite/epidote)"
+    elif r > 200 and g > 200 and b > 200:
+        return "white/pale (silica/carbonate)"
+    elif r < 80 and g < 80 and b < 80:
+        return "dark (sulfide/magnetite)"
+    else:
+        return "mixed/intermediate"
 ```
 
-## Core-Geochemistry Integration
+## Core Photo Stitching
 
 ```python
-def integrate_core_geochem(core_log_df, assay_df):
+def stitch_core_photos(photo_paths):
     """
-    Join core logging with assay data by depth interval
+    Stitch multiple core tray photos into continuous log image
     """
-    # Ensure intervals don't overlap in core log
-    core_log_df = core_log_df.sort_values(['hole_id', 'from_m'])
+    images = [cv2.imread(p) for p in photo_paths]
     
-    results = []
-    for _, core_row in core_log_df.iterrows():
-        hole = core_row['hole_id']
-        from_m = core_row['from_m']
-        to_m = core_row['to_m']
-        
-        # Find overlapping assays
-        overlapping = assay_df[
-            (assay_df['hole_id'] == hole) &
-            (assay_df['from_m'] < to_m) &
-            (assay_df['to_m'] > from_m)
-        ]
-        
-        if len(overlapping) > 0:
-            # Weighted average by interval overlap
-            overlaps = []
-            for _, assay in overlapping.iterrows():
-                overlap_start = max(from_m, assay['from_m'])
-                overlap_end = min(to_m, assay['to_m'])
-                overlap_length = overlap_end - overlap_start
-                overlaps.append((overlap_length, assay['treo_pct']))
-            
-            total_overlap = sum(o[0] for o in overlaps)
-            weighted_treo = sum(o[0] * o[1] for o in overlaps) / total_overlap
-            
-            core_row['avg_treo_pct'] = weighted_treo
-            core_row['n_assays'] = len(overlapping)
-        else:
-            core_row['avg_treo_pct'] = None
-            core_row['n_assays'] = 0
-        
-        results.append(core_row)
+    # Detect tray edges for alignment
+    stitched = cv2.hconcat(images)
     
-    return pd.DataFrame(results)
+    # Add depth markers
+    depth_interval = 1.0  # metres per photo
+    for i, img in enumerate(images):
+        depth = i * depth_interval
+        cv2.putText(stitched, f"{depth:.1f}m", 
+                   (i * img.shape[1] + 10, 30),
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    return stitched
 ```
 
 ## Best Practices
 
-1. **Log wet core:** Wetting enhances color and texture visibility. Photos should be wet.
-2. **Consistent lighting:** Use the same light source and angle for all photos.
-3. **Scale in every photo:** Include ruler or coin for scale.
-4. **Depth markers:** Clearly mark meterage on core boxes.
-5. **QC overlap:** Senior geologist should review 10% of all logging.
-6. **Correlate immediately:** Log → photo → assay in same session when possible.
+1. **Log before assaying:** Complete geological log before seeing assays to avoid bias.
+2. **Consistent intervals:** Use 1m or 2m standard intervals for geochemical comparison.
+3. **Photo every box:** Core tray photos are legal records. Include scale, hole ID, depth.
+4. **Wet and dry:** Photograph core both wet (color enhanced) and dry (texture visible).
+5. **UV light:** Check for scheelite (blue-white fluorescence) and fluorite (violet).
+6. **Magnet test:** Simple field test for magnetite content.
+7. **Acid test:** 10% HCl on carbonate — vigorous effervescence = calcite, weak = dolomite.

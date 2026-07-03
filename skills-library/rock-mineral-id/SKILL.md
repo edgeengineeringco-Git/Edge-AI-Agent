@@ -1,194 +1,182 @@
 ---
 name: rock-mineral-id
-description: Computer vision and spectral methods for automated rock and mineral identification in REE exploration — core photos, hand specimens, thin sections, and pXRF-assisted identification.
+description: Computer vision and spectral methods for automated rock and mineral identification in exploration — core photos, hand specimens, thin sections, and pXRF-assisted mineralogy.
 ---
 
-# Automated Rock and Mineral Identification
+# Rock and Mineral Identification
 
 ## When to use
 
-- You have core photos or hand specimen photos and want rapid lithology classification.
-- You want to identify REE-bearing minerals in thin section images.
-- You need to validate pXRF readings against visual mineralogy.
-- You want to build a training dataset for ML mineral classification.
+- You have drill core photos or hand specimen photos and want automated identification.
+- You need to identify minerals in the field using simple tests.
+- You want to link pXRF elemental data to likely mineralogy.
+- You have thin section images and want modal mineralogy.
 
-## Visual Identification Keys
+## Field Identification Key for REE Host Rocks
 
-### Carbonatite vs. Marble (Critical Distinction)
-| Feature | Carbonatite | Marble |
-|---|---|---|
-| Texture | Coarse, inequigranular | Granoblastic, equigranular |
-| Minerals | Calcite + apatite + magnetite + pyrochlore | Calcite ± dolomite |
-| REE minerals | Bastnäsite, monazite, parisite, synchysite | None |
-| Accessory | Magnetite (common), pyrite, barite | Graphite, tremolite |
-| Structure | Often brecciated, flow-banded | Bedded, folded |
-| Reactivity | Effervesces strongly in HCl | Effervesces strongly |
+### Carbonatite Identification
+| Test | Result |
+|---|---|
+| **Acid (HCl)** | Strong effervescence |
+| **Color** | Cream, white, buff, brown; sometimes banded |
+| **Texture** | Coarse-grained, equigranular; fenite contact zone |
+| **Heavy minerals** | Magnetite, pyrochlore, apatite, phlogopite |
+| **Associated rocks** | Syenite, nephelinite, ijolite within 1–2 km |
+| **Magnetism** | Variable — can be strongly magnetic |
 
-### Bastnäsite vs. Monazite (Hand Specimen)
-| Feature | Bastnäsite-(Ce) | Monazite-(Ce) |
-|---|---|---|
-| Color | Honey-yellow to brown | Yellow to reddish-brown |
-| Crystal form | Tabular, hexagonal | Prismatic, monoclinic |
-| Hardness | 4–4.5 | 5–5.5 |
-| Luster | Resinous to pearly | Resinous to waxy |
-| UV fluorescence | Often weak | Strong yellow-green |
-| Specific gravity | 4.9–5.2 | 5.0–5.3 |
+### Ion-Adsorption Clay (IAC)
+| Test | Result |
+|---|---|
+| **Texture** | Earthy, crumbly, sticky when wet |
+| **Color** | White, pink, red, yellow (lateritic) |
+| **Context** | Over granite, deeply weathered (>10 m) |
+| **pXRF** | Elevated REE, low Th/U in barren zones, high Th in mineralized |
+| **XRD** | Kaolinite, halloysite, illite dominant |
 
-### Xenotime vs. Zircon (Heavy Mineral Separation)
-| Feature | Xenotime-(Y) | Zircon |
-|---|---|---|
-| Color | Yellow-brown to reddish | Colorless to pale yellow |
-| Crystal form | Prismatic, tetragonal | Prismatic, tetragonal |
-| Hardness | 4–5 | 7.5 |
-| Luster | Vitreous to resinous | Adamantine |
-| Specific gravity | 4.4–5.1 | 4.6–4.7 |
-| REE content | High Y, HREE | Low REE, high Zr, Hf |
+### LCT Pegmatite
+| Test | Result |
+|---|---|
+| **Texture** | Very coarse-grained (>5 cm crystals), zoned |
+| **Key minerals** | Spodumene (white/pink blade), lepidolite (purple mica), petalite |
+| **pXRF** | High Li (proxy: Rb, Cs, Ta), Nb, Be |
+| **Associated** | Tourmaline (black, elbaite), beryl, cassiterite |
 
-### Field Indicators of REE Mineralization
+### Laterite (Ni-Co)
+| Test | Result |
+|---|---|
+| **Profile** | Ferricrete (cap) → limonite → saprolite → bedrock |
+| **Color** | Red-brown (limonite), green (garnierite in saprolite) |
+| **pXRF** | Ni, Co, Mn, Fe; Cr in bedrock |
+| **Hardness** | Ferricrete = very hard; saprolite = can dig with shovel |
 
-1. **Radioactivity:** Hand-held scintillometer or gamma scintillation
-2. **UV fluorescence:** Shortwave UV (254 nm) — scheelite (blue), fluorite (various), some apatite
-3. **Magnetism:** Magnetite-rich carbonatite will attract magnet
-4. **Density:** Heavy mineral concentrates feel distinctly dense
-5. **Color:** Yellow-brown staining (iron + REE oxides) in weathered zones
-
-## Computer Vision Pipeline
+## Automated Photo Identification
 
 ```python
 import tensorflow as tf
-from tensorflow.keras.applications import EfficientNetB3
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 from tensorflow.keras.models import Model
 
-def build_mineral_classifier(num_classes=20, img_size=300):
-    """
-    Build CNN for rock/mineral classification
-    """
-    base = EfficientNetB3(
+# Rock type classifier
+def build_rock_classifier(num_classes=10, input_shape=(224, 224, 3)):
+    base = EfficientNetB0(
         weights='imagenet',
         include_top=False,
-        input_shape=(img_size, img_size, 3)
+        input_shape=input_shape
     )
-    
-    # Freeze base layers initially
-    for layer in base.layers:
-        layer.trainable = False
     
     x = base.output
     x = GlobalAveragePooling2D()(x)
-    x = Dropout(0.3)(x)
     x = Dense(256, activation='relu')(x)
-    x = Dropout(0.3)(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
     predictions = Dense(num_classes, activation='softmax')(x)
     
     model = Model(inputs=base.input, outputs=predictions)
+    
+    # Fine-tune last 20 layers
+    for layer in base.layers[:-20]:
+        layer.trainable = False
+    
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
         loss='categorical_crossentropy',
         metrics=['accuracy']
     )
     
     return model
 
-# Training data augmentation for geology images
-train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-    rotation_range=360,  # Rocks have no preferred orientation
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    brightness_range=[0.8, 1.2],
-    zoom_range=0.2,
-    horizontal_flip=True,
-    vertical_flip=True,
-    fill_mode='nearest'
-)
+# Classes for REE exploration
+ROCK_CLASSES = [
+    'carbonatite',
+    'fenite',
+    'syenite',
+    'granite',
+    'pegmatite',
+    'laterite_saprolite',
+    'shale',
+    'breccia',
+    'gossan',
+    'barren_host'
+]
 ```
 
-### Thin Section Analysis
-```python
-import cv2
-import numpy as np
-
-def analyze_thin_section(image_path, polarized=False):
-    """
-    Extract mineralogical features from thin section photomicrographs
-    """
-    img = cv2.imread(image_path)
-    
-    if polarized:
-        # Under crossed polars: look for birefringence colors
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        
-        # High saturation = high birefringence
-        saturation = hsv[:,:,1]
-        high_biref = saturation > 150
-        
-        # Bastnäsite: low relief, weak birefringence (gray/white)
-        # Monazite: moderate birefringence (yellow/orange)
-        # Apatite: low relief, low birefringence
-    else:
-        # Plane polarized light
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Relief estimation (edge sharpness)
-        edges = cv2.Laplacian(gray, cv2.CV_64F)
-        relief = np.var(edges)
-        
-        # Grain size distribution
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        grain_areas = [cv2.contourArea(c) for c in contours if cv2.contourArea(c) > 50]
-    
-    return {
-        'mean_grain_size_px': np.mean(grain_areas) if grain_areas else 0,
-        'relief_index': float(relief),
-        'n_grains': len(grain_areas)
-    }
-```
-
-## pXRF + Vision Fusion
+## Mineral Identification from pXRF Chemistry
 
 ```python
-def identify_mineral_from_pxrf_and_image(pxrf_reading, image_features):
+def infer_mineralogy_from_pxrf(elements):
     """
-    Combine pXRF elemental data with visual features for mineral ID
+    Infer likely mineralogy from pXRF elemental signature
     """
-    elements = pxrf_reading  # dict of element ppm
+    minerals = []
     
-    candidates = []
-    
-    # Rule-based mineral identification
-    if elements.get('Ce', 0) > 10000 and elements.get('La', 0) > 5000:
-        if elements.get('F', 0) > 5000:
-            candidates.append(('bastnäsite', 0.8))
+    # REE-bearing minerals
+    if elements['Ce_ppm'] > 10000 and elements['La_ppm'] > 5000:
+        if elements['F_ppm'] > 5000:
+            minerals.append(('bastnäsite', 0.8))
         else:
-            candidates.append(('monazite', 0.7))
+            minerals.append(('monazite', 0.7))
     
-    if elements.get('Y', 0) > 5000 and elements.get('P', 0) > 10000:
-        candidates.append(('xenotime', 0.75))
+    if elements['Y_ppm'] > 5000 and elements['Dy_ppm'] > 500:
+        minerals.append(('xenotime', 0.75))
     
-    if elements.get('Ca', 0) > 300000 and elements.get('P', 0) > 5000:
-        candidates.append(('apatite', 0.6))
+    if elements['P_ppm'] > 50000 and elements['Ce_ppm'] > 2000:
+        minerals.append(('apatite', 0.7))
     
-    if elements.get('Fe', 0) > 500000:
-        candidates.append(('magnetite', 0.7))
+    # Pathfinder mineralogy
+    if elements['Fe_pct'] > 15 and elements['Ti_ppm'] > 5000:
+        minerals.append(('magnetite', 0.6))
     
-    if elements.get('Ba', 0) > 500000:
-        candidates.append(('barite', 0.8))
+    if elements['Nb_ppm'] > 1000 and elements['Ta_ppm'] > 50:
+        minerals.append(('pyrochlore', 0.65))
     
-    # Adjust confidence based on visual features
-    if image_features.get('magnetic', False):
-        # Boost magnetite, reduce others
-        candidates = [(name, conf*1.2 if 'magnet' in name else conf*0.9) 
-                      for name, conf in candidates]
+    if elements['Ba_ppm'] > 10000:
+        minerals.append(('barite', 0.6))
     
-    return sorted(candidates, key=lambda x: x[1], reverse=True)
+    if elements['F_ppm'] > 10000 and elements['Ca_pct'] > 5:
+        minerals.append(('fluorite', 0.7))
+    
+    # Lithium minerals
+    if elements['Rb_ppm'] > 200 and elements['Cs_ppm'] > 5:
+        if elements['Sn_ppm'] > 50:
+            minerals.append(('lepidolite', 0.6))
+        if elements['Al_pct'] > 10:
+            minerals.append(('spodumene', 0.55))
+    
+    return sorted(minerals, key=lambda x: x[1], reverse=True)
+```
+
+## Thin Section Modal Analysis
+
+```python
+def analyze_thin_section(image_path, minerals_reference):
+    """
+    Semi-automated modal mineralogy from thin section photo
+    """
+    from sklearn.cluster import KMeans
+    
+    img = cv2.imread(image_path)
+    img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    
+    # Segment grains by color/texture
+    pixels = img_lab.reshape(-1, 3)
+    kmeans = KMeans(n_clusters=8, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(pixels)
+    
+    # Match clusters to mineral reference colors
+    modal = {}
+    for i, center in enumerate(kmeans.cluster_centers_):
+        pct = np.sum(labels == i) / len(labels)
+        best_match = match_to_reference(center, minerals_reference)
+        modal[best_match] = modal.get(best_match, 0) + pct
+    
+    return {k: round(v * 100, 1) for k, v in modal.items()}
 ```
 
 ## Best Practices
 
-1. **Standardize photography:** Same lighting, background, scale for all training images.
-2. **Multi-view:** Classify from multiple angles — minerals are anisotropic.
-3. **Validate with XRD:** Use XRD or SEM-EDS as ground truth for training labels.
-4. **Confidence threshold:** Only report identifications > 70% confidence.
-5. **Human in the loop:** CV assists, but geologist confirms all critical identifications.
+1. **Photo standards:** Consistent lighting, scale bar, neutral background.
+2. **Multiple angles:** Some minerals show different colors/cleavage on different faces.
+3. **Hardness test:** Mohs scale — fingernail (2.5), copper penny (3.5), knife (5.5), glass (6), quartz (7).
+4. **Streak test:** More reliable than surface color (hematite = red-brown streak).
+5. **Magnet test:** Strong = magnetite, weak = pyrrhotite, none = most other minerals.
+6. **UV fluorescence:** Scheelite (blue-white), fluorite (violet), autunite (green-yellow).

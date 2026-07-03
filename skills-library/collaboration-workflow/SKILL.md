@@ -1,6 +1,6 @@
 ---
 name: collaboration-workflow
-description: Multi-user collaboration, role-based access control, audit logging, and workflow orchestration for REE exploration teams.
+description: Multi-user collaboration, role-based access control, audit logging, and workflow state management for exploration teams using the REE prospecting platform.
 ---
 
 # Collaboration and Workflow Management
@@ -8,200 +8,251 @@ description: Multi-user collaboration, role-based access control, audit logging,
 ## When to use
 
 - Multiple geologists need to work on the same project simultaneously.
-- You need role-based access (junior geo vs. CP vs. manager vs. investor).
-- You want audit trails for all data changes.
-- You need approval workflows before data is promoted to "official" status.
+- You need role-based permissions (viewer, geologist, manager, admin).
+- You want audit trails for data changes and decisions.
+- You need workflow state machines (e.g., Target → Prospect → Advanced → Mine).
 
-## Role Definitions
+## User Roles and Permissions
 
 | Role | Permissions | Typical User |
 |---|---|---|
-| **Admin** | Full access, user management, system config | IT / Project manager |
-| **Competent Person** | Approve resource estimates, sign off reports | Senior geologist |
-| **Senior Geologist** | Upload/edit all data, run models, create targets | Team lead |
-| **Geologist** | Upload field data, edit own data, view all | Field geo |
-| **Technician** | Upload lab data, QC checks, no interpretation | Lab tech |
-| **Viewer** | Read-only access to maps and reports | Investor, regulator |
+| **Viewer** | Read-only access to reports and maps | Investors, regulators |
+| **Field Geologist** | Upload field data, view own data | Junior geologists |
+| **Senior Geologist** | All data CRUD, run analyses, write reports | Project geologists |
+| **Project Manager** | Manage team, approve budgets, view all | Project manager |
+| **Competent Person** | Sign off on resource estimates, final reports | CP/QP |
+| **Admin** | Full system access, user management | IT/Platform admin |
 
-## Workflow States
-
-```
-DRAFT → UNDER_REVIEW → APPROVED → OFFICIAL → ARCHIVED
-   ↑         ↓
-REJECTED → REVISION_REQUIRED
-```
-
-| State | Meaning | Who Can Promote |
-|---|---|---|
-| **DRAFT** | Work in progress, editable by owner | Owner → UNDER_REVIEW |
-| **UNDER_REVIEW** | Locked for editing, under CP review | CP → APPROVED or REJECTED |
-| **APPROVED** | CP has reviewed and approved | Auto → OFFICIAL after 24h |
-| **OFFICIAL** | Locked permanently, versioned, auditable | No one (immutable) |
-| **ARCHIVED** | Superseded by newer version | Admin only |
-
-## Python Implementation
+## Workflow State Machine
 
 ```python
 from enum import Enum
-from datetime import datetime
-import hashlib
-import json
 
-class WorkflowState(Enum):
-    DRAFT = "draft"
-    UNDER_REVIEW = "under_review"
-    APPROVED = "approved"
-    OFFICIAL = "official"
-    ARCHIVED = "archived"
-    REJECTED = "rejected"
-    REVISION_REQUIRED = "revision_required"
+class TargetStatus(str, Enum):
+    GENERATED = "generated"           # AI/targeting generated
+    FIELD_CHECKED = "field_checked"   # Field visit completed
+    SAMPLED = "sampled"               # Geochemical samples collected
+    ANOMALOUS = "anomalous"           # Confirmed geochemical anomaly
+    DRILL_READY = "drill_ready"       # Approved for drilling
+    DRILLING = "drilling"             # Drill program in progress
+    MINERALIZED = "mineralized"       # Drilling confirmed mineralization
+    RESOURCE = "resource"             # JORC resource estimated
+    ADVANCED = "advanced"             # PFS/DFS completed
+    MINE = "mine"                     # Production
+    ABANDONED = "abandoned"           # Decision to cease
 
-class DataObject:
-    def __init__(self, obj_id, obj_type, owner_id, data):
-        self.obj_id = obj_id
-        self.obj_type = obj_type  # 'survey', 'assay', 'target', 'report'
-        self.owner_id = owner_id
-        self.state = WorkflowState.DRAFT
-        self.data = data
-        self.versions = []
-        self.audit_log = []
-        self.approved_by = None
-        self.approved_at = None
-        
-    def transition(self, new_state, user_id, comment=""):
-        """
-        State transition with validation
-        """
-        valid_transitions = {
-            WorkflowState.DRAFT: [WorkflowState.UNDER_REVIEW],
-            WorkflowState.UNDER_REVIEW: [WorkflowState.APPROVED, WorkflowState.REJECTED, WorkflowState.REVISION_REQUIRED],
-            WorkflowState.APPROVED: [WorkflowState.OFFICIAL],
-            WorkflowState.REJECTED: [WorkflowState.DRAFT],
-            WorkflowState.REVISION_REQUIRED: [WorkflowState.DRAFT],
-            WorkflowState.OFFICIAL: [WorkflowState.ARCHIVED]
-        }
-        
-        if new_state not in valid_transitions.get(self.state, []):
-            raise ValueError(f"Invalid transition: {self.state.value} → {new_state.value}")
-        
-        # Record previous version
-        self.versions.append({
-            'state': self.state.value,
-            'data_hash': self._hash_data(),
-            'timestamp': datetime.now().isoformat()
-        })
-        
-        # Log transition
-        self.audit_log.append({
-            'timestamp': datetime.now().isoformat(),
-            'user_id': user_id,
-            'action': 'state_transition',
-            'from_state': self.state.value,
-            'to_state': new_state.value,
-            'comment': comment,
-            'data_hash': self._hash_data()
-        })
-        
-        self.state = new_state
-        
-        if new_state == WorkflowState.APPROVED:
-            self.approved_by = user_id
-            self.approved_at = datetime.now().isoformat()
-        
-        if new_state == WorkflowState.OFFICIAL:
-            self.data = self._freeze_data()
+class TransitionRules:
+    """
+    Valid state transitions and required approvals
+    """
+    RULES = {
+        TargetStatus.GENERATED: [TargetStatus.FIELD_CHECKED, TargetStatus.ABANDONED],
+        TargetStatus.FIELD_CHECKED: [TargetStatus.SAMPLED, TargetStatus.ABANDONED],
+        TargetStatus.SAMPLED: [TargetStatus.ANOMALOUS, TargetStatus.ABANDONED],
+        TargetStatus.ANOMALOUS: [TargetStatus.DRILL_READY, TargetStatus.ABANDONED],
+        TargetStatus.DRILL_READY: [TargetStatus.DRILLING],
+        TargetStatus.DRILLING: [TargetStatus.MINERALIZED, TargetStatus.ABANDONED],
+        TargetStatus.MINERALIZED: [TargetStatus.RESOURCE, TargetStatus.ADVANCED],
+        TargetStatus.RESOURCE: [TargetStatus.ADVANCED],
+        TargetStatus.ADVANCED: [TargetStatus.MINE, TargetStatus.ABANDONED]
+    }
     
-    def _hash_data(self):
-        return hashlib.sha256(json.dumps(self.data, sort_keys=True).encode()).hexdigest()[:16]
+    REQUIRED_APPROVALS = {
+        TargetStatus.DRILL_READY: ['senior_geologist', 'project_manager'],
+        TargetStatus.RESOURCE: ['competent_person'],
+        TargetStatus.ABANDONED: ['project_manager']
+    }
     
-    def _freeze_data(self):
-        """Make data immutable by converting to tuple/frozen structures"""
-        return json.loads(json.dumps(self.data))  # Deep copy
-    
-    def edit(self, user_id, new_data):
-        """
-        Edit data with permission check
-        """
-        if self.state in [WorkflowState.OFFICIAL, WorkflowState.ARCHIVED]:
-            raise PermissionError("Cannot edit OFFICIAL or ARCHIVED data")
+    @classmethod
+    def can_transition(cls, from_status, to_status, user_role):
+        if to_status not in cls.RULES.get(from_status, []):
+            return False
         
-        if self.state == WorkflowState.UNDER_REVIEW and user_id != self.approved_by:
-            raise PermissionError("Only approver can edit during review")
+        required = cls.REQUIRED_APPROVALS.get(to_status, [])
+        if required and user_role not in required:
+            return False
         
-        # Log edit
-        self.audit_log.append({
-            'timestamp': datetime.now().isoformat(),
-            'user_id': user_id,
-            'action': 'edit',
-            'old_hash': self._hash_data(),
-            'new_hash': hashlib.sha256(json.dumps(new_data, sort_keys=True).encode()).hexdigest()[:16]
-        })
-        
-        self.data = new_data
-
-class ProjectACL:
-    def __init__(self):
-        self.permissions = {
-            'admin': ['*'],
-            'cp': ['read:*', 'write:official', 'approve:*', 'sign:report'],
-            'senior_geo': ['read:*', 'write:survey', 'write:assay', 'write:target', 'run:model'],
-            'geologist': ['read:*', 'write:own', 'upload:field'],
-            'technician': ['read:assay', 'write:lab_data', 'run:qc'],
-            'viewer': ['read:official', 'read:report']
-        }
-    
-    def can(self, user_role, action, resource_owner=None, current_user=None):
-        perms = self.permissions.get(user_role, [])
-        
-        if '*' in perms:
-            return True
-        if action in perms:
-            return True
-        if f"{action.split(':')[0]}:*" in perms:
-            return True
-        
-        # Ownership check
-        if 'write:own' in perms and resource_owner == current_user:
-            return True
-        
-        return False
+        return True
 ```
 
-## Audit Trail Requirements
-
-Every action must log:
-- Timestamp (UTC)
-- User ID
-- Action type (create, read, update, delete, transition, export)
-- Object ID and type
-- Before/after hash (for data changes)
-- IP address
-- Client application
-
-## Notifications
+## Audit Logging
 
 ```python
-async def notify_on_transition(obj, old_state, new_state):
+import json
+from datetime import datetime
+from typing import Dict, Any
+
+class AuditLogger:
     """
-    Send notifications on important transitions
+    Immutable audit trail for all data changes and decisions
     """
-    if new_state == WorkflowState.UNDER_REVIEW:
-        await notify_role('cp', f"{obj.obj_type} {obj.obj_id} ready for review")
     
-    elif new_state == WorkflowState.APPROVED:
-        await notify_user(obj.owner_id, f"Your {obj.obj_type} has been approved")
+    def __init__(self, db_connection):
+        self.db = db_connection
     
-    elif new_state == WorkflowState.REJECTED:
-        await notify_user(obj.owner_id, f"Your {obj.obj_type} was rejected. See comments.")
+    async def log_event(
+        self,
+        event_type: str,  # 'data_create', 'data_update', 'data_delete', 'state_change', 'report_sign'
+        user_id: str,
+        entity_type: str,  # 'sample', 'drill_hole', 'target', 'report'
+        entity_id: str,
+        old_value: Dict[str, Any],
+        new_value: Dict[str, Any],
+        ip_address: str,
+        notes: str = ""
+    ):
+        """
+        Log an auditable event
+        """
+        event = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'event_type': event_type,
+            'user_id': user_id,
+            'entity_type': entity_type,
+            'entity_id': entity_id,
+            'old_value': json.dumps(old_value),
+            'new_value': json.dumps(new_value),
+            'ip_address': ip_address,
+            'notes': notes,
+            'hash': self._compute_hash(old_value, new_value, timestamp)
+        }
+        
+        await self.db.execute("""
+            INSERT INTO audit_log (timestamp, event_type, user_id, entity_type, 
+                                 entity_id, old_value, new_value, ip_address, notes, hash)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        """, *event.values())
     
-    elif new_state == WorkflowState.OFFICIAL:
-        await notify_all(f"New official {obj.obj_type} available: {obj.obj_id}")
+    def _compute_hash(self, *data):
+        """Tamper-evident hash chain"""
+        import hashlib
+        content = json.dumps(data, sort_keys=True)
+        return hashlib.sha256(content.encode()).hexdigest()
+
+# Audit log table schema
+"""
+CREATE TABLE audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    user_id VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id VARCHAR(100) NOT NULL,
+    old_value JSONB,
+    new_value JSONB,
+    ip_address INET,
+    notes TEXT,
+    hash VARCHAR(64) NOT NULL,
+    previous_hash VARCHAR(64)
+);
+"""
+```
+
+## Comment and Annotation System
+
+```python
+class AnnotationSystem:
+    """
+    Contextual comments on maps, sections, and data points
+    """
+    
+    async def add_annotation(
+        self,
+        user_id: str,
+        entity_type: str,  # 'map', 'section', 'sample', 'target'
+        entity_id: str,
+        annotation_type: str,  # 'comment', 'measurement', 'interpretation', 'flag'
+        content: str,
+        geometry: dict = None,  # GeoJSON point/line/polygon
+        attachments: list = None
+    ):
+        annotation = {
+            'annotation_id': generate_uuid(),
+            'user_id': user_id,
+            'entity_type': entity_type,
+            'entity_id': entity_id,
+            'annotation_type': annotation_type,
+            'content': content,
+            'geometry': json.dumps(geometry) if geometry else None,
+            'attachments': attachments or [],
+            'created_at': datetime.utcnow().isoformat(),
+            'resolved': False,
+            'parent_id': None  # For threaded discussions
+        }
+        
+        await self.db.execute("""
+            INSERT INTO annotations 
+            (annotation_id, user_id, entity_type, entity_id, annotation_type, 
+             content, geometry, attachments, created_at, resolved, parent_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        """, *annotation.values())
+        
+        return annotation['annotation_id']
+    
+    async def get_annotations_for_entity(self, entity_type, entity_id):
+        """Get all annotations for a specific entity with threaded replies"""
+        rows = await self.db.fetch("""
+            SELECT * FROM annotations 
+            WHERE entity_type = $1 AND entity_id = $2
+            ORDER BY created_at ASC
+        """, entity_type, entity_id)
+        
+        # Build thread structure
+        threads = {}
+        for row in rows:
+            if row['parent_id'] is None:
+                threads[row['annotation_id']] = {'main': row, 'replies': []}
+            else:
+                threads[row['parent_id']]['replies'].append(row)
+        
+        return threads
+```
+
+## Notification System
+
+```python
+class NotificationEngine:
+    """
+    Notify users of relevant events
+    """
+    
+    async def notify(self, event_type: str, payload: dict, recipients: list):
+        """
+        Send notifications via user's preferred channel
+        """
+        for user_id in recipients:
+            user_prefs = await self.get_user_preferences(user_id)
+            
+            channels = []
+            if user_prefs['email_notifications']:
+                channels.append(self.send_email)
+            if user_prefs['telegram_notifications']:
+                channels.append(self.send_telegram)
+            if user_prefs['in_app_notifications']:
+                channels.append(self.send_in_app)
+            
+            for channel in channels:
+                await channel(user_id, event_type, payload)
+    
+    async def send_telegram(self, user_id, event_type, payload):
+        # Integration with agent-job-dm skill
+        message = self.format_telegram_message(event_type, payload)
+        await telegram_send(user_id, message)
+    
+    EVENT_TEMPLATES = {
+        'target_state_change': "🎯 Target {target_id} moved to {new_status} by {user_name}",
+        'qc_fail': "⚠️ QC FAILED for survey {survey_id}. {n_failed} samples flagged.",
+        'anomaly_detected': "🔍 New anomaly cluster found: {cluster_id} ({n_samples} samples, max TREO {max_treo}%)",
+        'drill_complete': "🪨 Drill hole {hole_id} completed: {total_depth}m",
+        'report_ready': "📄 Report {report_name} is ready for review"
+    }
 ```
 
 ## Best Practices
 
-1. **Immutable official data:** Once OFFICIAL, never edit. Create new version instead.
-2. **Digital signatures:** CP approval should use cryptographic signing.
-3. **Time-locked transitions:** APPROVED → OFFICIAL after 24h cooling-off period.
-4. **Export watermarks:** All exports include user ID, timestamp, and "UNOFFICIAL" if not official.
-5. **Conflict detection:** Warn if two users edit same object simultaneously.
+1. **Immutable audit trail:** Never delete or modify audit logs. Append-only.
+2. **Principle of least privilege:** Users get minimum access needed for their role.
+3. **Separation of duties:** CP cannot also be the one who collected the data.
+4. **Approval workflows:** State transitions that affect project decisions require approval.
+5. **Offline capability:** Field geologists need to sync when back in coverage.
+6. **Conflict resolution:** Last-write-wins with conflict markers for manual merge.

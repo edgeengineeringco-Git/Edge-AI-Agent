@@ -1,252 +1,258 @@
 ---
 name: field-data-collection
-description: Digital field data collection for REE exploration — mobile forms, GPS integration, sample chain of custody, and real-time data upload workflows.
+description: Digital field data collection for REE exploration — mobile forms, GPS integration, photo management, offline sync, and QA/QC in the field.
 ---
 
 # Digital Field Data Collection
 
 ## When to use
 
-- You need to collect rock, soil, stream sediment, or trench samples in the field.
-- You want GPS-tagged photos and sample metadata on mobile devices.
-- You need real-time data sync from field to office.
-- You want to eliminate transcription errors from paper to digital.
+- You need to collect structured field data on tablets or phones.
+- You want GPS-tagged photos and samples with barcodes.
+- You need offline capability with sync when back in coverage.
+- You want real-time validation to catch errors in the field.
 
-## Mobile Data Collection Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────────┐
-│  Mobile App │────▶│  Offline    │────▶│  API Endpoint   │
-│  (Android/  │     │  Queue      │     │  (/v1/ingest)   │
-│   iOS/PWA)  │     │  (SQLite)   │     │                 │
-└─────────────┘     └─────────────┘     └─────────────────┘
-       │                                           │
-       │ (WiFi/cellular)                           ▼
-       └──────────────────────────────────▶  PostGIS Database
-```
-
-## Sample Types and Protocols
-
-### Rock Chip Sampling
-| Parameter | Specification |
-|---|---|
-| Sample weight | 1–2 kg |
-| Dimensions | Fist-sized, representative |
-| GPS accuracy | < 10 m (differential GPS preferred) |
-| Photo | Wet and dry, with scale |
-| Bag | Kraft paper, numbered |
-| Duplicate rate | 1 in 20 (same location, second bag) |
-
-### Soil Sampling
-| Parameter | Specification |
-|---|---|
-| Depth | B-horizon, 10–50 cm |
-| Sieve | -80 mesh (177 μm) |
-| Sample weight | 200–500 g after sieving |
-| Grid spacing | 50–200 m (regional), 10–25 m (detailed) |
-| Background | 1 sample per 4 km² minimum |
-
-### Stream Sediment
-| Parameter | Specification |
-|---|---|
-| Collect from | Active stream bed, < 5 cm depth |
-| Material | Fine sand to silt, avoid organic matter |
-| Sample weight | 300–500 g |
-| Site selection | Confluence of tributaries, inside bends |
-
-## Mobile App Data Schema
+## Mobile Form Schema
 
 ```python
-FIELD_SAMPLE_SCHEMA = {
-    "sample_id": "string (auto-generated)",
-    "project_id": "string",
-    "sample_type": "enum: rock, soil, stream, trench, drill_core, water",
-    "collection_datetime": "ISO 8601",
-    "collector_name": "string",
-    "gps_latitude": "float (WGS84)",
-    "gps_longitude": "float (WGS84)",
-    "gps_accuracy_m": "float",
-    "gps_elevation_m": "float",
-    "elevation_source": "enum: gps, dem, barometric",
-    
-    # Location description
-    "tenement_id": "string",
-    "prospect_name": "string",
-    "grid_line": "string",
-    "station_id": "string",
-    
-    # For drill/trench
-    "hole_id": "string (optional)",
-    "from_m": "float (optional)",
-    "to_m": "float (optional)",
-    
-    # Geological description
-    "lithology_code": "string",
-    "lithology_description": "text",
-    "alteration": "text",
-    "mineralization": "text",
-    "structure": "text",
-    "texture": "text",
-    "color": "string",
-    "oxidation_pct": "int (0-100)",
-    
-    # Sampling metadata
-    "sample_weight_g": "float",
-    "sampling_method": "enum: chip, channel, grab, composite",
-    "weather_conditions": "string",
-    "photos": "list[uri]",
-    
-    # QA/QC
-    "qc_type": "enum: sample, blank, duplicate, standard",
-    "parent_sample_id": "string (for duplicates)",
-    
-    # Lab dispatch
-    "lab_id": "string",
-    "dispatch_date": "date",
-    "analysis_requested": "list[string]",
-    
-    # Sync status
-    "sync_status": "enum: pending, synced, failed",
-    "sync_timestamp": "ISO 8601 (optional)",
-    "device_id": "string"
+FIELD_FORM_SCHEMA = {
+    'sample_collection': {
+        'fields': [
+            {'name': 'sample_id', 'type': 'barcode', 'required': True, 'unique': True},
+            {'name': 'sample_type', 'type': 'select', 'options': ['rock', 'soil', 'stream_sed', 'water', 'core']},
+            {'name': 'easting', 'type': 'gps_auto', 'required': True},
+            {'name': 'northing', 'type': 'gps_auto', 'required': True},
+            {'name': 'elevation', 'type': 'gps_auto'},
+            {'name': 'datum', 'type': 'select', 'options': ['WGS84', 'GDA2020', 'local']},
+            {'name': 'photo_ids', 'type': 'camera_multi', 'min': 1, 'max': 5},
+            {'name': 'lithology', 'type': 'select', 'options': ['CARB', 'FEN', 'GRAN', 'SHAL', 'BREC', 'OTHER']},
+            {'name': 'alteration', 'type': 'multiselect', 'options': ['FENI', 'HEMI', 'SILi', 'CHLO', 'NONE']},
+            {'name': 'mineralization', 'type': 'multiselect', 'options': ['BAST', 'MONA', 'XENO', 'NONE']},
+            {'name': 'color', 'type': 'color_picker'},
+            {'name': 'hardness', 'type': 'select', 'options': ['very_soft', 'soft', 'medium', 'hard', 'very_hard']},
+            {'name': 'magnetic', 'type': 'toggle'},
+            {'name': 'effervescence', 'type': 'select', 'options': ['none', 'weak', 'strong']},
+            {'name': 'notes', 'type': 'text_area', 'max_length': 500},
+            {'name': 'collected_by', 'type': 'text', 'default': '{user_name}'},
+            {'name': 'datetime', 'type': 'datetime_auto'}
+        ],
+        'validation_rules': [
+            'sample_id must match pattern S-[A-Z]{3}-[0-9]{4}',
+            'easting and northing must be within tenement boundary',
+            'photo must include scale bar or GPS timestamp',
+            'if sample_type == "rock" then lithology != "OTHER"'
+        ]
+    },
+    'drill_hole_logging': {
+        'fields': [
+            {'name': 'hole_id', 'type': 'barcode', 'required': True},
+            {'name': 'from_m', 'type': 'number', 'min': 0, 'required': True},
+            {'name': 'to_m', 'type': 'number', 'min': 0, 'required': True},
+            {'name': 'lith_code', 'type': 'select', 'required': True},
+            {'name': 'alt_code', 'type': 'select'},
+            {'name': 'min_code', 'type': 'select'},
+            {'name': 'rqd', 'type': 'number', 'min': 0, 'max': 100},
+            {'name': 'recovery', 'type': 'number', 'min': 0, 'max': 100},
+            {'name': 'fracture_count', 'type': 'number', 'min': 0},
+            {'name': 'photo_ids', 'type': 'camera_multi'}
+        ],
+        'validation_rules': [
+            'to_m > from_m',
+            'from_m must equal previous to_m (no gaps) or have gap_reason',
+            'interval length <= 2.0m for geochem comparison'
+        ]
+    }
 }
 ```
 
-## Python Backend for Field Sync
+## Offline Sync Architecture
 
 ```python
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from datetime import datetime
-import asyncpg
-
-app = FastAPI()
-
-class FieldSample(BaseModel):
-    sample_id: str
-    project_id: str
-    sample_type: str
-    collection_datetime: datetime
-    collector_name: str
-    gps_latitude: float
-    gps_longitude: float
-    gps_accuracy_m: float
-    lithology_code: str = None
-    lithology_description: str = None
-    sample_weight_g: float = None
-    qc_type: str = "sample"
-    photos: list[str] = []
-
-@app.post("/v1/field/sample")
-async def submit_field_sample(sample: FieldSample):
+class OfflineSyncManager:
     """
-    Receive sample from mobile app
+    Manages data collection when offline, syncs when connected
     """
-    # Validate
-    if sample.gps_accuracy_m > 50:
-        raise HTTPException(400, "GPS accuracy too poor (>50m)")
     
-    # Check for duplicates
-    existing = await db.fetchval(
-        "SELECT sample_id FROM field_samples WHERE sample_id = $1",
-        sample.sample_id
-    )
-    if existing:
-        raise HTTPException(409, "Sample ID already exists")
+    def __init__(self, local_db_path):
+        self.local_db = sqlite3.connect(local_db_path)
+        self.server_url = None
+        self.pending_queue = []
     
-    # Insert
-    await db.execute("""
-        INSERT INTO field_samples (
-            sample_id, project_id, sample_type, collection_datetime,
-            collector_name, geom, gps_accuracy_m, lithology_code,
-            lithology_description, sample_weight_g, qc_type, photos, sync_status
-        ) VALUES ($1, $2, $3, $4, $5, 
-                  ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9, $10, $11, $12, $13, 'synced')
-    """, sample.sample_id, sample.project_id, sample.sample_type,
-         sample.collection_datetime, sample.collector_name,
-         sample.gps_longitude, sample.gps_latitude, sample.gps_accuracy_m,
-         sample.lithology_code, sample.lithology_description,
-         sample.sample_weight_g, sample.qc_type, sample.photos)
+    def save_record(self, record_type, data):
+        """Save to local SQLite immediately"""
+        record_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().isoformat()
+        
+        self.local_db.execute("""
+            INSERT INTO pending_sync (record_id, record_type, data, timestamp, synced)
+            VALUES (?, ?, ?, ?, 0)
+        """, (record_id, record_type, json.dumps(data), timestamp))
+        self.local_db.commit()
+        
+        return record_id
     
-    return {"status": "synced", "sample_id": sample.sample_id}
-
-@app.get("/v1/field/pending/{device_id}")
-async def get_pending_syncs(device_id: str):
-    """
-    Return samples that failed to sync for retry
-    """
-    rows = await db.fetch("""
-        SELECT * FROM field_samples 
-        WHERE device_id = $1 AND sync_status = 'failed'
-    """, device_id)
+    async def sync_to_server(self):
+        """Push pending records to server when online"""
+        cursor = self.local_db.execute(
+            "SELECT record_id, record_type, data FROM pending_sync WHERE synced = 0 ORDER BY timestamp"
+        )
+        
+        async with httpx.AsyncClient() as client:
+            for row in cursor:
+                record_id, record_type, data = row
+                try:
+                    response = await client.post(
+                        f"{self.server_url}/api/v1/data/{record_type}",
+                        json=json.loads(data),
+                        headers={'Authorization': f'Bearer {self.get_token()}'},
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        self.local_db.execute(
+                            "UPDATE pending_sync SET synced = 1 WHERE record_id = ?",
+                            (record_id,)
+                        )
+                    else:
+                        # Keep in queue, log error
+                        self.log_sync_error(record_id, response.status_code, response.text)
+                        
+                except httpx.ConnectError:
+                    # Still offline, stop trying
+                    break
+        
+        self.local_db.commit()
     
-    return {"pending": [dict(r) for r in rows]}
+    def get_sync_status(self):
+        """Return sync statistics for UI display"""
+        total = self.local_db.execute("SELECT COUNT(*) FROM pending_sync").fetchone()[0]
+        synced = self.local_db.execute("SELECT COUNT(*) FROM pending_sync WHERE synced = 1").fetchone()[0]
+        pending = total - synced
+        
+        return {
+            'total_records': total,
+            'synced': synced,
+            'pending': pending,
+            'status': 'synced' if pending == 0 else f'{pending} pending'
+        }
 ```
 
-## Chain of Custody
+## Barcode and Sample Tracking
 
 ```python
-class ChainOfCustody:
-    def __init__(self):
-        self.custody_chain = []
+class SampleTracker:
+    """
+    End-to-end sample tracking from field to lab
+    """
     
-    def collect(self, sample_id, collector, datetime, location):
-        self.custody_chain.append({
+    def generate_sample_id(self, project_code, sample_type, sequence):
+        """
+        Generate standardized sample ID
+        Format: PRJ-TYP-YYYY-NNNN
+        """
+        year = datetime.now().year
+        return f"{project_code}-{sample_type}-{year}-{sequence:04d}"
+    
+    def print_field_labels(self, sample_ids):
+        """
+        Generate PDF for thermal printer labels
+        """
+        from reportlab.lib.pagesizes import labels
+        from reportlab.graphics.barcode import code128
+        
+        for sample_id in sample_ids:
+            # QR code + human readable
+            label = {
+                'sample_id': sample_id,
+                'qr_data': json.dumps({
+                    'id': sample_id,
+                    'project': project_code,
+                    'created': datetime.now().isoformat()
+                })
+            }
+            yield label
+    
+    def track_sample(self, sample_id, event, location, user):
+        """
+        Record sample chain of custody event
+        """
+        custody_record = {
             'sample_id': sample_id,
-            'action': 'collected',
-            'agent': collector,
-            'datetime': datetime,
+            'event': event,  # 'collected', 'shipped', 'received_lab', 'prepared', 'analyzed'
+            'timestamp': datetime.utcnow().isoformat(),
             'location': location,
-            'condition': 'fresh'
-        })
+            'user': user,
+            'condition': 'good',  # 'good', 'damaged', 'contaminated'
+            'notes': ''
+        }
+        
+        # Save to database
+        save_custody_record(custody_record)
+        
+        return custody_record
+```
+
+## Field QA/QC
+
+```python
+FIELD_QC_RULES = {
+    'sample_spacing': {
+        'rock': 'minimum 10m between samples unless mineralized',
+        'soil': 'regular grid 50m or 100m',
+        'stream_sed': 'every 200m along drainage, at confluences'
+    },
+    'duplicates': {
+        'frequency': '1 per 20 samples',
+        'type': 'field_duplicate (same site, separate bag)'
+    },
+    'blanks': {
+        'frequency': '1 per 50 samples',
+        'material': 'quartz sand or barren granite',
+        'purpose': 'detect contamination during crushing'
+    },
+    'standards': {
+        'frequency': '1 per 20 samples',
+        'types': ['low_grade', 'medium_grade', 'high_grade'],
+        'purpose': 'verify lab accuracy'
+    },
+    'photos': {
+        'every_sample': True,
+        'requirements': ['in_situ', 'with_scale', 'with_label', 'GPS_metadata'],
+        'backup': 'SD card + cloud sync daily'
+    }
+}
+
+def validate_field_submission(submission):
+    """
+    Real-time validation before allowing submission
+    """
+    errors = []
+    warnings = []
     
-    def dispatch(self, sample_id, dispatcher, datetime, courier, tracking):
-        self.custody_chain.append({
-            'sample_id': sample_id,
-            'action': 'dispatched',
-            'agent': dispatcher,
-            'datetime': datetime,
-            'courier': courier,
-            'tracking': tracking
-        })
+    # Check sample ID format
+    if not re.match(r'^[A-Z]{3}-[A-Z]{2}-\d{4}-\d{4}$', submission['sample_id']):
+        errors.append('Invalid sample ID format')
     
-    def receive_at_lab(self, sample_id, lab_tech, datetime, condition):
-        self.custody_chain.append({
-            'sample_id': sample_id,
-            'action': 'received_at_lab',
-            'agent': lab_tech,
-            'datetime': datetime,
-            'condition': condition
-        })
+    # Check for photos
+    if len(submission.get('photo_ids', [])) < 1:
+        errors.append('At least one photo required')
     
-    def verify_integrity(self, sample_id):
-        """
-        Check for gaps or anomalies in custody chain
-        """
-        chain = [c for c in self.custody_chain if c['sample_id'] == sample_id]
-        
-        issues = []
-        if not chain:
-            issues.append("No custody records found")
-            return issues
-        
-        if chain[0]['action'] != 'collected':
-            issues.append("Missing collection record")
-        
-        # Check for time gaps > 48h
-        for i in range(1, len(chain)):
-            gap = (chain[i]['datetime'] - chain[i-1]['datetime']).total_seconds() / 3600
-            if gap > 48:
-                issues.append(f"Time gap of {gap:.1f} hours between {chain[i-1]['action']} and {chain[i]['action']}")
-        
-        return issues
+    # Check GPS accuracy
+    if submission.get('gps_accuracy', 100) > 10:
+        warnings.append('GPS accuracy > 10m — consider re-taking')
+    
+    # Check for duplicate coordinates
+    if is_near_existing_sample(submission['easting'], submission['northing'], radius=5):
+        warnings.append('Within 5m of existing sample — duplicate?')
+    
+    return {'valid': len(errors) == 0, 'errors': errors, 'warnings': warnings}
 ```
 
 ## Best Practices
 
-1. **Auto-generate sample IDs:** `PRJ_YYYYMMDD_NNNN` format. Never reuse numbers.
-2. **Photo geotagging:** Ensure photos embed GPS coordinates and timestamp.
-3. **Offline first:** Mobile app must work without connectivity; sync when available.
-4. **Validate on device:** Check ranges, required fields, GPS quality before allowing save.
-5. **Daily backup:** Field supervisor downloads all data every evening.
-6. **Paper backup:** Print daily summary as emergency backup.
+1. **Daily backup:** Sync all data at end of each field day. Never keep >1 day unsynced.
+2. **Redundant GPS:** Log handheld GPS even if tablet has GPS (backup + verification).
+3. **Photo metadata:** Ensure EXIF GPS, timestamp, and device ID are embedded.
+4. **Sample security:** Lock samples in vehicle; never leave unattended at camp.
+5. **Chain of custody:** Every handoff must be documented with signature/timestamp.
+6. **Weather notes:** Rain can mobilize soil geochemistry — note recent weather.

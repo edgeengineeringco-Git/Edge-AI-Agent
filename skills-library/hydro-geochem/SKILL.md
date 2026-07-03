@@ -1,167 +1,187 @@
 ---
 name: hydro-geochem
-description: Hydrogeochemistry and water sampling for REE exploration — water chemistry analysis, pathfinder detection in water, isotope geochemistry, and environmental baseline studies.
+description: Hydrogeochemistry for REE and critical mineral exploration — water sampling, pathfinder elements in groundwater, isotope geochemistry, and environmental baseline studies.
 ---
 
 # Hydrogeochemistry for REE Exploration
 
 ## When to use
 
-- You want to detect REE pathfinders in surface water or groundwater.
-- You need to establish environmental baseline chemistry before exploration.
+- You need to sample groundwater, streams, or springs for geochemical pathfinders.
+- You want to understand REE mobility in the weathering environment.
+- You need environmental baseline data before exploration begins.
 - You want to use isotopes (O, H, Sr, Nd) to trace fluid sources.
-- You're assessing acid mine drainage or leaching potential.
 
-## Water Sampling Protocol
+## Water Sampling for Exploration
 
-### Field Parameters (In-Situ)
-| Parameter | Instrument | Notes |
-|---|---|---|
-| pH | Portable pH meter | Calibrate daily |
-| EC (electrical conductivity) | EC meter | μS/cm, correlates with TDS |
-| Temperature | Thermometer | °C, affects solubility |
-| Eh / ORP | ORP meter | Redox conditions |
-| Dissolved O₂ | DO meter | Critical for redox-sensitive REE |
-| Turbidity | Turbidimeter | Filter if > 5 NTU |
+### Parameters to Measure
+| Parameter | Field Method | Lab Method | Exploration Significance |
+|---|---|---|---|
+| **pH** | pH meter | — | Controls REE mobility (low pH = mobile) |
+| **EC/TDS** | Conductivity meter | — | Total dissolved solids proxy |
+| **Eh** | ORP meter | — | Redox state (affects Ce) |
+| **Alkalinity** | Titrate HCl | — | Carbonate system |
+| **Major ions** | — | IC, ICP-OES | Water type classification |
+| **REE + trace** | — | ICP-MS | Direct pathfinder detection |
+| **U, Th** | — | ICP-MS | Radioactive pathfinders |
+| **Stable isotopes** | — | IRMS | Fluid source tracing |
 
-### Sample Collection
-1. **Rinse bottle 3×** with sample water before filling
-2. **0.45 μm filter** on-site for dissolved metals
-3. **Acidify to pH < 2** with HNO₃ (ultra-pure) for metal analysis
-4. **Refrigerate** at 4°C, analyze within 6 months
-5. **Duplicate** 1 in 20 samples
-6. **Field blank** 1 per batch (deionized water)
+### REE Mobility in Water
+- **Acidic waters (pH < 5):** All REE mobile, LREE > HREE
+- **Neutral waters (pH 6–7):** REE immobile, adsorbed to Fe-Mn oxyhydroxides
+- **Carbonate-rich waters:** Ce anomaly develops (Ce⁴⁺ insoluble)
+- **Saline waters:** REE complexed with Cl⁻, SO₄²⁻
 
-## REE in Natural Waters
-
-### Concentration Ranges
-| Water Type | TREO (ppb) | Key Features |
-|---|---|---|
-| Seawater | 1–5 | Strong LREE enrichment, negative Ce anomaly |
-| River water | 0.1–50 | Variable, reflects catchment lithology |
-| Groundwater | 0.01–1000 | Can be very high in REE-rich aquifers |
-| Acid mine drainage | 100–10,000 | Extremely high, LREE >> HREE |
-| Carbonatite springs | 10–500 | Anomalous Nb, Sr, Ba, F, P |
-
-### Normalized Patterns
+### Sampling Protocol
 ```python
-def plot_water_ree_pattern(water_data, normalization='chondrite'):
-    """
-    Plot REE pattern for water sample
-    """
-    import matplotlib.pyplot as plt
-    
-    ree_elements = ['La', 'Ce', 'Pr', 'Nd', 'Sm', 'Eu', 'Gd', 
-                    'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu']
-    
-    chondrite = [0.237, 0.612, 0.095, 0.467, 0.153, 0.058, 0.205,
-                 0.037, 0.254, 0.057, 0.166, 0.026, 0.165, 0.025]
-    
-    water_values = [water_data.get(e, np.nan) for e in ree_elements]
-    normalized = np.array(water_values) / np.array(chondrite)
-    
-    plt.figure(figsize=(10, 6))
-    plt.plot(ree_elements, normalized, 'o-', linewidth=2)
-    plt.axhline(y=1, color='gray', linestyle='--')
-    plt.ylabel(f'{normalization}-normalized REE')
-    plt.yscale('log')
-    plt.title('Water REE Pattern')
-    plt.grid(True, alpha=0.3)
-    return plt.gcf()
+WATER_SAMPLING_PROTOCOL = {
+    'preparation': [
+        'Rinse bottle 3x with sample water before filling',
+        'Wear nitrile gloves — skin oils contaminate REE analysis',
+        'Record GPS, time, weather, flow rate, color, odor'
+    ],
+    'filtration': {
+        'unfiltered': 'Acidify with HNO₃ to pH < 2 for total metals (ICP-MS)',
+        '0.45_um': 'Filter for dissolved metals',
+        '0.22_um': 'Filter for truly dissolved (colloids removed)'
+    },
+    'acidification': {
+        'total_ree': 'HNO₃ to pH < 2 immediately after collection',
+        'cations': 'HNO₃ to pH < 2',
+        'anions': 'No acidification — analyze within 48 hours',
+        'isotopes': 'No acidification — fill completely, no headspace'
+    },
+    'preservation': {
+        'temperature': 'Cool to 4°C immediately',
+        'dark': 'Store in dark to prevent algal growth',
+        'time_to_lab': '< 6 months for total metals, < 48 hours for anions'
+    }
+}
 ```
 
-## Pathfinder Elements in Water
+## Stream Sediment vs. Water Geochemistry
 
-| Target | Primary Pathfinders | Secondary | Notes |
+| Method | Best For | Detection Range | Seasonal Variation |
 |---|---|---|---|
-| Carbonatite | F⁻, Sr²⁺, Ba²⁺, Nb, P | REE, Th | High pH (8–10), high HCO₃⁻ |
-| IAC clay | Al³⁺, SO₄²⁻, pH 4–6 | Fe, Mn | Acidic groundwater from weathering |
-| Hydrothermal HREE | F⁻, As, Sb, W | Sn, Li, Cs | Near-neutral pH, high F |
-| LCT pegmatite | Li, Cs, Rb, B | Be, Nb, Ta | Often in thermal springs |
-| U-REE | U, Ra, Rn | Mo, Se | Redox front control |
+| **Stream sediment** | REE pathfinders in heavy minerals | ppm–% | Low |
+| **Stream water (total)** | Mobile REE, major ions | ppb–ppm | High (flow-dependent) |
+| **Stream water (filtered)** | Truly dissolved REE | ppb | Very high |
+| **Groundwater** | Deep-seated signatures | ppb–ppm | Low |
 
 ## Isotope Geochemistry
 
-### Strontium Isotopes (⁸⁷Sr/⁸⁶Sr)
-- **Carbonatite:** 0.703–0.706 (mantle-derived)
-- **Granite:** 0.707–0.720 (crustal)
-- **Seawater:** 0.709 (modern)
-- **Application:** Distinguish carbonatite-derived fluids from crustal groundwater
+### Strontium-Neodymium Isotopes
+```
+⁸⁷Sr/⁸⁶Sr and εNd can fingerprint:
+- Carbonatite fluids (low ⁸⁷Sr/⁸⁶Sr, positive εNd)
+- Crustal fluids (high ⁸⁷Sr/⁸⁶Sr, negative εNd)
+- Seawater (⁸⁷Sr/⁸⁶Sr ~ 0.709, time-dependent)
+```
 
-### Neodymium Isotopes (εNd)
-- **Carbonatite:** εNd = 0 to +5 (depleted mantle signature)
-- **Crustal rocks:** εNd = -5 to -20
-- **Application:** Provenance of REE in sediments/placers
+### Oxygen-Hydrogen Isotopes
+```
+δ¹⁸O vs. δD plot:
+- Meteoric water line (MWL): δD = 8 × δ¹⁸O + 10
+- Magmatic fluids: δ¹⁸O = 6–10‰, δD = -40 to -80‰
+- Metamorphic fluids: δ¹⁸O = 8–15‰
+- Evolved meteoric: Shifted right of MWL
+```
 
-### Oxygen-Hydrogen Isotopes (δ¹⁸O, δD)
-- **Meteoric water line:** δD = 8 × δ¹⁸O + 10
-- **Magmatic water:** δ¹⁸O = +6 to +10, δD = -40 to -80
-- **Application:** Distinguish magmatic vs. meteoric fluid sources
+## Python: Water Chemistry Analysis
+
+```python
+import pandas as pd
+import numpy as np
+from matplotlib import pyplot as plt
+
+def analyze_water_chemistry(water_df):
+    """
+    Analyze water geochemistry for exploration signals
+    """
+    results = {}
+    
+    # 1. Water type (Piper diagram data)
+    water_df['Ca_meq'] = water_df['Ca_mgL'] / 20.04
+    water_df['Mg_meq'] = water_df['Mg_mgL'] / 12.15
+    water_df['Na_meq'] = water_df['Na_mgL'] / 22.99
+    water_df['K_meq'] = water_df['K_mgL'] / 39.10
+    water_df['HCO3_meq'] = water_df['HCO3_mgL'] / 61.02
+    water_df['SO4_meq'] = water_df['SO4_mgL'] / 48.03
+    water_df['Cl_meq'] = water_df['Cl_mgL'] / 35.45
+    
+    cation_sum = water_df['Ca_meq'] + water_df['Mg_meq'] + water_df['Na_meq'] + water_df['K_meq']
+    anion_sum = water_df['HCO3_meq'] + water_df['SO4_meq'] + water_df['Cl_meq']
+    
+    water_df['Ca_pct'] = water_df['Ca_meq'] / cation_sum * 100
+    water_df['Mg_pct'] = water_df['Mg_meq'] / cation_sum * 100
+    water_df['NaK_pct'] = (water_df['Na_meq'] + water_df['K_meq']) / cation_sum * 100
+    
+    # 2. REE patterns in water
+    ree_elements = ['La', 'Ce', 'Pr', 'Nd', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu']
+    
+    # Shale-normalized (PAAS)
+    paas = {'La': 38.2, 'Ce': 79.6, 'Pr': 8.83, 'Nd': 33.9, 'Sm': 5.55, 
+            'Eu': 1.08, 'Gd': 4.66, 'Tb': 0.774, 'Dy': 4.68, 'Ho': 0.991,
+            'Er': 2.85, 'Tm': 0.405, 'Yb': 2.82, 'Lu': 0.433}
+    
+    for elem in ree_elements:
+        water_df[f'{elem}_sn'] = water_df[f'{elem}_ugL'] / paas[elem]
+    
+    # 3. Anomaly detection
+    water_df['has_ree_anomaly'] = water_df[['La_ugL', 'Ce_ugL', 'Nd_ugL']].max(axis=1) > 1.0
+    
+    # 4. Correlation with known mineralization
+    # (Requires training data)
+    
+    return water_df
+
+def plot_water_ree_pattern(sample, title="Water REE Pattern"):
+    """Plot shale-normalized REE pattern for water sample"""
+    ree_elements = ['La', 'Ce', 'Pr', 'Nd', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu']
+    values = [sample[f'{e}_sn'] for e in ree_elements]
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(ree_elements)), values, 'o-', linewidth=2)
+    plt.xticks(range(len(ree_elements)), ree_elements)
+    plt.ylabel('PAAS-normalized')
+    plt.title(title)
+    plt.yscale('log')
+    plt.grid(True, alpha=0.3)
+    plt.axhline(y=1, color='r', linestyle='--', alpha=0.5)
+    plt.show()
+```
 
 ## Environmental Baseline
 
 ```python
-def calculate_baselines(water_chemistry_df, elements):
-    """
-    Calculate background and anomaly thresholds for water chemistry
-    """
-    results = {}
-    
-    for elem in elements:
-        data = water_chemistry_df[elem].dropna()
-        
-        # Background: median + 2MAD
-        median = data.median()
-        mad = np.median(np.abs(data - median))
-        threshold = median + 2 * 1.4826 * mad  # Consistent MAD estimator
-        
-        results[elem] = {
-            'n_samples': len(data),
-            'mean': data.mean(),
-            'median': median,
-            'std': data.std(),
-            'min': data.min(),
-            'max': data.max(),
-            'threshold': threshold,
-            'anomaly_count': int(np.sum(data > threshold))
-        }
-    
-    return pd.DataFrame(results).T
-```
-
-## AMD Potential Assessment
-
-```python
-def calculate_np_ap(sulfide_pct, carbonate_pct, silicate_pct):
-    """
-    Acid Base Accounting for REE deposits
-    NP = Neutralization Potential (from carbonates)
-    AP = Acid Potential (from sulfides)
-    """
-    # Simplified: assume all S is pyrite
-    ap = sulfide_pct * 31.25  # kg H2SO4/t
-    
-    # NP from calcite/dolomite
-    np = carbonate_pct * 10  # Rough approximation
-    
-    npr = np / ap if ap > 0 else float('inf')
-    
-    if npr > 3:
-        risk = "Low"
-    elif npr > 1:
-        risk = "Moderate"
-    elif npr > 0:
-        risk = "High"
-    else:
-        risk = "Very High"
-    
-    return {'NP': np, 'AP': ap, 'NPR': npr, 'risk': risk}
+ENVIRONMENTAL_BASELINE = {
+    'water_quality': {
+        'sampling_frequency': 'quarterly',
+        'parameters': ['pH', 'EC', 'TDS', 'major_ions', 'trace_metals', 'REE'],
+        'reference_sites': 'upgradient of any disturbance',
+        'seasonal_coverage': 'wet and dry season'
+    },
+    'radiation': {
+        'gamma_dose_rate': 'continuous monitoring or quarterly surveys',
+        'radon': 'indoor and outdoor air',
+        'water': 'gross_alpha, gross_beta, U, Th'
+    },
+    'biology': {
+        'aquatic': 'macroinvertebrate community (sensitive to metals)',
+        'vegetation': 'species composition, heavy metal uptake'
+    },
+    'socioeconomic': {
+        'land_use': 'current farming, grazing, fishing',
+        'water_use': 'domestic, irrigation, livestock'
+    }
+}
 ```
 
 ## Best Practices
 
-1. **Sample before drilling:** Establish true baseline before any disturbance.
-2. **Seasonal sampling:** Wet season vs. dry season can show 10× concentration differences.
-3. **Filter immediately:** REE can precipitate on suspended particles.
-4. **Record everything:** Weather, flow rate, upstream geology, nearby land use.
-5. **Chain of custody:** Track samples from field to lab with signed forms.
+1. **Sample upstream first:** Always collect baseline samples before any ground disturbance.
+2. **Duplicate everything:** 10% field duplicates, 10% lab duplicates for water.
+3. **Blank control:** Equipment blanks to check for contamination.
+4. **Flow measurement:** Stream flow affects concentration — always measure.
+5. **Seasonal monitoring:** Water chemistry varies dramatically between wet and dry seasons.
+6. **Colloids matter:** A significant fraction of "dissolved" REE may be colloidal. Filter carefully.
