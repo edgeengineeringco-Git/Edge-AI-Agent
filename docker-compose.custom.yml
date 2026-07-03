@@ -100,6 +100,12 @@ services:
       - traefik.http.routers.upload-server.tls.domains[0].main=${SSL_DOMAIN}
       - traefik.http.routers.upload-server.tls.domains[0].sans=*.${SSL_DOMAIN}
       - traefik.http.services.upload-server.loadbalancer.server.port=3001
+      - traefik.http.routers.intake-notify.rule=Host(`${APP_HOSTNAME}`) && Path(`/intake/notify`)
+      - traefik.http.routers.intake-notify.entrypoints=websecure
+      - traefik.http.routers.intake-notify.tls.certresolver=letsencrypt
+      - traefik.http.routers.intake-notify.tls.domains[0].main=${SSL_DOMAIN}
+      - traefik.http.routers.intake-notify.tls.domains[0].sans=*.${SSL_DOMAIN}
+      - traefik.http.services.upload-server.loadbalancer.server.port=3001
     restart: unless-stopped
 
   litellm:

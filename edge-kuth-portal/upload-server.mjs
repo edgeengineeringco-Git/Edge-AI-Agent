@@ -222,6 +222,31 @@ function serveStatic(req, res) {
   });
 }
 
+// ── Telegram notification helper ──────────────────────────────────────────
+
+function sendTelegram(message) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    console.log("[telegram] Not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID) — skipping");
+    return;
+  }
+  const postData = JSON.stringify({ chat_id: chatId, text: message, parse_mode: "Markdown" });
+  const req = https.request({
+    hostname: "api.telegram.org",
+    path: `/bot${token}/sendMessage`,
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(postData) },
+  }, (res) => {
+    let body = "";
+    res.on("data", (c) => { body += c; });
+    res.on("end", () => { console.log(`[telegram] ${res.statusCode} ${body.slice(0, 120)}`); });
+  });
+  req.on("error", (e) => { console.log(`[telegram] Error: ${e.message}`); });
+  req.write(postData);
+  req.end();
+}
+
 // ── HTTP Server ───────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -233,6 +258,45 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  const urlPath = decodeURIComponent((req.url || "").split("?")[0]);
+
+  // ── Intake notification endpoint (GitHub Pages forms → Telegram) ──
+  if (urlPath === "/intake/notify" && req.method === "POST") {
+    try {
+      const chunks = [];
+      for await (const chunk of req) { chunks.push(chunk); }
+      const body = Buffer.concat(chunks).toString("utf-8");
+      const data = JSON.parse(body);
+
+      const projectName = data.project_name || data.project || "Unnamed";
+      const formType = data.form_type || "unknown";
+      const contact = data.contact_name || "—";
+      const email = data.email || "—";
+      const org = data.organisation || "—";
+      const fileCount = data.file_count || 0;
+      const folderUrl = data.folder_url || "";
+
+      const msg = `📋 *New EDGE Portal Submission*\n\n` +
+        `*Project:* ${projectName}\n` +
+        `*Form:* ${formType}\n` +
+        `*Contact:* ${contact}\n` +
+        `*Email:* ${email}\n` +
+        `*Org:* ${org}\n` +
+        `*Files:* ${fileCount}\n\n` +
+        `${folderUrl ? `[Open Drive Folder](${folderUrl})` : ""}`;
+
+      sendTelegram(msg);
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, notified: true }));
+    } catch (err) {
+      console.error(`[intake/notify] Error: ${err.message}`);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    }
     return;
   }
 
