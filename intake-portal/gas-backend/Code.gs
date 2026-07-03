@@ -4,35 +4,46 @@
  * Receives JSON+base64 form submissions from the intake portal HTML forms
  * and saves them to Google Drive + logs to a Google Sheet.
  *
- * Setup:
- *   1. Create a new Google Apps Script project: https://script.google.com
- *   2. Paste this entire file into the default Code.gs
- *   3. Set CONFIG values below (TARGET_FOLDER_ID, SHEET_ID, NOTIFY_EMAIL)
- *   4. Deploy → New deployment → Web app → Execute as: Me → Access: Anyone
- *   5. Copy the deployment URL and paste it into GAS_URL in both HTML files
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SETUP (one-time, 2 minutes):
+ *   1. Go to https://script.google.com → New project
+ *   2. Delete the default code, paste this entire file
+ *   3. Deploy → New deployment → Web app
+ *      - Execute as: Me
+ *      - Who has access: Anyone
+ *   4. Authorize when Google asks (needs Drive + Sheets access)
+ *   5. Copy the Web App URL and paste it into GAS_URL in both HTML files
+ *
+ * That's it. The script auto-creates the log Sheet on first submission.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CONFIG — replace these with your actual IDs
-// ═══════════════════════════════════════════════════════════════════════════
-
 var CONFIG = {
-  // Google Drive folder ID where submission sub-folders will be created
+  // Your Drive folder (pre-filled)
   TARGET_FOLDER_ID: '1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO',
 
-  // Google Sheet ID for the submission log
-  SHEET_ID: '1YkQyyYkaLQUmauiGMVYpfxEauSI17t4l',
+  // Leave empty — the script will auto-create a Sheet on first run
+  SHEET_ID: '',
 
-  // Sheet tab name (will be created if it doesn't exist)
+  // Sheet tab name
   SHEET_TAB_NAME: 'Submissions',
 
-  // Email address for new-submission alerts (leave empty to disable)
+  // Email for alerts (leave empty to disable)
   NOTIFY_EMAIL: '',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Entry Points
 // ═══════════════════════════════════════════════════════════════════════════
+
+function doGet(e) {
+  return outputJSON({
+    ok: true,
+    service: 'EDGE Intake Portal',
+    folderId: CONFIG.TARGET_FOLDER_ID,
+    time: new Date().toISOString()
+  });
+}
 
 function doPost(e) {
   try {
@@ -92,7 +103,7 @@ function processSubmission(data) {
     }
   }
 
-  // ── Log to Sheet ──
+  // ── Log to Sheet (auto-creates on first run) ──
   var sheetLink = logToSheet(formType, fields, uploadedFiles, subFolder.getUrl(), ts);
 
   // ── Generate HTML summary ──
@@ -140,12 +151,51 @@ function processSubmission(data) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Sheet Logging
+// Sheet Logging (auto-creates Sheet on first run)
 // ═══════════════════════════════════════════════════════════════════════════
+
+function getOrCreateSheet() {
+  // If we already have a stored Sheet ID, use it
+  var props = PropertiesService.getScriptProperties();
+  var storedId = props.getProperty('SHEET_ID');
+
+  if (storedId) {
+    try {
+      return SpreadsheetApp.openById(storedId);
+    } catch (e) {
+      // Stored ID invalid, fall through to create new
+    }
+  }
+
+  // If CONFIG.SHEET_ID is set, try that first
+  if (CONFIG.SHEET_ID) {
+    try {
+      var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+      props.setProperty('SHEET_ID', CONFIG.SHEET_ID);
+      return ss;
+    } catch (e) {
+      // Invalid ID, fall through to create new
+    }
+  }
+
+  // Create a new Sheet inside the target Drive folder
+  var ss = SpreadsheetApp.create('EDGE_Intake_Log');
+  var newId = ss.getId();
+  props.setProperty('SHEET_ID', newId);
+
+  // Move from root into the target folder
+  var targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
+  var file = DriveApp.getFileById(newId);
+  targetFolder.addFile(file);
+  try { DriveApp.getRootFolder().removeFile(file); } catch (e) {}
+
+  Logger.log('Auto-created Sheet: ' + ss.getUrl());
+  return ss;
+}
 
 function logToSheet(formType, fields, uploadedFiles, folderUrl, ts) {
   try {
-    var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    var ss = getOrCreateSheet();
     var sheet = ss.getSheetByName(CONFIG.SHEET_TAB_NAME);
 
     if (!sheet) {

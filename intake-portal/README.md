@@ -1,123 +1,141 @@
 # EDGE Intake Portal
 
-Client intake forms for project setup and data upload. Hosted on **GitHub Pages** — no server required.
+Client intake forms — completely separate from the K/U/Th portal.
 
-## How it works
+| Folder | Purpose |
+|--------|---------|
+| `intake-portal/` | Client-facing intake forms (GitHub Pages + Google Apps Script) |
+| `edge-kuth-portal/` | K/U/Th spectral analysis pipeline (thepopebot / Docker) |
 
-```
-┌─────────────────┐      JSON + base64 files       ┌──────────────────────┐
-│  GitHub Pages   │  ───────────────────────────►  │  Google Apps Script  │
-│  (static HTML)  │                                │     (free backend)   │
-└─────────────────┘                                └──────────────────────┘
-                                                            │
-                                                            ▼
-                                                   ┌──────────────────────┐
-                                                   │   Google Drive       │
-                                                   │   + Google Sheet     │
-                                                   └──────────────────────┘
-```
-
-1. **Client fills out the form** in their browser (project setup or data upload).
-2. **JavaScript converts files to base64** and sends everything as JSON to a Google Apps Script web app.
-3. **GAS creates a timestamped folder** in your Drive, saves all uploaded files, and appends a row to a Google Sheet log.
-4. **Client sees a success message** with a link to their Drive folder.
+---
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Landing page — link to project setup |
-| `project-setup.html` | Form 1: project details, area map, services, contact |
-| `data-upload.html` | Form 2: multi-block data upload (geochem, drilling, geophysics, etc.) |
-| `gas-backend/Code.gs` | Google Apps Script backend — copy this into a new GAS project |
+| `index.html` | Landing page — links to both forms |
+| `project-setup.html` | **Form 1** — project details, services, contact info |
+| `data-upload.html` | **Form 2** — multi-block data upload with file attachments |
+| `gas-backend/Code.gs` | Google Apps Script backend — receives submissions, saves to Drive, logs to Sheet |
 
-## Setup (one-time)
+---
 
-### 1. Create the Google Drive folder
-- In Google Drive, create a folder called **"EDGE Intake Submissions"** (or any name).
-- Open it and copy the folder ID from the URL:
-  ```
-  https://drive.google.com/drive/folders/1ABC123xyz...
-                              └──────────┬──────────┘
-                                    folder ID
-  ```
+## How it works
 
-### 2. Create the Google Sheet log
-- Create a new Google Sheet (or reuse an existing one).
-- Copy the **Sheet ID** from the URL:
-  ```
-  https://docs.google.com/spreadsheets/d/1XYZ456abc.../edit
-                                           └──────┬──────┘
-                                              sheet ID
-  ```
+```
+Client browser (GitHub Pages)
+        ↓  JSON + base64 files
+Google Apps Script Web App
+        ↓
+├── Creates timestamped sub-folder in your Drive
+├── Decodes & saves uploaded files
+├── Appends row to Google Sheet log
+├── Generates HTML summary inside the folder
+└── Sends you an email alert (optional)
+```
 
-### 3. Deploy the Google Apps Script backend
-1. Go to [script.google.com](https://script.google.com) and create a **new project**.
-2. Delete the default `myFunction` and paste the entire contents of `gas-backend/Code.gs`.
-3. In the `CONFIG` section at the top, replace:
-   - `YOUR_DRIVE_FOLDER_ID_HERE` → your Drive folder ID
-   - `YOUR_SHEET_ID_HERE` → your Sheet ID
-4. Save the project (Ctrl+S).
-5. Click **Deploy → New deployment**:
+---
+
+## Deploy (one-time, ~5 minutes)
+
+### Step 1 — Deploy the GAS backend
+
+1. Go to [script.google.com](https://script.google.com) → **New project**
+2. Delete the default code
+3. Paste the entire contents of `gas-backend/Code.gs`
+   - Your Drive folder ID (`1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO`) is already pre-filled
+   - The Sheet will be **auto-created** on the first submission — no manual setup needed
+4. **Deploy → New deployment**
    - Type: **Web app**
    - Execute as: **Me**
    - Who has access: **Anyone**
-   - Click **Deploy**
-6. Authorize the script when prompted (it needs permission to access Drive and Sheets).
-7. Copy the **Web App URL** — it looks like:
-   ```
-   https://script.google.com/macros/s/AKfycbzxxxxxxxx/exec
-   ```
+5. **Authorize** when Google asks (needs Drive + Sheets permissions)
+6. Copy the **Web App URL**
 
-### 4. Configure the HTML forms
-Open both `project-setup.html` and `data-upload.html` and find this block near the bottom:
+### Step 2 — Connect the forms
 
-```html
-<script>
-  var GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
-</script>
+Open both HTML files and paste your GAS URL:
+
+- `project-setup.html` → line ~401
+- `data-upload.html` → line ~467
+
+Replace:
+```javascript
+var GAS_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 ```
 
-Replace the URL with your actual deployed GAS URL in **both files**.
-
-### 5. Host on GitHub Pages
-1. Push this `intake-portal/` folder to a GitHub repository.
-2. In the repo settings, enable **GitHub Pages** from the `main` branch `/ (root)` or `/docs` folder.
-3. If using a sub-folder, update the internal links (`project-setup.html`, `data-upload.html`, `index.html`) to include the correct path.
-
-The live URL will be something like:
-```
-https://yourusername.github.io/intake-portal/
+with your real URL:
+```javascript
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbzXXXXXXXX/exec';
 ```
 
-### 6. Add the link to your website
+### Step 3 — Host on GitHub Pages
+
+```bash
+git add intake-portal/
+git commit -m "Add client intake portal"
+git push
+```
+
+Then in your repo: **Settings → Pages → Source**: select your branch and `/ (root)`.
+
+---
+
+## Browser links for verification
+
+After deploying, you can verify everything works by opening these links:
+
+### 1. Health check (GAS backend is alive)
+```
+https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
+```
+You should see JSON: `{ "ok": true, "service": "EDGE Intake Portal", ... }`
+
+### 2. Intake portal landing page (GitHub Pages)
+```
+https://yourusername.github.io/your-repo-name/intake-portal/index.html
+```
+
+### 3. Direct form links
+- Project Setup: `.../intake-portal/project-setup.html`
+- Data Upload: `.../intake-portal/data-upload.html`
+
+---
+
+## What you get in Google Drive
+
+Each submission creates a folder like:
+
+```
+EDGE_Intake_Log/                    ← auto-created Google Sheet
+└── 20250703_143000 — Project Name (project_setup)/
+    ├── data.csv
+    ├── survey.zip
+    └── submission-summary.html     ← pretty HTML summary
+```
+
+The Google Sheet log has these columns:
+`Timestamp | Form Type | Project Name | Organisation | Contact Name | Email | Area | Country | Services | Detector Type | Detector Model | Start Date | Referral | File Count | Drive Folder | Notes`
+
+---
+
+## Embed on your website
+
 Use this link anywhere on your site:
+
 ```html
-<a href="https://yourusername.github.io/intake-portal/">
+<a href="https://yourusername.github.io/your-repo-name/intake-portal/index.html">
   Client Portal →
 </a>
 ```
 
-## Data flow summary
-
-| What | Where |
-|------|-------|
-| Uploaded files | `EDGE Intake Submissions/YYYY-MM-DD_HHmmss — Project Name/` |
-| Submission log | Google Sheet → `Submissions` tab |
-| Client confirmation | On-screen success message + Drive folder link |
+---
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| "Form receiver not configured" | You haven't replaced `YOUR_DEPLOYMENT_ID` with the real GAS URL |
-| "Upload failed" in red banner | Check the GAS execution log (View → Executions in Apps Script editor) |
-| Files not appearing in Drive | Make sure the GAS project has been authorized to access Drive |
-| CORS / network error | The GAS web app must be deployed with **"Who has access: Anyone"** |
-| Sheet not logging | Make sure `SHEET_ID` is correct and the Sheet is shared with you |
-
-## Notes
-
-- **File size limit**: Google Apps Script has a ~50 MB payload limit. For very large files, ask clients to upload to Drive and paste a share link in the notes field.
-- **Security**: The GAS endpoint is public (Anyone can access). There is no password — this is standard for contact-form-style use cases. The data goes straight into your own Drive.
-- **No server maintenance**: Once deployed, this runs entirely on Google's infrastructure. You only need to update the HTML if you change the GAS URL.
+| "Form receiver not configured" | You forgot to paste the GAS_URL in the HTML files |
+| CORS error in browser console | Make sure GAS deployment is set to "Anyone" access |
+| Files not appearing in Drive | Check GAS execution log (View → Executions in script.google.com) |
+| Sheet not created | The script auto-creates it on first submission. Check the target Drive folder for `EDGE_Intake_Log`. |
