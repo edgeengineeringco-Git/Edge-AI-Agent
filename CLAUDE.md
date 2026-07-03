@@ -10,6 +10,7 @@ This is a [thepopebot](https://github.com/stephengpope/thepopebot) project.
 - **`event-handler/`** — Event handler configuration: chat system prompts, trigger definitions (`TRIGGERS.json`), cluster templates, and LiteLLM proxy config.
 - **`skills-library/`** — Canonical skill source. All `SKILL.md` files and scripts live here.
 - **`skills/`** — Activation surface. Each entry is a symlink to `../skills-library/<name>` — present means active, absent means deactivated. Coding agents only see skills symlinked here.
+- **`intake-portal/`** — Client intake forms (project setup + data upload). Static HTML for GitHub Pages + Google Apps Script backend. Completely separate from the K/U/Th portal.
 - **`data/`** — Runtime data (SQLite database, cluster state). Not checked into git.
 - **`logs/`** — Agent job logs, organized by job ID. Not checked into git.
 
@@ -82,9 +83,11 @@ EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc file
 - **Scope:** `agents/edge-kuth-portal`
 - **Upload endpoint:** `/edge-kuth/upload-page` (Traefik → upload-server Docker container)
 - **Webhook trigger:** `/edge-kuth/upload` (TRIGGERS.json, **enabled**) — fires agent on upload server callback
-- **Flow:** Client form POSTs multipart → upload server saves files → triggers agent → agent runs Python → Telegram broadcast
+- **Flow:** Client uploads `.spc` → upload server saves files → triggers agent → agent runs Python → Telegram broadcast
 - **Telegram:** Results CSV broadcast to all admins via `agent-job-dm` skill
 - **Skill:** `edge-kuth-analysis` — invocable by any agent
+
+> **Note:** The client intake forms (project setup + data upload) have been moved to **`/intake-portal/`**. They are completely separate from the K/U/Th pipeline.
 
 ```
 agents/edge-kuth-portal/
@@ -100,10 +103,11 @@ agents/edge-kuth-portal/
 **Pipeline files:**
 - `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core Python engine (CLI with args)
 - `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)
+- `edge-kuth-portal/kuth-upload.html` — Simple `.spc` upload form served at `/edge-kuth/upload-page`
 - `edge-kuth-portal/handle-upload.sh` — Upload handler orchestrator
 - `edge-kuth-portal/pad_data.py` — Embedded PAD reference spectra (authoritative source, no Drive download)
-- `edge-kuth-portal/drive-utils.sh` — Google Drive & Sheets helper (PAD fetch, results upload, job logging)
-- `edge-kuth-portal/send-email.sh` — SendGrid email helper (confirmation + results)
+- `edge-kuth-portal/drive-utils.sh` — Google Drive & Sheets helper (results upload, job logging)
+- `edge-kuth-portal/send-email.sh` — Brevo / SendGrid email helper
 - `edge-kuth-portal/incoming/` — Drop .spc files here for processing
 - `edge-kuth-portal/output/` — Results CSVs archived here
 - `edge-kuth-portal/jobs/{job_id}/` — Per-job working directory

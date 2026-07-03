@@ -202,12 +202,8 @@ const MIME = {
 function serveStatic(req, res) {
   // Map friendly URLs → actual files
   let urlPath = decodeURIComponent((req.url || "").split("?")[0]);
-  if (urlPath === "/" || urlPath === "/edge-kuth/upload-page" || urlPath === "/edge-kuth/") {
-    urlPath = "/upload-form.html";
-  } else if (urlPath === "/edge-kuth/data-upload") {
-    urlPath = "/data-upload.html";
-  } else if (urlPath === "/edge-kuth/upload-form") {
-    urlPath = "/upload-form.html";
+  if (urlPath === "/" || urlPath === "/edge-kuth/upload-page" || urlPath === "/edge-kuth/" || urlPath === "/edge-kuth/upload-form") {
+    urlPath = "/kuth-upload.html";
   }
   // Only serve files inside the edge-kuth-portal directory
   const safePath = path.normalize(path.join(__dirname, urlPath));
@@ -274,14 +270,12 @@ const server = http.createServer(async (req, res) => {
     // Extract form fields and files
     const fields = {};
     const files = [];
-    const allFiles = [];
     let doseCsv = null;
 
     for (const part of parts) {
       if (part.filename) {
         // It's a file
         const entry = { field: part.name, filename: part.filename, data: part.body };
-        allFiles.push(entry);
         if (part.filename.endsWith(".spc")) {
           files.push(entry);
         } else if (part.filename.endsWith(".csv")) {
@@ -289,138 +283,19 @@ const server = http.createServer(async (req, res) => {
         }
       } else if (part.name) {
         const value = part.body.toString("utf-8").trim();
-        // Handle duplicate field names as arrays (e.g. services[] checkboxes)
-        if (fields[part.name] !== undefined) {
-          if (!Array.isArray(fields[part.name])) {
-            fields[part.name] = [fields[part.name]];
-          }
-          fields[part.name].push(value);
-        } else {
-          fields[part.name] = value;
-        }
+        fields[part.name] = value;
       }
     }
 
-    // Normalize array field names (e.g. services[] -> services)
-    for (const key of Object.keys(fields)) {
-      const cleanKey = key.replace(/\[\]$/, '');
-      if (cleanKey !== key) {
-        const val = fields[key];
-        delete fields[key];
-        fields[cleanKey] = Array.isArray(val) ? val.join(', ') : val;
-      }
+    // Validate password and .spc files
+    if (fields.password !== UPLOAD_PASSWORD) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid access password" }));
+      return;
     }
-
-    // Detect portal form submissions
-    const formStep = fields.form_step;
-    const isPortal = formStep === 'project_setup' || formStep === 'data_upload';
-
-    // Validate password and .spc files (skip for portal submissions)
-    if (!isPortal) {
-      if (fields.password !== UPLOAD_PASSWORD) {
-        res.writeHead(403, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid access password" }));
-        return;
-      }
-      if (files.length === 0) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "No .spc files found in upload" }));
-        return;
-      }
-    }
-
-    // === Portal form submission (project setup / data upload) ===
-    if (isPortal) {
-      const ts = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 15);
-      const safeProject = (fields.project_name || "portal").replace(/[^a-zA-Z0-9_-]/g, "_");
-      const jobId = `portal_${safeProject}_${ts}`;
-      const jobDir = path.join(JOBS_DIR, jobId);
-      const filesDir = path.join(jobDir, "files");
-      fs.mkdirSync(filesDir, { recursive: true });
-
-      // Save all uploaded files
-      const uploadedFiles = [];
-      for (const f of allFiles) {
-        const dest = path.join(filesDir, f.filename);
-        fs.writeFileSync(dest, f.data);
-        uploadedFiles.push({
-          field: f.field,
-          filename: f.filename,
-          local_path: dest,
-          size: f.data.length,
-        });
-      }
-
-      // Build submission metadata
-      const submission = {
-        form_step: formStep,
-        timestamp: new Date().toISOString(),
-        fields: { ...fields },
-        files: uploadedFiles,
-      };
-
-      // Save submission.json
-      fs.writeFileSync(
-        path.join(jobDir, "submission.json"),
-        JSON.stringify(submission, null, 2),
-      );
-
-      console.log(`[portal] Job ${jobId}: ${uploadedFiles.length} files from ${fields.project_name || "anonymous"}`);
-
-      // Spawn portal-processor.py (non-blocking)
-      // Read OAuth from env or fallback to file (for zero-redeploy injection)
-      let oauthJson = process.env.GOOGLE_DRIVE_OAUTH || "";
-      if (!oauthJson) {
-        try { oauthJson = fs.readFileSync("/tmp/.drive_oauth.json", "utf-8").trim(); } catch (e) {}
-      }
-      const subFolderId = process.env.SUBMISSIONS_FOLDER_ID || "1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO";
-      spawn("python3", [
-        path.join(__dirname, "portal-processor.py"), "--job-dir", jobDir,
-        "--oauth", oauthJson,
-        "--folder-id", subFolderId,
-      ], { stdio: "inherit", env: process.env });
-
-      // Send Telegram notification (non-blocking, direct API call)
-      const projectName = fields.project_name || "Unnamed";
-      const formType = formStep === "data_upload" ? "Data Upload" : "Project Setup";
-      const notifyMsg = `📋 New portal submission: ${formType} from "${projectName}" — ${uploadedFiles.length} file(s). Job: ${jobId}`;
-      // Read creds from env or fallback to files (for zero-redeploy injection)
-      let tgToken = process.env.TELEGRAM_BOT_TOKEN || "";
-      let tgChatId = process.env.TELEGRAM_CHAT_ID || "";
-      if (!tgToken || !tgChatId) {
-        try {
-          if (!tgToken) tgToken = fs.readFileSync("/tmp/.tg_token", "utf-8").trim();
-          if (!tgChatId) tgChatId = fs.readFileSync("/tmp/.tg_chat_id", "utf-8").trim();
-        } catch (e) {}
-      }
-      if (tgToken && tgChatId) {
-        const postData = JSON.stringify({ chat_id: tgChatId, text: notifyMsg });
-        const req = https.request({
-          hostname: "api.telegram.org",
-          path: `/bot${tgToken}/sendMessage`,
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(postData) },
-        }, (res) => {
-          let body = "";
-          res.on("data", (c) => { body += c; });
-          res.on("end", () => { console.log(`[portal] Telegram notification: ${res.statusCode} ${body.slice(0, 80)}`); });
-        });
-        req.on("error", (e) => { console.log(`[portal] Telegram error: ${e.message}`); });
-        req.write(postData);
-        req.end();
-      } else {
-        console.log("[portal] Telegram credentials not available — skipping notification");
-      }
-
-      // Respond to client
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        status: "submitted",
-        job_id: jobId,
-        form_step: formStep,
-        files: uploadedFiles.length,
-        message: `Thank you! Your ${formStep === "project_setup" ? "project details" : "data upload"} have been received.`,
-      }));
+    if (files.length === 0) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "No .spc files found in upload" }));
       return;
     }
 

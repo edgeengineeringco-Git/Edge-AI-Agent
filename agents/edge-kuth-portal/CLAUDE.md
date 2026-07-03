@@ -15,14 +15,18 @@ This agent processes gamma-ray spectral analysis jobs (K/U/Th estimation from .s
 - `edge-kuth-portal/workflow-config.json` — Workflow configuration document detailing CLI args, energy calibration, reference lines, ROI integration, PAD specs, composition matrix, spectral unmixing, and processing pipeline steps
 - `docker-compose.custom.yml` — Upload-server service definition (node:22-alpine, port 3001, Traefik at `/edge-kuth/upload-page`)
 
-## Pipeline Flow
+## Intake Forms (separate system)
 
-1. Client submits form at `https://senanaghdam-ai.github.io/Kuth-tools/` (GitHub Pages)
-2. Form POSTs multipart data to thepopebot's upload server at `/edge-kuth/upload-page`
-3. Upload server saves .spc files and metadata to `edge-kuth-portal/jobs/{job_id}/`
-4. Upload server forwards job metadata to event-handler at `/edge-kuth/upload`
-5. TRIGGERS.json fires the `agents/edge-kuth-portal` agent
-6. Agent runs estimation, sends results via Telegram (agent-job-dm skill)
+**The client intake forms (project setup + data upload) have been moved to `/intake-portal/`.**
+They are completely separate from the K/U/Th pipeline. They run on GitHub Pages + Google Apps Script.
+
+## K/U/Th Pipeline Flow
+
+1. Client visits `/edge-kuth/upload-page` (served by `upload-server.mjs`) and uploads `.spc` files.
+2. Upload server saves files to `edge-kuth-portal/jobs/{job_id}/spectra/`.
+3. Upload server triggers event-handler webhook at `/edge-kuth/upload`.
+4. TRIGGERS.json fires the `agents/edge-kuth-portal` agent.
+5. Agent runs estimation via `handle-upload.sh`, sends results via Telegram (agent-job-dm skill).
 
 ## Dependencies
 

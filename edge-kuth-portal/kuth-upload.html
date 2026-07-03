@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EDGE K/U/Th Portal – Upload Spectra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green-700: #1b4332; --green-600: #2d6a4f; --green-500: #40916c;
+      --green-100: #d8f3dc; --green-50: #f0faf3;
+      --blue-700: #1e3a5f; --blue-500: #2a6cb0;
+      --ink: #101828; --ink-soft: #344054; --ink-muted: #667085;
+      --line: #d0d5dd; --surface: #f9fafb; --white: #ffffff;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(16,24,40,0.08);
+      --shadow-pop: 0 12px 24px -8px rgba(16,24,40,0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Inter",sans-serif;
+      background: var(--surface); color: var(--ink); line-height: 1.55;
+      min-height: 100vh;
+      background: linear-gradient(180deg, var(--green-700) 0%, var(--blue-700) 30%, var(--surface) 55%);
+    }
+    main { max-width: 560px; margin: 0 auto; padding: 48px 20px 64px; }
+    .logo {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.12); color: var(--white);
+      padding: 6px 16px; border-radius: 100px; font-size: 0.85rem; font-weight: 600;
+      margin-bottom: 28px;
+    }
+    .logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-100); }
+    h1 { margin: 0 0 6px; font-size: 1.6rem; color: var(--white); }
+    .sub { margin: 0 0 28px; color: rgba(255,255,255,0.8); font-size: 0.95rem; }
+    .card {
+      background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow-pop); padding: 24px 28px;
+    }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-weight: 500; font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 5px; }
+    input[type="text"], input[type="email"], input[type="password"], input[type="file"], select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+      font-size: 0.92rem; font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--green-500); box-shadow: 0 0 0 3px var(--green-100); }
+    .hint { font-size: 0.78rem; color: var(--ink-muted); margin-top: 4px; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 480px) { .settings { grid-template-columns: 1fr; } }
+    .btn {
+      background: var(--green-600); color: var(--white); border: none;
+      padding: 12px 28px; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; width: 100%; box-shadow: 0 2px 6px rgba(45,106,79,0.25);
+    }
+    .btn:hover { background: var(--green-700); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .result { display: none; margin-top: 16px; padding: 14px 16px; border-radius: 8px; font-size: 0.9rem; }
+    .result.ok { display: block; background: var(--green-50); border: 1px solid var(--green-500); color: var(--green-700); }
+    .result.err { display: block; background: #fef2f2; border: 1px solid #b42318; color: #7f1d1d; }
+    footer { text-align: center; margin-top: 32px; font-size: 0.78rem; color: var(--ink-muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo"><span class="dot"></span> EDGE GeoIntelligence</div>
+    <h1>K/U/Th Portal</h1>
+    <p class="sub">Upload gamma-ray .spc spectra for K, U, Th concentration analysis.</p>
+
+    <form class="card" id="upload-form" enctype="multipart/form-data">
+      <div class="field">
+        <label for="project">Project name</label>
+        <input type="text" id="project" name="project" placeholder="e.g. Donegal REE Survey 2026" required />
+      </div>
+      <div class="field">
+        <label for="email">Email (for results)</label>
+        <input type="email" id="email" name="email" placeholder="name@example.com" required />
+      </div>
+      <div class="field">
+        <label for="password">Access password</label>
+        <input type="password" id="password" name="password" required />
+      </div>
+      <div class="field">
+        <label for="spectra">.spc spectra files</label>
+        <input type="file" id="spectra" name="spectra" accept=".spc" multiple required />
+        <div class="hint">Select one or more .spc files. All files must be from the same survey.</div>
+      </div>
+      <div class="settings">
+        <div class="field">
+          <label for="roi_half_width">ROI half-width (keV)</label>
+          <input type="text" id="roi_half_width" name="roi_half_width" value="20" />
+        </div>
+        <div class="field">
+          <label for="normalize_live_time">Live-time norm</label>
+          <select id="normalize_live_time" name="normalize_live_time">
+            <option value="false">Raw counts</option>
+            <option value="true">Normalize by live time</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top: 8px;">
+        <button type="submit" class="btn">Upload &amp; process</button>
+      </div>
+      <div class="result" id="result"></div>
+    </form>
+
+    <footer>
+      EDGE Geointelligence · Results delivered via email and Telegram
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var btn = this.querySelector('button[type="submit"]');
+      var result = document.getElementById('result');
+      btn.disabled = true;
+      btn.textContent = 'Uploading…';
+      result.className = 'result';
+      result.textContent = '';
+
+      try {
+        var formData = new FormData(this);
+        var resp = await fetch('/edge-kuth/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        var data = await resp.json();
+        if (resp.ok && data.status === 'received') {
+          result.className = 'result ok';
+          result.innerHTML = '<strong>✓ Upload successful</strong><br>Job ID: <code>' + data.job_id + '</code><br>' + data.files + ' file(s) queued for processing.<br>Results will be emailed to ' + (document.getElementById('email').value || 'the registered address') + '.';
+          this.reset();
+        } else {
+          result.className = 'result err';
+          result.textContent = (data.error || 'Upload failed') + ' — please try again.';
+        }
+      } catch (err) {
+        result.className = 'result err';
+        result.textContent = 'Network error: ' + err.message;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Upload & process';
+    });
+  </script>
+</body>
+</html>
