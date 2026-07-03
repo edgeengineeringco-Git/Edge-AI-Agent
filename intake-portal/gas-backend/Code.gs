@@ -22,8 +22,8 @@ var CONFIG = {
   // Your Drive folder (pre-filled)
   TARGET_FOLDER_ID: '1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO',
 
-  // Leave empty — the script will auto-create a Sheet on first run
-  SHEET_ID: '',
+  // Your existing Sheet — data will be logged here
+  SHEET_ID: '1YkQyyYkaLQUmauiGMVYpfxEauSI17t4l',
 
   // Sheet tab name
   SHEET_TAB_NAME: 'Submissions',
@@ -155,33 +155,18 @@ function processSubmission(data) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function getOrCreateSheet() {
-  // If we already have a stored Sheet ID, use it
-  var props = PropertiesService.getScriptProperties();
-  var storedId = props.getProperty('SHEET_ID');
-
-  if (storedId) {
-    try {
-      return SpreadsheetApp.openById(storedId);
-    } catch (e) {
-      // Stored ID invalid, fall through to create new
-    }
-  }
-
-  // If CONFIG.SHEET_ID is set, try that first
+  // Use the configured Sheet ID directly
   if (CONFIG.SHEET_ID) {
     try {
-      var ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-      props.setProperty('SHEET_ID', CONFIG.SHEET_ID);
-      return ss;
+      return SpreadsheetApp.openById(CONFIG.SHEET_ID);
     } catch (e) {
-      // Invalid ID, fall through to create new
+      Logger.log('Configured Sheet ID invalid, will create new: ' + e);
     }
   }
 
   // Create a new Sheet inside the target Drive folder
   var ss = SpreadsheetApp.create('EDGE_Intake_Log');
   var newId = ss.getId();
-  props.setProperty('SHEET_ID', newId);
 
   // Move from root into the target folder
   var targetFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
@@ -265,6 +250,48 @@ function generateSummaryHtml(fields, files, ts, projectName, folderUrl) {
     '</div>';
   }
 
+  function section(title, content) {
+    return '<div class="card"><h2>' + escapeHtml(title) + '</h2>' + content + '</div>';
+  }
+
+  // Build services display
+  var servicesHtml = '';
+  if (fields.services) {
+    var svcList = fields.services.split(',');
+    servicesHtml = '<ul style="margin:0;padding-left:18px;font-size:0.92rem;color:#101828">';
+    for (var s = 0; s < svcList.length; s++) {
+      servicesHtml += '<li>' + escapeHtml(svcList[s].trim()) + '</li>';
+    }
+    servicesHtml += '</ul>';
+  }
+
+  var contactContent =
+    field('Name', fields.contact_name) +
+    field('Email', fields.email) +
+    field('Organisation', fields.organisation) +
+    field('Phone', fields.phone);
+
+  var projectContent =
+    field('Project Name', fields.project_name) +
+    field('Description', fields.project_description) +
+    field('Calculated Area', fields.calculated_area) +
+    field('Country / Region', fields.country) +
+    field('Start Date', fields.start_date);
+
+  var servicesContent = servicesHtml || '<p style="color:#667085;font-size:0.9rem">No services selected</p>';
+
+  var detectorContent =
+    field('Detector Type', fields.detector_type) +
+    field('Detector Model', fields.detector_model) +
+    field('Scintillator Size', fields.scintillator_size) +
+    field('GPS Accuracy', fields.gps_accuracy);
+
+  var otherContent =
+    field('Referral / How did you hear about us?', fields.referral) +
+    field('Confirmation', fields.confirmation === 'confirmed' ? 'Confirmed' : 'Pending');
+
+  var notesContent = '<p style="white-space:pre-wrap;margin:0;font-size:0.9rem">' + escapeHtml(fields.additional_notes || 'No additional notes') + '</p>';
+
   return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>EDGE Portal — ' + escapeHtml(projectName) + '</title>' +
     '<style>*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,sans-serif;background:#f9fafb;color:#101828;line-height:1.6}' +
@@ -281,18 +308,13 @@ function generateSummaryHtml(fields, files, ts, projectName, folderUrl) {
     '<p>' + escapeHtml(fields.organisation || '') + ' &middot; ' + ts.toISOString() + '</p>' +
     '<p><a href="' + folderUrl + '" style="color:#d8f3dc">View Drive Folder</a></p></div>' +
     '<main>' +
-    '<div class="card"><h2>Contact</h2>' +
-      field('Name', fields.contact_name) +
-      field('Email', fields.email) +
-      field('Organisation', fields.organisation) +
-      field('Description', fields.project_description) + '</div>' +
-    '<div class="card"><h2>Area of Interest</h2>' +
-      field('Calculated Area', fields.calculated_area) +
-      field('Country / Region', fields.country) + '</div>' +
-    (files.length > 0 ? '<div class="card"><h2>Uploaded Files (' + files.length + ')</h2>' +
-      '<table><thead><tr><th>File</th><th>Size</th></tr></thead><tbody>' + fileRows + '</tbody></table></div>' : '') +
-    (fields.additional_notes ? '<div class="card"><h2>Additional Notes</h2>' +
-      '<p style="white-space:pre-wrap;margin:0;font-size:0.9rem">' + escapeHtml(fields.additional_notes) + '</p></div>' : '') +
+    section('Contact', contactContent) +
+    section('Project Details', projectContent) +
+    section('Services Requested', servicesContent) +
+    section('Equipment Details', detectorContent) +
+    section('Other Information', otherContent) +
+    (files.length > 0 ? section('Uploaded Files (' + files.length + ')', '<table><thead><tr><th>File</th><th>Size</th></tr></thead><tbody>' + fileRows + '</tbody></table>') : '') +
+    section('Additional Notes', notesContent) +
     '<div class="footer">EDGE GeoIntelligence &middot; Processed ' + ts.toISOString() + '</div>' +
     '</main></body></html>';
 }
