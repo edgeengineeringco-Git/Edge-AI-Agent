@@ -18,12 +18,10 @@
 
 var CONFIG = {
   // Google Drive folder ID where submission sub-folders will be created
-  // To get the ID: open the folder in Drive, the URL contains /folders/ID
-  TARGET_FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID_HERE',
+  TARGET_FOLDER_ID: '1iqhbAZOqb1G-vV8658Ih2bqXzyeU4puO',
 
   // Google Sheet ID for the submission log
-  // To get the ID: open the sheet, the URL contains /spreadsheets/d/ID
-  SHEET_ID: 'YOUR_SHEET_ID_HERE',
+  SHEET_ID: '1YkQyyYkaLQUmauiGMVYpfxEauSI17t4l',
 
   // Sheet tab name (will be created if it doesn't exist)
   SHEET_TAB_NAME: 'Submissions',
