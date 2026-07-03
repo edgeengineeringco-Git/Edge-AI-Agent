@@ -161,49 +161,61 @@ agents/geosync-expert/
 
 ## Skills
 
-### edge-kuth-analysis
+### Geochemical Analysis
+| Skill | What it does |
+|---|---|
+| **geochem-qc** | Validate CSV data (structure, CRM recovery, duplicate RPD, range bounds, IQR outliers) → PASS / CONDITIONAL / FAIL |
+| **geochem-anomaly** | DBSCAN spatial clustering + deposit-type classification (carbonatite / IAC / hydrothermal HREE / placer monazite) |
+| **geochem-resource** | Tonnage, contained TREO/CREO, JORC-aligned confidence tier, economic status + 3-axis risk matrix |
+| **geochem-pipeline** | End-to-end processing: moisture/matrix correction, TREO/HREO/CREO, CSV + JSON summary, HTML report |
+| **geochem-exploration** | Sampling best practices, grid spacing, field QA checklist, continue vs. cease decision criteria |
+| **ore-grade** | Ore grade economic assessment — confidence verification, uncertainty, cut-off grade, HREE premium, JORC classification |
+| **spectral-interpret** | Gamma + pXRF spectral interpretation — QC, background stats, REE patterns, chondrite normalization, Ce/Eu anomalies |
+| **critical-minerals-ref** | Reference tables — REE, Li, Co, Cu, Ni, W element data, deposit-type TREO ranges, pathfinder elements, cut-off grades |
+| **ree-database** | Comprehensive REE reference — 17-element data, market prices, global production/reserves, processing technologies, magnet specs, demand scenarios |
+| **hydro-geochem** | Water sampling, hydrogeochemistry, REE in natural waters, isotope geochemistry, environmental baseline, AMD potential |
 
-K/U/Th spectral analysis skill. Any agent can invoke this skill for instructions on running the estimation engine. See `skills-library/edge-kuth-analysis/SKILL.md` for details.
+### Geostatistics & 3D Modeling
+| Skill | What it does |
+|---|---|
+| **geostatistics-kriging** | Variography, ordinary/simple/block kriging, 3D block modeling, uncertainty quantification, JORC confidence from kriging variance |
+| **geophysics-gravity-mag** | Magnetic data processing (RTP, upward continuation, analytic signal), gravity, radiometrics, integration with geochemistry |
+| **structural-geology** | Fault/lineament interpretation, fold analysis, stereonet analysis, drill core structural logging, 3D structural framework |
+| **satellite-imagery** | Sentinel-2/ASTER/Landsat processing, band ratios, alteration indices, principal component analysis, automated target generation |
 
-### geochem-qc
+### Machine Learning & Prediction
+| Skill | What it does |
+|---|---|
+| **ml-deposit-prediction** | Binary/multi-class deposit classification, grade regression, anomaly detection, uncertainty quantification, feature engineering for REE |
+| **rock-mineral-id** | Computer vision for rock/mineral identification, thin section analysis, pXRF + vision fusion for mineral ID |
 
-Automated QC validation for geochemical CSV data. Returns PASS / CONDITIONAL / FAIL based on structure, CRM recovery, duplicate RPD, range bounds, and IQR outlier detection. See `skills-library/geochem-qc/SKILL.md`.
+### Data & Infrastructure
+| Skill | What it does |
+|---|---|
+| **database-geospatial** | PostGIS/SpatiaLite schema design, spatial queries, data ingestion pipelines, CRS management |
+| **api-gateway** | FastAPI REST endpoints for data ingestion, processing, queries, webhooks, auth, rate limiting |
+| **field-data-collection** | Mobile data collection workflows, GPS integration, sample chain of custody, real-time sync |
+| **core-logging** | Digital core logging templates, lithology/alteration codes, photo analysis, core-geochemistry integration |
+| **collaboration-workflow** | Multi-user role-based access, workflow states (DRAFT → OFFICIAL), audit trails, digital signatures |
+| **tenement-management** | License tracking, compliance deadlines, work program obligations, expenditure tracking, automated alerts |
 
-### geochem-anomaly
+### Economics & Intelligence
+| Skill | What it does |
+|---|---|
+| **project-economics** | NPV modeling, basket price calculation, cut-off grade optimization (Lane's algorithm), sensitivity analysis, capex/opex |
+| **web-search-intel** | Live web search, commodity price fetching, patent monitoring, RSS aggregation, automated intelligence reports |
+| **regulatory-compliance** | JORC 2012, NI 43-101, SAMREC compliance checklists, safe reporting language, CP requirements |
 
-Spatial anomaly clustering (DBSCAN, median + 3×MAD threshold) and deposit-type classification (carbonatite / ion-adsorption clay / hydrothermal HREE / placer monazite) from REE patterns. See `skills-library/geochem-anomaly/SKILL.md`.
-
-### geochem-resource
-
-Quick resource estimation (tonnage, contained TREO/CREO, JORC-aligned confidence tier, economic status) and geological/analytical/economic risk matrix with recommendations. See `skills-library/geochem-resource/SKILL.md`.
-
-### geochem-pipeline
-
-End-to-end geochemical processing — moisture/matrix correction, TREO/HREO/CREO computation, CSV + JSON summary output, and HTML report generation via Jinja2. See `skills-library/geochem-pipeline/SKILL.md`.
-
-### critical-minerals-ref
-
-Pure reference — REE element tables, deposit-type TREO ranges, pathfinder elements, Li/Co/Cu/Ni/W occurrence patterns and cut-off grades, multi-commodity associations. See `skills-library/critical-minerals-ref/SKILL.md`.
-
-### geochem-exploration
-
-Pure reference — sampling best practices, grid spacing guidelines, field QA/QC checklist, and continue vs. cease decision criteria. See `skills-library/geochem-exploration/SKILL.md`.
-
-### drone-survey
-
-Aerial survey planning and interpretation for REE and critical minerals — platform selection (multirotor / fixed-wing / hybrid VTOL), sensor specs (gamma / pXRF / hyperspectral / LiDAR), flight grid design, weather constraints, cost analysis, data processing workflows, regulatory framework, and troubleshooting. See `skills-library/drone-survey/SKILL.md`.
-
-### ore-grade
-
-Ore grade economic assessment — confidence tier verification, uncertainty ranges, tonnage and contained metal, cut-off grade assessment with HREE premium, JORC-aligned resource classification, 3-axis risk matrix, and regulation-safe reporting language. See `skills-library/ore-grade/SKILL.md`.
-
-### ree-database
-
-Comprehensive REE reference — full 17-element lanthanide data (crustal abundance, ionic radii, electron configuration, magnetic properties, redox chemistry), market prices and correlations, global production and reserve statistics, processing and separation technologies, substitutability matrix, magnet specifications, environmental radioactivity, and 2025–2035 demand scenarios. See `skills-library/ree-database/SKILL.md`.
-
-### spectral-interpret
-
-Gamma-ray and pXRF spectral interpretation — data quality assessment, background characterization, REE pattern analysis, chondrite normalization, Ce/Eu anomaly interpretation, deposit-type fingerprinting, and radiometric ratio analysis (Th/U, F-parameter). See `skills-library/spectral-interpret/SKILL.md`.
+### Platform & Integration
+| Skill | What it does |
+|---|---|
+| **agent-job-background** | Spawn or check long-running background agent jobs (launches Docker containers, opens PRs when done) |
+| **agent-job-dm** | Send direct messages or broadcast to all subscribed admins via Telegram |
+| **agent-job-secrets** | List and retrieve agent job secrets, API keys, and auto-refreshed OAuth credentials |
+| **google-drive-upload** | Upload files to Google Drive using OAuth refresh token auth |
+| **playwright-cli** | Automate browser interactions, test web pages, and work with Playwright tests |
+| **drone-survey** | Aerial survey planning — platform/sensor selection, flight grid design, weather constraints, cost analysis, processing workflows |
+| **edge-kuth-analysis** | K/U/Th spectral analysis skill — instructions for running the gamma-ray estimation engine |
 
 ## Security Note
 

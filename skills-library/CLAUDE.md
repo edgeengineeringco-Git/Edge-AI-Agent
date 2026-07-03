@@ -145,17 +145,50 @@ Always build AND test a skill in the same job. Tell the agent to test with real 
 
 Bundled in this directory and activated by default on first install:
 
+**Platform & Integration**
 - `agent-job-secrets` — list/get agent-job secrets and OAuth credentials
 - `agent-job-dm` — list users + send DMs/broadcasts via the recipient's default channel
 - `agent-job-background` — spawn/check background agent jobs (defaults `--user-id` to the running container's `USER_ID`)
 - `playwright-cli` — browser automation via Playwright CLI
+- `google-drive-upload` — upload files to Google Drive using OAuth refresh token auth
+
+**Geochemical Analysis**
 - `geochem-qc` — automated QC validation for geochemical CSV data (PASS/CONDITIONAL/FAIL)
 - `geochem-anomaly` — DBSCAN spatial clustering + deposit-type classification from REE patterns
 - `geochem-resource` — tonnage / contained metal / risk matrix for anomaly clusters
 - `geochem-pipeline` — end-to-end processing (TREO, HREO:TREO) + HTML report rendering
-- `critical-minerals-ref` — reference tables for REE, Li, Co, Cu, Ni, W deposit types and thresholds
 - `geochem-exploration` — sampling, grid spacing, field QA, continue/cease decision criteria
-- `drone-survey` — aerial survey planning (platforms, sensors, grids, cost, regulation, processing)
 - `ore-grade` — ore grade economic assessment (confidence, cut-off, HREE premium, JORC classification)
-- `ree-database` — comprehensive 17-element REE reference (market, processing, reserves, demand scenarios)
 - `spectral-interpret` — gamma + pXRF spectral interpretation (REE patterns, Ce/Eu anomalies, fingerprinting)
+- `hydro-geochem` — water sampling, hydrogeochemistry, isotope geochemistry, environmental baseline
+
+**Reference & Data**
+- `critical-minerals-ref` — reference tables for REE, Li, Co, Cu, Ni, W deposit types and thresholds
+- `ree-database` — comprehensive 17-element REE reference (market, processing, reserves, demand scenarios)
+- `regulatory-compliance` — JORC 2012, NI 43-101, SAMREC compliance checklists and safe reporting language
+
+**Geostatistics & Modeling**
+- `geostatistics-kriging` — variography, ordinary/block kriging, 3D block modeling, uncertainty quantification
+- `geophysics-gravity-mag` — magnetic data processing (RTP, upward continuation, analytic signal), gravity, radiometrics
+- `structural-geology` — fault/lineament interpretation, stereonet analysis, core structural logging
+- `satellite-imagery` — Sentinel-2/ASTER/Landsat processing, alteration indices, automated target generation
+
+**Machine Learning & Computer Vision**
+- `ml-deposit-prediction` — binary/multi-class deposit classification, grade regression, anomaly detection
+- `rock-mineral-id` — computer vision for rock/mineral identification, thin section analysis
+
+**Data & Infrastructure**
+- `database-geospatial` — PostGIS/SpatiaLite schema design, spatial queries, ingestion pipelines
+- `api-gateway` — FastAPI REST endpoints for data ingestion, processing, queries, webhooks
+- `field-data-collection` — mobile data collection workflows, GPS integration, chain of custody
+- `core-logging` — digital core logging templates, lithology/alteration codes, photo analysis
+- `collaboration-workflow` — multi-user role-based access, workflow states, audit trails
+- `tenement-management` — license tracking, compliance deadlines, expenditure tracking
+
+**Economics & Intelligence**
+- `project-economics` — NPV modeling, basket price calculation, cut-off grade optimization, sensitivity analysis
+- `web-search-intel` — live web search, commodity prices, patent monitoring, RSS aggregation
+
+**Aerial & Remote Sensing**
+- `drone-survey` — aerial survey planning (platforms, sensors, grids, cost, regulation, processing)
+- `edge-kuth-analysis` — K/U/Th spectral analysis skill for gamma-ray estimation engine
