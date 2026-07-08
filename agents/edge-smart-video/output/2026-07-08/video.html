@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDGE | Workshop: Automating geotechnical reports with n8n</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #f0f4f0;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.player {
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16/9;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow:
+        0 0 0 1px rgba(26, 122, 58, 0.1),
+        0 30px 80px rgba(0, 0, 0, 0.6);
+    z-index: 1;
+}
+
+/* Progress bar */
+.progress-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(0,0,0,0.04);
+    z-index: 100;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1a7a3a, #145c2d);
+    transition: width 0.1s linear;
+    width: 0%;
+}
+
+/* Slides */
+.slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: scale(0.97);
+    padding: 60px 80px;
+}
+.slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Brand watermark */
+.brand-watermark {
+    position: absolute;
+    top: 24px;
+    left: 32px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.brand-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #1a7a3a;
+}
+.brand-name {
+    color: #1a7a3a;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+/* Title slide */
+.slide-title {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.slide-title .sector-tag {
+    color: #1a7a3a;
+    font-size: clamp(12px, 1.4vw, 18px);
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+}
+.slide-title h1 {
+    color: #1e293b;
+    font-size: clamp(28px, 4vw, 56px);
+    font-weight: 800;
+    line-height: 1.15;
+    max-width: 800px;
+    margin: 0 auto 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s forwards;
+}
+.slide-title .subtitle {
+    color: #64748b;
+    font-size: clamp(14px, 1.5vw, 22px);
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s forwards;
+}
+.slide-title .tagline-bar {
+    margin-top: 32px;
+    width: 60px;
+    height: 2px;
+    background: #1a7a3a;
+    margin-left: auto;
+    margin-right: auto;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+}
+
+/* Content slide */
+.slide-content {
+    justify-content: center;
+}
+.slide-content .slide-header {
+    margin-bottom: 32px;
+}
+.slide-content .slide-number {
+    color: #1a7a3a;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 6px;
+}
+.slide-content h2 {
+    color: #1e293b;
+    font-size: clamp(22px, 2.8vw, 40px);
+    font-weight: 700;
+    line-height: 1.2;
+    position: relative;
+    padding-bottom: 16px;
+}
+.slide-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 50px;
+    height: 3px;
+    background: #1a7a3a;
+    border-radius: 2px;
+}
+.slide-content .bullets {
+    margin-top: 28px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.slide-content .bullets li {
+    color: #64748b;
+    font-size: clamp(13px, 1.3vw, 20px);
+    line-height: 1.5;
+    padding-left: 28px;
+    position: relative;
+    opacity: 0;
+    animation: fadeUp 0.4s forwards;
+}
+.slide-content .bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #1a7a3a;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+.slide-content .bullets li:nth-child(1) { animation-delay: 0.2s; }
+.slide-content .bullets li:nth-child(2) { animation-delay: 0.35s; }
+.slide-content .bullets li:nth-child(3) { animation-delay: 0.5s; }
+.slide-content .bullets li:nth-child(4) { animation-delay: 0.65s; }
+
+/* Content slide with SVG schematic */
+.slide-content.has-svg {
+    flex-direction: row;
+    align-items: center;
+    gap: 40px;
+}
+.slide-text {
+    flex: 1;
+    min-width: 0;
+}
+.slide-svg {
+    flex: 0 0 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 0.6s 0.3s forwards;
+}
+.slide-svg svg {
+    width: 100%;
+    height: auto;
+    max-height: 340px;
+    border-radius: 8px;
+}
+
+/* Background SVG for title and CTA slides */
+.slide-bg-svg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.06;
+    z-index: -1;
+    overflow: hidden;
+}
+.slide-bg-svg svg {
+    width: 80%;
+    height: 80%;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* CTA slide */
+.slide-cta {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.slide-cta h2 {
+    color: #1e293b;
+    font-size: clamp(24px, 3vw, 44px);
+    font-weight: 800;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+}
+.slide-cta .cta-url {
+    color: #1a7a3a;
+    font-size: clamp(18px, 2vw, 32px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.5s forwards;
+}
+.slide-cta .cta-sub {
+    color: #64748b;
+    font-size: clamp(11px, 1vw, 16px);
+    margin-top: 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+    opacity: 0.4;
+}
+
+/* Navigation */
+.nav {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+}
+.nav-dot.active {
+    background: #1a7a3a;
+    box-shadow: 0 0 12px rgba(26, 122, 58, 0.4);
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* Animations */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .slide { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+<div class="player" id="player" tabindex="0">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="brand-watermark">
+        <div class="brand-dot"></div>
+        <div class="brand-name">EDGE Engineers</div>
+    </div>
+    <div id="slidesContainer"></div>
+    <div class="nav" id="nav"></div>
+</div>
+
+<script>
+const slides = [{"type": "title", "headline": "Automating Geotechnical Reports with n8n", "subtitle": "Education | EDGE Engineers", "sector": "Education"}, {"type": "content", "headline": "The Challenge", "bullets": ["Engineers lose 12+ hours/week to manual report formatting", "Copy-pasting borehole logs and soil tables creates transcription risk", "Site safety decisions depend on error-free, timely data delivery"]}, {"type": "content", "headline": "The EDGE Solution", "bullets": ["n8n workflow auto-generates Word/PDF reports from raw field data", "Connects pXRF, lab CSVs, and GIS layers in under 60 seconds", "Cut reporting cycles from 3 days to 3 hours \u2014 no coding required"]}, {"type": "cta", "headline": "Ready to transform your operations?", "url": "www.edgeengineers.net", "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"}];
+const schematics = [];
+const SLIDE_DURATION = 5000;
+let current = 0;
+let timer = null;
+let progressInterval = null;
+
+function render() {
+    const container = document.getElementById('slidesContainer');
+    const nav = document.getElementById('nav');
+    container.innerHTML = '';
+    nav.innerHTML = '';
+
+    slides.forEach((slide, i) => {
+        const div = document.createElement('div');
+        div.className = 'slide' + (i === current ? ' active' : '');
+
+        const svgData = schematics && schematics[i] && schematics[i].svg;
+
+        if (slide.type === 'title') {
+            div.className += ' slide-title' + (svgData ? ' has-bg-svg' : '');
+            div.innerHTML = `
+                ${svgData ? `<div class="slide-bg-svg">${svgData}</div>` : ''}
+                <div class="sector-tag">${slide.sector || 'Education'}</div>
+                <h1>${slide.headline}</h1>
+                ${slide.subtitle ? `<div class="subtitle">${slide.subtitle}</div>` : ''}
+                <div class="tagline-bar"></div>
+            `;
+        } else if (slide.type === 'cta') {
+            div.className += ' slide-cta' + (svgData ? ' has-bg-svg' : '');
+            div.innerHTML = `
+                ${svgData ? `<div class="slide-bg-svg">${svgData}</div>` : ''}
+                <h2>${slide.headline}</h2>
+                <div class="cta-url">${slide.url || 'www.edgeengineers.net'}</div>
+                ${slide.subtitle ? `<div class="cta-sub">${slide.subtitle}</div>` : ''}
+            `;
+        } else {
+            div.className += ' slide-content' + (svgData ? ' has-svg' : '');
+            const bullets = (slide.bullets || []).map(b => `<li>${b}</li>`).join('');
+            div.innerHTML = `
+                <div class="slide-text">
+                    <div class="slide-header">
+                        <div class="slide-number">${slide.number || (i + 1)} / ${slides.length}</div>
+                        <h2>${slide.headline}</h2>
+                    </div>
+                    ${bullets ? `<ul class="bullets">${bullets}</ul>` : ''}
+                </div>
+                ${svgData ? `<div class="slide-svg">${svgData}</div>` : ''}
+            `;
+        }
+
+        container.appendChild(div);
+
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot' + (i === current ? ' active' : '');
+        dot.onclick = () => goTo(i);
+        nav.appendChild(dot);
+    });
+}
+
+function goTo(i) {
+    current = i;
+    render();
+    resetTimer();
+}
+
+function next() {
+    current = (current + 1) % slides.length;
+    render();
+    resetTimer();
+}
+
+function resetTimer() {
+    if (timer) clearInterval(timer);
+    if (progressInterval) clearInterval(progressInterval);
+    timer = setInterval(next, SLIDE_DURATION);
+    updateProgress();
+}
+
+function updateProgress() {
+    const bar = document.getElementById('progressFill');
+    let start = Date.now();
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const pct = Math.min((elapsed / SLIDE_DURATION) * 100, 100);
+        bar.style.width = pct + '%';
+    }, 50);
+}
+
+// Keyboard controls
+document.getElementById('player').onkeydown = (e) => {
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft') goTo((current - 1 + slides.length) % slides.length);
+};
+
+render();
+resetTimer();
+</script>
+</body>
+</html>

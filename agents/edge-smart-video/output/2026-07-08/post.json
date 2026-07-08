@@ -1,0 +1,6 @@
+{
+  "id": "5",
+  "topic": "Workshop: Automating geotechnical reports with n8n",
+  "sector": "Education",
+  "post_text": "Most geotechnical firms lose 12+ hours per week to report formatting alone.\n\nWe just ran a hands-on workshop showing engineers how to reclaim that time — using n8n to auto-generate borehole logs, soil classification tables, and summary memos directly from raw field data.\n\nNo coding required. The workflow connects your pXRF outputs, lab CSVs, and GIS layers into formatted Word/PDF reports in under 60 seconds. One attendee cut their reporting cycle from 3 days to 3 hours.\n\nIf your team is still copy-pasting tables by hand, you're not just slow — you're exposed to transcription errors that creep into site safety decisions.\n\nAutomation isn't the future of geotech. It's the standard.\n\nwww.edgeengineers.net\n\n#GeotechnicalEngineering #WorkflowAutomation #CivilEngineering #EdgeEngineers"
+}

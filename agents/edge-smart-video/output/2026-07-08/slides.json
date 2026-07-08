@@ -1,0 +1,32 @@
+[
+  {
+    "type": "title",
+    "headline": "Automating Geotechnical Reports with n8n",
+    "subtitle": "Education | EDGE Engineers",
+    "sector": "Education"
+  },
+  {
+    "type": "content",
+    "headline": "The Challenge",
+    "bullets": [
+      "Engineers lose 12+ hours/week to manual report formatting",
+      "Copy-pasting borehole logs and soil tables creates transcription risk",
+      "Site safety decisions depend on error-free, timely data delivery"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution",
+    "bullets": [
+      "n8n workflow auto-generates Word/PDF reports from raw field data",
+      "Connects pXRF, lab CSVs, and GIS layers in under 60 seconds",
+      "Cut reporting cycles from 3 days to 3 hours \u2014 no coding required"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to transform your operations?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
