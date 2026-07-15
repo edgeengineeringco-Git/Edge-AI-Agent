@@ -1,0 +1,32 @@
+[
+  {
+    "type": "title",
+    "headline": "LiDAR-Assisted Landslide Detection",
+    "subtitle": "Geo-engineering | EDGE Engineers",
+    "sector": "Geo-engineering"
+  },
+  {
+    "type": "content",
+    "headline": "The Challenge",
+    "bullets": [
+      "Road corridors lose \u20ac2.3B annually to undetected landslide damage",
+      "Traditional ground surveys miss early deformation signals",
+      "Reactive repairs cause unplanned closures and spiralling costs"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution",
+    "bullets": [
+      "Aerial LiDAR detects millimetre-scale ground deformation at corridor scale",
+      "60% faster hazard mapping vs. conventional survey methods",
+      "Integrated GIS delivery \u2014 zero disruption to existing workflows"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to transform your corridor monitoring?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
