@@ -159,3 +159,4 @@ Bundled in this directory and activated by default on first install:
 - `ore-grade` — ore grade economic assessment (confidence, cut-off, HREE premium, JORC classification)
 - `ree-database` — comprehensive 17-element REE reference (market, processing, reserves, demand scenarios)
 - `spectral-interpret` — gamma + pXRF spectral interpretation (REE patterns, Ce/Eu anomalies, fingerprinting)
+- `samd-eu-mdr` — SaMD EU MDR compliance (classification, technical documentation, ISO 14971, IEC 62304, ISO 13485, clinical evaluation, EUDAMED)

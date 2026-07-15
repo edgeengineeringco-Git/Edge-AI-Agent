@@ -80,6 +80,17 @@ GeoSync Expert — geochemical survey processing pipeline for REE prospecting. P
 - **System prompt:** `agents/geosync-expert/SYSTEM.md`
 - **Skills:** Inherits all 10 root geoscience skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration, drone-survey, ore-grade, ree-database, spectral-interpret)
 
+### samd-compliance-eu
+
+SaMD EU MDR Compliance Agent — transforms wellness applications into compliant Software as a Medical Device under EU MDR 2017/745. Covers classification, technical documentation, risk management, software lifecycle, QMS gaps, clinical evaluation, and EUDAMED registration.
+
+- **Scope:** `agents/samd-compliance-eu`
+- **System prompt:** `agents/samd-compliance-eu/SYSTEM.md`
+- **Job:** `agents/samd-compliance-eu/jobs/compliance-audit.md`
+- **Skill:** `samd-eu-mdr`
+- **Current focus:** Glucose monitoring + weight-loss insights → Class IIa SaMD
+- **Output:** Regulatory documentation written to `agents/samd-compliance-eu/output/`
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.

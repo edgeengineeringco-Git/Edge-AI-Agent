@@ -159,6 +159,27 @@ agents/geosync-expert/
 └── (data + reports written to data/ and reports/ at repo root)
 ```
 
+### samd-compliance-eu
+
+**SaMD EU MDR Compliance Agent** — transforms wellness applications into compliant Software as a Medical Device under EU MDR 2017/745. Specialises in classification, technical documentation, risk management (ISO 14971), software lifecycle (IEC 62304), QMS gap analysis (ISO 13485), clinical evaluation, and EUDAMED registration.
+
+- **Scope:** `agents/samd-compliance-eu`
+- **System prompt:** `agents/samd-compliance-eu/SYSTEM.md`
+- **Jobs:** `agents/samd-compliance-eu/jobs/compliance-audit.md`
+- **Skill:** `samd-eu-mdr`
+- **Current focus:** Glucose fluctuation monitoring + personalised weight-loss insights → Class IIa SaMD
+- **Output:** Regulatory documentation, gap analysis reports, and compliance roadmaps written to `agents/samd-compliance-eu/output/`
+
+```
+agents/samd-compliance-eu/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── compliance-audit.md
+└── output/
+    └── YYYY-MM-DD-mdr-gap-analysis.md
+```
+
 ## Skills
 
 ### edge-kuth-analysis
@@ -204,6 +225,10 @@ Comprehensive REE reference — full 17-element lanthanide data (crustal abundan
 ### spectral-interpret
 
 Gamma-ray and pXRF spectral interpretation — data quality assessment, background characterization, REE pattern analysis, chondrite normalization, Ce/Eu anomaly interpretation, deposit-type fingerprinting, and radiometric ratio analysis (Th/U, F-parameter). See `skills-library/spectral-interpret/SKILL.md`.
+
+### samd-eu-mdr
+
+SaMD EU MDR compliance skill. Covers MDR 2017/745 classification (Rule 11), technical documentation (Annex III), risk management (ISO 14971), software lifecycle (IEC 62304), clinical evaluation, QMS gap analysis (ISO 13485), EUDAMED registration, UDI allocation, and post-market surveillance. Includes document templates and a 12-month compliance roadmap. See `skills-library/samd-eu-mdr/SKILL.md`.
 
 ## Security Note
 
