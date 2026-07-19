@@ -51,8 +51,10 @@ model_list:
       api_key: ${AIHUBMIX_API_KEY}
       api_base: https://aihubmix.com/v1
 
-  - model_name: aihubmix-gemma-2-9b
-    litellm_params:
-      model: openai/google/gemma-2-9b-it:free
-      api_key: ${AIHUBMIX_API_KEY}
-      api_base: https://aihubmix.com/v1
+  # Note: google/gemma-2-9b-it:free was not listed by AIHubMix for this key.
+  # Uncomment and adjust if it becomes available:
+  # - model_name: aihubmix-gemma-2-9b
+  #   litellm_params:
+  #     model: openai/google/gemma-2-9b-it:free
+  #     api_key: ${AIHUBMIX_API_KEY}
+  #     api_base: https://aihubmix.com/v1
