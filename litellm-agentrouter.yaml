@@ -1,0 +1,33 @@
+# AgentRouter LiteLLM Config Snippet
+# Paste these entries into event-handler/litellm/main.yaml under the model_list: array
+# Requires AGENTROUTER_API_KEY in your .env file
+
+  - model_name: claude-opus-4-8
+    litellm_params:
+      model: openai/claude-opus-4-8
+      api_key: ${AGENTROUTER_API_KEY}
+      api_base: https://agentrouter.org/v1
+
+  - model_name: claude-opus-4-7
+    litellm_params:
+      model: openai/claude-opus-4-7
+      api_key: ${AGENTROUTER_API_KEY}
+      api_base: https://agentrouter.org/v1
+
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: openai/claude-opus-4-6
+      api_key: ${AGENTROUTER_API_KEY}
+      api_base: https://agentrouter.org/v1
+
+  - model_name: gpt-5.5
+    litellm_params:
+      model: openai/gpt-5.5
+      api_key: ${AGENTROUTER_API_KEY}
+      api_base: https://agentrouter.org/v1
+
+  - model_name: glm-5.2
+    litellm_params:
+      model: openai/glm-5.2
+      api_key: ${AGENTROUTER_API_KEY}
+      api_base: https://agentrouter.org/v1

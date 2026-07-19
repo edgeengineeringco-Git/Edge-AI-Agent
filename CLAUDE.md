@@ -205,6 +205,28 @@ Comprehensive REE reference — full 17-element lanthanide data (crustal abundan
 
 Gamma-ray and pXRF spectral interpretation — data quality assessment, background characterization, REE pattern analysis, chondrite normalization, Ce/Eu anomaly interpretation, deposit-type fingerprinting, and radiometric ratio analysis (Th/U, F-parameter). See `skills-library/spectral-interpret/SKILL.md`.
 
+## AgentRouter Integration (Optional)
+
+This project includes pre-configured support for **AgentRouter** — a free API aggregator that provides $175 credit for premium models:
+
+- `claude-opus-4-8`, `claude-opus-4-7`, `claude-opus-4-6`
+- `gpt-5.5`
+- `glm-5.2`
+
+**Files:**
+- `litellm-agentrouter.yaml` — Ready-to-paste LiteLLM model block
+- `docs/agentrouter-setup.md` — Step-by-step sign-up + configuration guide
+- `.env.example` — Required environment variables
+
+**To activate:**
+1. Sign up at https://agentrouter.org with GitHub
+2. Create an API key with unlimited quota
+3. Add `AGENTROUTER_API_KEY=ar_...` to your `.env`
+4. Append `litellm-agentrouter.yaml` into `event-handler/litellm/main.yaml`
+5. Restart the LiteLLM proxy container
+
+---
+
 ## Security Note
 
 The original n8n workflow used a hardcoded password (`Edge12345`). This thepopebot-native deployment handles auth through the platform's standard webhook authentication and agent scoping. No credentials are embedded in code.
