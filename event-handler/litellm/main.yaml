@@ -1,6 +1,8 @@
 # LiteLLM proxy config. Docs: https://docs.litellm.ai/docs/
 # DeepSeek V3 configured as Claude Code backend.
 # Set DEEPSEEK_API_KEY in .env.
+# AIHubMix — OpenAI-compatible proxy for GPT-4o, Claude, Gemini, etc.
+# Set AIHUBMIX_API_KEY in .env.
 
 model_list:
   - model_name: deepseek-chat
@@ -8,3 +10,17 @@ model_list:
       model: openai/deepseek-chat
       api_key: ${DEEPSEEK_API_KEY}
       api_base: https://api.deepseek.com/v1
+
+  # AIHubMix models — adjust the mapped model below to whatever you have access to
+  # Common options: openai/gpt-4o, openai/gpt-4o-mini, anthropic/claude-3-5-sonnet-20241022
+  - model_name: aihubmix-gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: ${AIHUBMIX_API_KEY}
+      api_base: https://aihubmix.com/v1
+
+  - model_name: aihubmix-claude
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20241022
+      api_key: ${AIHUBMIX_API_KEY}
+      api_base: https://aihubmix.com/v1
