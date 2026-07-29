@@ -67,10 +67,10 @@ Always add backlinks — if you create a new note about a project, add a link fr
 
 ### 5. Commit the note
 
-After writing the note, commit it:
+After writing the note, commit it (the vault is its own git repo at `Edge-Obsidian-Brain`):
 ```bash
-cd /home/coding-agent/workspace
-git add agents/ree-obsidian-brain/vault/...
+cd /home/coding-agent/workspace/agents/ree-obsidian-brain/vault
+git add <path-to-new-note>
 git commit -m "vault: add [note title]"
 git push
 ```

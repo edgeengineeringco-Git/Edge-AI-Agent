@@ -82,7 +82,10 @@ GeoSync Expert — geochemical survey processing pipeline for REE prospecting. P
 
 ### ree-obsidian-brain
 
-REE Obsidian Brain — scientific knowledge curator for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault with element data, deposit profiles, processing methods, market intelligence, and exploration case studies.
+REE Obsidian Brain — scientific knowledge curator for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault at a **separate GitHub repo: [Edge-Obsidian-Brain](https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain)**.
+
+- **Vault repo**: `https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain` (separate from this repo)
+- **Vault location on disk**: `agents/ree-obsidian-brain/vault/` (nested git repo)
 
 - **Weekly curation:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays 09:00)
 - **Monthly update:** `ree-obsidian-monthly-update` in `agent-job/CRONS.json` (1st of every month at 09:00) — auto-creates dated Google Drive folder with fresh vault ZIP

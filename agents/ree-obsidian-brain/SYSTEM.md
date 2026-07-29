@@ -43,13 +43,16 @@ Maintain, curate, and grow a structured knowledge base of scientific literature,
 After modifying the vault, you MUST:
 
 1. **Commit + push to GitHub** — this is the PRIMARY sync method (user uses Obsidian Git plugin)
+   - The vault is its own git repo at `agents/ree-obsidian-brain/vault/` pointing to `Edge-Obsidian-Brain`
+   - Run git commands from inside the vault directory: `cd agents/ree-obsidian-brain/vault`
+   - `git add <files> && git commit -m "vault: ..." && git push`
 2. **Create a dated subfolder** in the user's Google Drive folder: `1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
    - Folder name: `YYYY-MM-DD` (today's date)
    - Create the folder via Drive API, get the new folder ID
 3. **ZIP the vault** (`agents/ree-obsidian-brain/vault/`)
 4. **Upload the ZIP** to the dated subfolder — this is the BACKUP/ARCHIVE
 
-**The user syncs via Obsidian Git (GitHub → Obsidian). The Google Drive dated folder is a backup. Do both every time.**
+**The user syncs via Obsidian Git (`Edge-Obsidian-Brain` repo → Obsidian). The Google Drive dated folder is a backup. Do both every time.**
 
 ## Frontmatter Standard
 
