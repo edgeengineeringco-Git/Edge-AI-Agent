@@ -11,8 +11,8 @@ status: seed
 ## Operating Mines
 | Project | Country | Type | TREO | HREO | Status |
 |---|---|---|---|---|---|
-| Bayan Obo | China | Carbonatite | 3–6% | Low | Producing |
-| Mountain Pass | USA | Carbonatite | 7–9% | Very Low | Producing |
+| [[Bayan Obo]] | China | Carbonatite | 3–6% | Low | Producing |
+| [[Mountain Pass]] | USA | Carbonatite | 7–9% | Very Low | Producing |
 | Araxá | Brazil | Carbonatite | 2–4% | Moderate | Producing |
 | Lovozero | Russia | Alkaline | 1–2% | Moderate | Producing |
 | Lynas Mt Weld | Australia | Carbonatite | Variable | High | Processing in Malaysia |
@@ -21,10 +21,14 @@ status: seed
 ## Advanced Development
 | Project | Country | Type | Key Feature |
 |---|---|---|---|
-| Browns Range | Australia | Hydrothermal | 55–75% HREO |
+| [[Browns Range]] | Australia | Hydrothermal | 55–75% HREO |
 | Nolans Bore | Australia | Hydrothermal/breccia | Apatite-hosted |
 | Dubbo Zirconia | Australia | Alkaline | Polymetallic |
 | Hoidas Lake | Canada | Hydrothermal | HREE potential |
+
+## By Deposit Type
+- **Carbonatite**: [[Bayan Obo]], [[Mountain Pass]]
+- **Hydrothermal HREE**: [[Browns Range]]
 
 ## Exploration Targets
 - Add new targets as they emerge
