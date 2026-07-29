@@ -1,0 +1,32 @@
+[
+  {
+    "type": "title",
+    "headline": "Smart Grout Mix Optimization Using Predictive Modeling",
+    "subtitle": "Construction & Materials | EDGE Engineers",
+    "sector": "Construction & Materials"
+  },
+  {
+    "type": "content",
+    "headline": "The Challenge",
+    "bullets": [
+      "Traditional mix designs rely on trial batches and rule-of-thumb ratios",
+      "$40K\u2013$80K in wasted lab time per project with no guarantee of real-world performance",
+      "Grout failure costs schedules, reputation, and future contracts"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution",
+    "bullets": [
+      "ML trained on 10,000+ mix records forecasts strength, bleed, and shrinkage pre-batch",
+      "Optimized blends delivered in hours instead of weeks",
+      "Standard deviations cut by 50%; one client reduced over-design by 18%"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to transform your operations?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
