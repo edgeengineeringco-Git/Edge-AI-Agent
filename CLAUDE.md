@@ -159,6 +159,37 @@ agents/geosync-expert/
 └── (data + reports written to data/ and reports/ at repo root)
 ```
 
+### ree-obsidian-brain
+
+**REE Obsidian Brain** — scientific knowledge curator and research librarian for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault designed to be opened in Obsidian desktop or mobile.
+
+- **Scope:** `agents/ree-obsidian-brain`
+- **Cron:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays at 09:00)
+- **System prompt:** `agents/ree-obsidian-brain/SYSTEM.md`
+- **Jobs:** `agents/ree-obsidian-brain/jobs/curate-vault.md`
+- **Pipeline:** Inbox processing → source note creation → atomic claim extraction → wiki-link curation → MOC updates → integrity check → Telegram notification
+- **Skills:** Inherits root skills (`ree-database`, `critical-minerals-ref`, `agent-job-dm`)
+
+```
+agents/ree-obsidian-brain/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── curate-vault.md
+└── vault/
+    ├── 00-Inbox/              ← drop new papers/sources here
+    ├── 01-Sources/            ← processed bibliographic notes
+    ├── 02-Elements/           ← 17 lanthanides + Sc + Y (seeded)
+    ├── 03-Deposits/           ← carbonatite, IAC, hydrothermal, placer
+    ├── 04-Processing/         ← beneficiation, leaching, SX, refining
+    ├── 05-Markets/            ← prices, demand, supply chain
+    ├── 06-Exploration/        ← methods, pathfinders, case studies
+    ├── 07-Projects/           ← specific mines worldwide
+    ├── 08-Concepts/           ← geochemical principles
+    ├── 09-Maps-of-Content/    ← index hubs (MOCs)
+    └── Templates/             ← source, element, project templates
+```
+
 ## Skills
 
 ### edge-kuth-analysis

@@ -1,5 +1,13 @@
 [
   {
+    "name": "ree-obsidian-curate",
+    "schedule": "0 9 * * 0",
+    "type": "agent",
+    "scope": "agents/ree-obsidian-brain",
+    "job": "Read jobs/curate-vault.md and execute the full vault curation pipeline. Process inbox, maintain links, update MOCs, check integrity, and notify via Telegram. Do not ask for input — execute autonomously.",
+    "enabled": true
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",

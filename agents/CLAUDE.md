@@ -80,6 +80,36 @@ GeoSync Expert — geochemical survey processing pipeline for REE prospecting. P
 - **System prompt:** `agents/geosync-expert/SYSTEM.md`
 - **Skills:** Inherits all 10 root geoscience skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration, drone-survey, ore-grade, ree-database, spectral-interpret)
 
+### ree-obsidian-brain
+
+REE Obsidian Brain — scientific knowledge curator for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault with element data, deposit profiles, processing methods, market intelligence, and exploration case studies.
+
+- **Cron:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays 09:00)
+- **Job:** `agents/ree-obsidian-brain/jobs/curate-vault.md`
+- **System prompt:** `agents/ree-obsidian-brain/SYSTEM.md`
+- **Vault:** `agents/ree-obsidian-brain/vault/` — open in Obsidian desktop/mobile
+- **Skills:** Inherits root skills (ree-database, critical-minerals-ref, agent-job-dm)
+
+```
+agents/ree-obsidian-brain/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── curate-vault.md
+└── vault/
+    ├── 00-Inbox/              ← drop new papers/sources here
+    ├── 01-Sources/            ← processed bibliographic notes
+    ├── 02-Elements/           ← 17 lanthanides + Sc + Y
+    ├── 03-Deposits/           ← carbonatite, IAC, hydrothermal, placer
+    ├── 04-Processing/         ← beneficiation, leaching, SX, refining
+    ├── 05-Markets/            ← prices, demand, supply chain
+    ├── 06-Exploration/        ← methods, pathfinders, case studies
+    ├── 07-Projects/           ← specific mines worldwide
+    ├── 08-Concepts/           ← geochemical principles
+    ├── 09-Maps-of-Content/    ← index hubs (MOCs)
+    └── Templates/             ← source, element, project templates
+```
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.
