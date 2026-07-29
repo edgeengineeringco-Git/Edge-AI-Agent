@@ -1,0 +1,19 @@
+# Obsidian user-specific files — never commit these
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/sync.json
+.obsidian/graph.json
+.obsidian/plugins/obsidian-git/data.json
+.obsidian/plugins/omnisearch/data.json
+.obsidian/plugins/**/data.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Mobile sync
+.obsidian/app.json
+
+# Cache
+.obsidian/cache/
+.trash/

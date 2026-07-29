@@ -30,10 +30,19 @@ The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
 
 ## How to Use with Obsidian
 
-1. Download the latest ZIP from the user's Google Drive delivery folder
-2. Extract and open `vault/` as an Obsidian vault
-3. Install optional plugins: Dataview (for frontmatter queries), Graph Analysis
-4. The vault works out of the box without plugins
+The user has the vault synced via **Obsidian Git plugin** + **Omni Search** installed.
+
+### Sync Workflow (Obsidian Git)
+1. User opens Obsidian → Git plugin **auto-pulls** latest updates from GitHub on boot
+2. User writes notes, adds papers → **Git commit + push** from Obsidian
+3. Agent sees changes on next run → curates, links, updates MOCs
+4. Agent commits to GitHub
+5. User opens Obsidian → Git **auto-pulls** new agent changes
+
+### Plugins Installed
+- **Dataview** (v0.5.70) — pre-bundled, frontmatter queries
+- **Obsidian Git** — auto-pull on boot, manual push
+- **Omni Search** — full-text search with `Ctrl/Cmd + O`
 
 ## User Delivery Protocol
 
@@ -42,7 +51,9 @@ The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
 1. **Create a dated folder** inside the user's Google Drive folder: `https://drive.google.com/drive/folders/1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
    - Folder name format: `YYYY-MM-DD` (e.g., `2026-07-29`)
 2. **Upload the vault ZIP** to that dated folder
-3. **Also commit to GitHub** as usual
+3. **Also commit to GitHub** as usual (this is the primary sync method via Obsidian Git)
+
+**The user uses Git sync as primary. The dated Google Drive folder is a backup/archive.**
 
 **Do NOT skip the dated folder step. The user expects every update in a dated folder.**
 
