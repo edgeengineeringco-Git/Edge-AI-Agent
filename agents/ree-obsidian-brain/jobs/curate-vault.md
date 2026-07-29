@@ -32,12 +32,23 @@ Maintain the REE Obsidian Brain vault by processing the inbox, curating links, u
 - Check that `date_modified` is current
 - Confirm no duplicate filenames
 
-### 5. Notification
+### 5. Deliver to User
+
+**MANDATORY — After every curation:**
+
+1. Create a dated folder (`YYYY-MM-DD`) inside the user's Google Drive folder: `1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
+2. ZIP the vault (`agents/ree-obsidian-brain/vault/`)
+3. Upload the ZIP to the dated folder
+4. Provide the user with the Google Drive folder URL
+
+### 6. Notification
 - When complete, send a Telegram summary:
   - Items processed from inbox
   - New links created
+  - Google Drive dated folder URL
   - Any issues found
 
 ## Output
 - Curated vault with clean links and up-to-date MOCs
+- Dated folder in user's Google Drive with ZIP upload
 - Telegram notification to admins

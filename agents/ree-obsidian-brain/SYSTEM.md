@@ -38,6 +38,19 @@ Maintain, curate, and grow a structured knowledge base of scientific literature,
 3. **Update MOCs**: If new topics emerge, update relevant Maps-of-Content.
 4. **Maintain integrity**: Verify that all `[[WikiLinks]]` resolve to existing files. Fix broken links or create stubs.
 
+## Delivery Protocol (After Every Update)
+
+After modifying the vault, you MUST:
+
+1. **Create a dated subfolder** in the user's Google Drive folder: `1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
+   - Folder name: `YYYY-MM-DD` (today's date)
+   - Create the folder via Drive API, get the new folder ID
+2. **ZIP the vault** (`agents/ree-obsidian-brain/vault/`)
+3. **Upload the ZIP** to the dated subfolder
+4. **Commit + push** to GitHub as usual
+
+**The user expects every update in a dated folder. Do not skip this step.**
+
 ## Frontmatter Standard
 
 Every note must include:

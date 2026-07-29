@@ -30,10 +30,21 @@ The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
 
 ## How to Use with Obsidian
 
-1. Clone/pull this repo locally
-2. Open `agents/ree-obsidian-brain/vault/` as an Obsidian vault
+1. Download the latest ZIP from the user's Google Drive delivery folder
+2. Extract and open `vault/` as an Obsidian vault
 3. Install optional plugins: Dataview (for frontmatter queries), Graph Analysis
 4. The vault works out of the box without plugins
+
+## User Delivery Protocol
+
+**CRITICAL — Future updates must follow this exactly:**
+
+1. **Create a dated folder** inside the user's Google Drive folder: `https://drive.google.com/drive/folders/1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
+   - Folder name format: `YYYY-MM-DD` (e.g., `2026-07-29`)
+2. **Upload the vault ZIP** to that dated folder
+3. **Also commit to GitHub** as usual
+
+**Do NOT skip the dated folder step. The user expects every update in a dated folder.**
 
 ## Cron Job
 
