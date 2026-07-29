@@ -38,8 +38,12 @@ class ObsidianClient:
     def __init__(self, api_key: Optional[str] = None, port: int = 27124, host: str = "localhost"):
         self.api_key = api_key or os.environ.get("OBSIDIAN_API_KEY", "")
         self.base_url = f"http://{host}:{port}"
+        # Handle key that may or may not include "Bearer " prefix
+        token = self.api_key
+        if token and not token.startswith("Bearer "):
+            token = f"Bearer {token}"
         self._headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": token,
             "Content-Type": "application/json",
         }
 
