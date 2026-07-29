@@ -1,0 +1,10 @@
+# Obsidian user-specific files — do not commit
+workspace.json
+workspace-mobile.json
+sync.json
+
+# Cache & temp
+cache/
+
+# Plugin data (user-specific)
+plugins/**/data.json
