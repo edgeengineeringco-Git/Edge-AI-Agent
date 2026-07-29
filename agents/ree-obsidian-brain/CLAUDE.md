@@ -42,6 +42,7 @@ The user has the vault synced via **Obsidian Git plugin** + **Omni Search** inst
 ### Plugins Installed
 - **Dataview** (v0.5.70) — pre-bundled, frontmatter queries
 - **Obsidian Git** — auto-pull on boot, manual push
+- **Obsidian Local REST API** — exposes vault via HTTP at `localhost:27124` for agent integration
 - **Omni Search** — full-text search with `Ctrl/Cmd + O`
 
 ## User Delivery Protocol
@@ -66,10 +67,30 @@ The user has the vault synced via **Obsidian Git plugin** + **Omni Search** inst
 
 ## Skills
 
-Inherits root skills automatically (no `skills/` folder needed). Key skills used:
+Scoped skills in `skills/` (override root):
+- `obsidian-rest-api` — real-time vault access via Obsidian Local REST API plugin when user's Obsidian is open
+
+Inherits root skills automatically. Key root skills used:
 - `ree-database` — element data, market prices, processing tech
 - `critical-minerals-ref` — deposit types, pathfinders, cut-off grades
 - `agent-job-dm` — Telegram notifications when curation completes
+- `agent-job-secrets` — fetches `OBSIDIAN_API_KEY` for REST API auth
+
+## Obsidian REST API Tooling
+
+Located at `obsidian-client/obsidian_client.py` — a Python CLI and library for interacting with the user's running Obsidian instance.
+
+| Command | Purpose |
+|---------|---------|
+| `ping` | Check if Obsidian REST API is reachable |
+| `list` | List all vault notes |
+| `get <path>` | Read a note's content |
+| `create <path> --content` | Create a new note |
+| `search <query>` | Full-text search across vault |
+| `ingest-source` | Create a scientific source note with frontmatter + claims |
+| `quick-capture <text>` | Drop content into inbox for later processing |
+
+**Secret needed:** `OBSIDIAN_API_KEY` — the API key from the Obsidian Local REST API plugin settings. Store this via the `agent-job-secrets` skill.
 
 ## Adding Content
 
@@ -78,6 +99,8 @@ Drop Markdown files or PDF references into `vault/00-Inbox/`. The agent will:
 2. Create a source note in `01-Sources/`
 3. Extract atomic claims and link them to element/deposit/concept notes
 4. Clear the inbox
+
+**Real-time option:** If Obsidian is open on the user's desktop, the agent can use the REST API (via `obsidian_client.py`) to create notes directly — they appear in Obsidian instantly without waiting for a Git sync.
 
 ## Maintenance
 

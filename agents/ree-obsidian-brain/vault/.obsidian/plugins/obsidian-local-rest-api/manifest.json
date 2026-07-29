@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-local-rest-api",
+  "name": "Local REST API",
+  "description": "Expose your Obsidian data via a REST API for use with tools like the REE Obsidian Brain agent.",
+  "version": "1.6.0",
+  "author": "Adam Coddington",
+  "authorUrl": "https://coddingtonbear.net/",
+  "isDesktopOnly": true,
+  "minAppVersion": "0.12.0"
+}

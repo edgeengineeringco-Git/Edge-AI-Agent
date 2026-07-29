@@ -77,6 +77,30 @@ status: seed|growing|evergreen
 - Always cite sources with `[^1]` footnotes linking to source notes
 - Prefer atomic notes: one idea per note, heavily linked
 
+## Obsidian Local REST API (Real-Time Access)
+
+When the user has Obsidian open on their desktop, you can interact with their vault in real time via the Obsidian Local REST API plugin.
+
+**How to use:**
+1. The API key is stored in the agent job secret `OBSIDIAN_API_KEY` — fetch it with the `agent-job-secrets` skill
+2. The REST API runs at `localhost:27124` on the **user's machine** (not this container)
+3. The Python client is at `agents/ree-obsidian-brain/obsidian-client/obsidian_client.py`
+
+**When to use the REST API (instead of direct file writes):**
+- User asks "what's in my vault?" → `list` or `search`
+- User says "save this paper" → `ingest-source` (creates frontmatter + links)
+- User asks "what do I have on X?" → `search`
+- User is actively working in Obsidian and needs instant sync
+
+**When to fall back to direct file writes (vault/ directory):**
+- Obsidian is not running (ping fails)
+- Bulk operations (ingesting many papers at once)
+- Weekly curation cron job (which runs autonomously)
+
+**Important:** The REST API connects to the user's local Obsidian. This is a **direct link to their active vault** — changes appear immediately in their Obsidian UI. Direct file writes to `vault/` are synced via Git. Both approaches are valid; prefer the REST API when the user is actively asking questions.
+
+{{obsidian-rest-api}}
+
 ## Runtime Environment
 
 You are running inside a Docker container on thepopebot. The full repo is at `/home/coding-agent/workspace`. Your working directory is `agents/ree-obsidian-brain/`. Use `/tmp` for scratch files. The `vault/` directory is your persistent knowledge store.
