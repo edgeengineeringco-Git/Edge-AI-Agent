@@ -3,7 +3,7 @@
 Obsidian Local REST API Client for the REE Obsidian Brain.
 
 Connects to the Obsidian Local REST API plugin running on the user's desktop.
-Provides vault CRUD, search, and REE-specific scientific source ingestion.
+Zero external dependencies — uses only Python standard library.
 
 Usage:
     from obsidian_client import ObsidianClient
@@ -17,54 +17,118 @@ import os
 import json
 import sys
 import argparse
-from pathlib import Path
+import datetime
+import urllib.request
+import urllib.parse
+import urllib.error
 from typing import Optional
-from urllib.parse import quote
 
-import requests
+
+class ObsidianClientError(Exception):
+    """Wrapper for API errors with status code and body."""
+    def __init__(self, status: int, body: str):
+        self.status = status
+        self.body = body
+        super().__init__(f"API error {status}: {body[:200]}")
 
 
 class ObsidianClient:
-    """Client for the Obsidian Local REST API plugin."""
+    """Client for the Obsidian Local REST API plugin (zero external dependencies)."""
 
     def __init__(self, api_key: Optional[str] = None, port: int = 27124, host: str = "localhost"):
         self.api_key = api_key or os.environ.get("OBSIDIAN_API_KEY", "")
         self.base_url = f"http://{host}:{port}"
-        self.headers = {
+        self._headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
     # ------------------------------------------------------------------ #
-    #  Core helpers
+    #  Core helpers (stdlib urllib only)
     # ------------------------------------------------------------------ #
 
-    def _get(self, path: str, params: dict = None) -> requests.Response:
+    def _request(self, method: str, path: str, body: Optional[dict] = None) -> dict:
+        """Make an HTTP request and return parsed JSON response."""
         url = f"{self.base_url}{path}"
-        return requests.get(url, headers=self.headers, params=params)
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode("utf-8")
 
-    def _put(self, path: str, data: dict = None) -> requests.Response:
-        url = f"{self.base_url}{path}"
-        return requests.put(url, headers=self.headers, json=data or {})
-
-    def _post(self, path: str, data: dict = None) -> requests.Response:
-        url = f"{self.base_url}{path}"
-        return requests.post(url, headers=self.headers, json=data or {})
-
-    def _delete(self, path: str) -> requests.Response:
-        url = f"{self.base_url}{path}"
-        return requests.delete(url, headers=self.headers)
-
-    def _check(self, resp: requests.Response) -> dict:
-        """Check response and return JSON body."""
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers=self._headers,
+            method=method,
+        )
         try:
-            resp.raise_for_status()
-            return resp.json() if resp.content else {}
-        except requests.exceptions.RequestException as e:
-            print(f"API error: {e}", file=sys.stderr)
-            if resp.text:
-                print(f"Response: {resp.text[:500]}", file=sys.stderr)
-            raise
+            with urllib.request.urlopen(req) as resp:
+                content = resp.read().decode("utf-8")
+                if content.strip():
+                    return json.loads(content)
+                return {}
+        except urllib.error.HTTPError as e:
+            body_text = e.read().decode("utf-8", errors="replace")
+            raise ObsidianClientError(e.code, body_text) from e
+        except urllib.error.URLError as e:
+            raise ObsidianClientError(0, f"Connection failed: {e.reason}") from e
+
+    def _get(self, path: str) -> tuple:
+        """GET request, returns (status, body_text_or_parsed_json)."""
+        url = f"{self.base_url}{path}"
+        req = urllib.request.Request(url, headers=self._headers, method="GET")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                content = resp.read().decode("utf-8")
+                if content.strip():
+                    return resp.status, json.loads(content)
+                return resp.status, {}
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                return e.code, json.loads(body) if body.strip() else {}
+            except (json.JSONDecodeError, ValueError):
+                return e.code, body
+        except urllib.error.URLError as e:
+            raise ObsidianClientError(0, f"Connection failed: {e.reason}") from e
+
+    def _put(self, path: str, data: Optional[dict] = None) -> tuple:
+        """PUT request, returns (status, parsed_json)."""
+        url = f"{self.base_url}{path}"
+        body = json.dumps(data or {}).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=self._headers, method="PUT")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                content = resp.read().decode("utf-8")
+                if content.strip():
+                    return resp.status, json.loads(content)
+                return resp.status, {}
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                return e.code, json.loads(body) if body.strip() else {}
+            except (json.JSONDecodeError, ValueError):
+                return e.code, body
+        except urllib.error.URLError as e:
+            raise ObsidianClientError(0, f"Connection failed: {e.reason}") from e
+
+    def _delete(self, path: str) -> tuple:
+        """DELETE request, returns (status, parsed_json)."""
+        url = f"{self.base_url}{path}"
+        req = urllib.request.Request(url, headers=self._headers, method="DELETE")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                content = resp.read().decode("utf-8")
+                if content.strip():
+                    return resp.status, json.loads(content)
+                return resp.status, {}
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            try:
+                return e.code, json.loads(body) if body.strip() else {}
+            except (json.JSONDecodeError, ValueError):
+                return e.code, body
+        except urllib.error.URLError as e:
+            return 0, f"Connection failed: {e.reason}"
 
     # ------------------------------------------------------------------ #
     #  Health / status
@@ -73,9 +137,9 @@ class ObsidianClient:
     def ping(self) -> bool:
         """Check if the REST API is reachable."""
         try:
-            resp = self._get("/")
-            return resp.status_code == 200
-        except requests.exceptions.ConnectionError:
+            status, _ = self._get("/")
+            return status == 200
+        except ObsidianClientError:
             return False
 
     # ------------------------------------------------------------------ #
@@ -84,16 +148,21 @@ class ObsidianClient:
 
     def list_notes(self) -> list[dict]:
         """List all notes in the vault (recursive)."""
-        return self._check(self._get("/vault/"))
+        status, data = self._get("/vault/")
+        if status != 200:
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, list) else []
 
     def get_note(self, path: str) -> Optional[str]:
         """Read a note by its vault path (e.g. '02-Elements/Neodymium.md')."""
-        encoded = quote(path, safe="")
-        resp = self._get(f"/vault/{encoded}")
-        if resp.status_code == 404:
+        encoded = urllib.parse.quote(path, safe="")
+        status, data = self._get(f"/vault/{encoded}")
+        if status == 404:
             return None
-        self._check(resp)
-        return resp.text
+        # The REST API returns the raw markdown as the response body
+        if isinstance(data, str):
+            return data
+        return str(data)
 
     def note_exists(self, path: str) -> bool:
         """Check if a note exists at the given path."""
@@ -101,18 +170,27 @@ class ObsidianClient:
 
     def create_note(self, path: str, content: str) -> dict:
         """Create a new note. Returns the API response."""
-        encoded = quote(path, safe="")
-        return self._check(self._put(f"/vault/{encoded}", {"content": content}))
+        encoded = urllib.parse.quote(path, safe="")
+        status, data = self._put(f"/vault/{encoded}", {"content": content})
+        if status not in (200, 201):
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, dict) else {}
 
     def update_note(self, path: str, content: str) -> dict:
         """Overwrite an existing note."""
-        encoded = quote(path, safe="")
-        return self._check(self._put(f"/vault/{encoded}", {"content": content}))
+        encoded = urllib.parse.quote(path, safe="")
+        status, data = self._put(f"/vault/{encoded}", {"content": content})
+        if status not in (200, 201):
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, dict) else {}
 
     def delete_note(self, path: str) -> dict:
         """Delete a note."""
-        encoded = quote(path, safe="")
-        return self._check(self._delete(f"/vault/{encoded}"))
+        encoded = urllib.parse.quote(path, safe="")
+        status, data = self._delete(f"/vault/{encoded}")
+        if status not in (200, 204):
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, dict) else {}
 
     # ------------------------------------------------------------------ #
     #  Search
@@ -120,10 +198,13 @@ class ObsidianClient:
 
     def search(self, query: str, context_length: int = 100) -> list[dict]:
         """Full-text search across the vault. Returns list of {filename, match, context}."""
-        return self._check(self._post("/search", {
-            "query": query,
-            "contextLength": context_length,
-        }))
+        status, data = self._request(
+            "POST", "/search",
+            {"query": query, "contextLength": context_length}
+        )
+        if status != 200:
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, list) else []
 
     # ------------------------------------------------------------------ #
     #  Commands
@@ -131,11 +212,16 @@ class ObsidianClient:
 
     def list_commands(self) -> list[dict]:
         """List all available Obsidian commands."""
-        return self._check(self._get("/commands"))
+        status, data = self._get("/commands")
+        if status != 200:
+            raise ObsidianClientError(status, str(data))
+        return data if isinstance(data, list) else []
 
     def execute_command(self, command_id: str) -> dict:
         """Execute an Obsidian command by ID (e.g. 'editor:insert-link')."""
-        return self._check(self._post(f"/commands/{quote(command_id, safe='')}"))
+        encoded = urllib.parse.quote(command_id, safe="")
+        status, data = self._request("POST", f"/commands/{encoded}")
+        return data if isinstance(data, dict) else {}
 
     # ------------------------------------------------------------------ #
     #  Daily / periodic notes
@@ -143,10 +229,12 @@ class ObsidianClient:
 
     def get_daily_note(self) -> Optional[str]:
         """Get today's daily note content."""
-        resp = self._get("/daily")
-        if resp.status_code == 404:
+        status, data = self._get("/daily")
+        if status == 404:
             return None
-        return self._check(resp).get("content", "")
+        if isinstance(data, dict):
+            return data.get("content", "")
+        return str(data)
 
     # ------------------------------------------------------------------ #
     #  Active note
@@ -154,10 +242,10 @@ class ObsidianClient:
 
     def get_active_note(self) -> Optional[dict]:
         """Get the currently active note in Obsidian."""
-        resp = self._get("/active")
-        if resp.status_code == 404:
+        status, data = self._get("/active")
+        if status == 404:
             return None
-        return self._check(resp)
+        return data if isinstance(data, dict) else {"content": str(data)}
 
     # ------------------------------------------------------------------ #
     #  REE-specific helpers
@@ -184,17 +272,19 @@ class ObsidianClient:
         linked_notes = linked_notes or []
 
         # Sanitize title for filename
-        safe_title = title.replace(":", " -").replace("/", "-").replace("?", "")
+        safe_title = title.replace(":", " -").replace("/", "-").replace("?", "").replace('"', "'")
         filename = f"{safe_title[:120]}.md"
         vault_path = f"01-Sources/{filename}"
+
+        today = datetime.date.today().isoformat()
 
         # Build frontmatter
         frontmatter = {
             "title": title,
             "authors": authors,
             "year": year,
-            "date_created": __import__("datetime").date.today().isoformat(),
-            "date_modified": __import__("datetime").date.today().isoformat(),
+            "date_created": today,
+            "date_modified": today,
             "type": source_type,
             "status": "seed",
             "tags": ["source", source_type] + tags,
@@ -237,7 +327,6 @@ class ObsidianClient:
 
         Returns the vault path.
         """
-        import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         vault_path = f"{folder}/quick-capture-{timestamp}.md"
         self.create_note(vault_path, content)

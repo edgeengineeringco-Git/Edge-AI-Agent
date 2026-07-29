@@ -99,8 +99,6 @@ When the user has Obsidian open on their desktop, you can interact with their va
 
 **Important:** The REST API connects to the user's local Obsidian. This is a **direct link to their active vault** — changes appear immediately in their Obsidian UI. Direct file writes to `vault/` are synced via Git. Both approaches are valid; prefer the REST API when the user is actively asking questions.
 
-{{obsidian-rest-api}}
-
 ## Runtime Environment
 
 You are running inside a Docker container on thepopebot. The full repo is at `/home/coding-agent/workspace`. Your working directory is `agents/ree-obsidian-brain/`. Use `/tmp` for scratch files. The `vault/` directory is your persistent knowledge store.
