@@ -1,5 +1,13 @@
 [
   {
+    "name": "ree-obsidian-monthly-update",
+    "schedule": "0 9 1 * *",
+    "type": "agent",
+    "scope": "agents/ree-obsidian-brain",
+    "job": "Monthly vault update: 1) Process any files in vault/00-Inbox/, 2) Curate links and update MOCs, 3) Create a dated folder (YYYY-MM-DD) in Google Drive folder 1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7, 4) ZIP the vault and upload to the dated folder, 5) Commit and push to GitHub, 6) Notify via Telegram with the Drive folder link. Do not ask for input — execute autonomously.",
+    "enabled": true
+  },
+  {
     "name": "ree-obsidian-curate",
     "schedule": "0 9 * * 0",
     "type": "agent",

@@ -164,11 +164,13 @@ agents/geosync-expert/
 **REE Obsidian Brain** — scientific knowledge curator and research librarian for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault designed to be opened in Obsidian desktop or mobile.
 
 - **Scope:** `agents/ree-obsidian-brain`
-- **Cron:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays at 09:00)
+- **Weekly curation:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays at 09:00)
+- **Monthly update:** `ree-obsidian-monthly-update` in `agent-job/CRONS.json` (1st of every month at 09:00) — creates dated folder in user's Google Drive, zips vault, uploads ZIP
 - **System prompt:** `agents/ree-obsidian-brain/SYSTEM.md`
 - **Jobs:** `agents/ree-obsidian-brain/jobs/curate-vault.md`
 - **Pipeline:** Inbox processing → source note creation → atomic claim extraction → wiki-link curation → MOC updates → integrity check → Telegram notification
 - **Skills:** Inherits root skills (`ree-database`, `critical-minerals-ref`, `agent-job-dm`)
+- **Universal write:** Any agent can write to the vault via the `ree-vault-write` skill. Just ask: *"Save this to my REE vault"*
 
 ```
 agents/ree-obsidian-brain/
@@ -235,6 +237,12 @@ Comprehensive REE reference — full 17-element lanthanide data (crustal abundan
 ### spectral-interpret
 
 Gamma-ray and pXRF spectral interpretation — data quality assessment, background characterization, REE pattern analysis, chondrite normalization, Ce/Eu anomaly interpretation, deposit-type fingerprinting, and radiometric ratio analysis (Th/U, F-parameter). See `skills-library/spectral-interpret/SKILL.md`.
+
+### ree-vault-write
+
+Universal vault write skill — any agent or chat can save scientific notes, papers, or data directly to the REE Obsidian Brain vault. Creates properly formatted Markdown with YAML frontmatter, wiki-links, and tags. See `skills-library/ree-vault-write/SKILL.md`.
+
+**Usage from any chat**: *"Save this paper to the REE vault"* or *"Add this to my Obsidian brain"*
 
 ## Security Note
 
