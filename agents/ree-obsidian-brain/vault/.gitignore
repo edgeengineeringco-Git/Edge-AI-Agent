@@ -17,3 +17,10 @@ Thumbs.db
 # Cache
 .obsidian/cache/
 .trash/
+
+# Windows junk
+desktop.ini
+*.ini
+
+# PDFs are too large for GitHub — store in Google Drive instead
+*.pdf

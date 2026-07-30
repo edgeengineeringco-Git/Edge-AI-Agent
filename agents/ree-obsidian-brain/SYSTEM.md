@@ -42,10 +42,11 @@ Maintain, curate, and grow a structured knowledge base of scientific literature,
 
 After modifying the vault, you MUST:
 
-1. **Commit + push to GitHub** — this is the PRIMARY sync method (user uses Obsidian Git plugin)
-   - The vault is its own git repo at `agents/ree-obsidian-brain/vault/` pointing to `Edge-Obsidian-Brain`
-   - Run git commands from inside the vault directory: `cd agents/ree-obsidian-brain/vault`
-   - `git add <files> && git commit -m "vault: ..." && git push`
+1. **Commit + push to the `Edge-Obsidian-Brain` repo** — this is the PRIMARY sync method
+   - Vault is its own git repo at `agents/ree-obsidian-brain/vault/`
+   - Token stored at `agents/ree-obsidian-brain/.vault-token` and in git credential store
+   - Run: `cd agents/ree-obsidian-brain/vault && git add -A && git commit -m "vault: ..." && git push origin main`
+   - **This is the ONLY repo for Obsidian. Not Edge-AI-Agent.**
 2. **Create a dated subfolder** in the user's Google Drive folder: `1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
    - Folder name: `YYYY-MM-DD` (today's date)
    - Create the folder via Drive API, get the new folder ID

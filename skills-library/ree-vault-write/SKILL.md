@@ -9,9 +9,15 @@ Use this skill to save data, papers, findings, or any scientific content to the 
 
 ## Vault Location
 
+The vault is its own git repo at **https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain**
+
 ```
-agents/ree-obsidian-brain/vault/
+agents/ree-obsidian-brain/vault/  (git remote: Edge-Obsidian-Brain)
 ```
+
+**GitHub token** stored at `agents/ree-obsidian-brain/.vault-token` (gitignored) and in git credential store.
+
+All vault writes go directly to the `Edge-Obsidian-Brain` repo — this is the ONLY repo for Obsidian.
 
 ## How to Write a Note
 
