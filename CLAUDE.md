@@ -159,6 +159,30 @@ agents/geosync-expert/
 └── (data + reports written to data/ and reports/ at repo root)
 ```
 
+### geolibre-portal
+
+**GeoLibre Planetary Atlas** — interactive MapLibre GL JS globes of the **Moon and Mars** (plus Mercury, Venus, Io, Europa, Ganymede, Callisto, Titan). Mirrors GeoLibre's planetary mapping natively in thepopebot: a single self-contained `web/index.html` loads MapLibre from a CDN and planetary tiles from OpenPlanetaryMap / NASA / USGS — **no backend, no API keys**.
+
+- **Scope:** `agents/geolibre-portal`
+- **System prompt:** `agents/geolibre-portal/SYSTEM.md`
+- **Jobs:** `agents/geolibre-portal/jobs/maintain-atlas.md`
+- **Cron:** `geolibre-refresh-atlas` in `agent-job/CRONS.json` (disabled by default — weekly tile-health check)
+- **Pipeline:** Verify tile sources (PNG) → refresh landmark coords → regenerate `index.html` → confirm live route → Telegram status
+- **Live route:** `https://${APP_HOSTNAME}/geolibre/` served by the `geolibre-web` nginx container in `docker-compose.custom.yml` (`docker compose up -d geolibre-web`). Also opens directly as a file.
+- **Skills:** Inherits root skills (`agent-job-dm`, `google-drive-upload`)
+
+```
+agents/geolibre-portal/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── maintain-atlas.md
+└── web/
+    ├── index.html     ← the atlas (single self-contained file)
+    ├── nginx.conf      ← served by the geolibre-web container
+    └── README.md       ← deploy + access instructions
+```
+
 ### ree-obsidian-brain
 
 **REE Obsidian Brain** — scientific knowledge curator and research librarian for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault designed to be opened in Obsidian desktop or mobile.

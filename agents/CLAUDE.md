@@ -80,6 +80,29 @@ GeoSync Expert — geochemical survey processing pipeline for REE prospecting. P
 - **System prompt:** `agents/geosync-expert/SYSTEM.md`
 - **Skills:** Inherits all 10 root geoscience skills (geochem-qc, geochem-anomaly, geochem-resource, geochem-pipeline, critical-minerals-ref, geochem-exploration, drone-survey, ore-grade, ree-database, spectral-interpret)
 
+### geolibre-portal
+
+GeoLibre Planetary Atlas — renders and serves an interactive **MapLibre GL JS** globe of the **Moon and Mars** (plus Mercury, Venus, Io, Europa, Ganymede, Callisto, Titan), mirroring GeoLibre's planetary mapping natively in thepopebot. A single self-contained `web/index.html` loads MapLibre from a CDN and tiles from OpenPlanetaryMap / NASA / USGS — **no backend, no API keys**.
+
+- **Scope:** `agents/geolibre-portal`
+- **System prompt:** `agents/geolibre-portal/SYSTEM.md`
+- **Job:** `agents/geolibre-portal/jobs/maintain-atlas.md` (verify tiles, refresh coords, confirm live route)
+- **Cron:** `geolibre-refresh-atlas` in `agent-job/CRONS.json` — **disabled**; enable for weekly tile-health checks
+- **Live route:** `https://${APP_HOSTNAME}/geolibre/` served by the `geolibre-web` nginx service in `docker-compose.custom.yml` (run `docker compose up -d geolibre-web`). Also opens directly as a file.
+- **Skills:** Inherits root skills (agent-job-dm for notifications, google-drive-upload optional)
+
+```
+agents/geolibre-portal/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── maintain-atlas.md
+└── web/
+    ├── index.html     ← the atlas (single self-contained file)
+    ├── nginx.conf      ← served by the geolibre-web container
+    └── README.md       ← deploy + access instructions
+```
+
 ### ree-obsidian-brain
 
 REE Obsidian Brain — scientific knowledge curator for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault at a **separate GitHub repo: [Edge-Obsidian-Brain](https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain)**.

@@ -69,5 +69,13 @@
     "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input \u2014 execute autonomously.",
     "scope": "agents/edge-smart-video",
     "enabled": true
+  },
+  {
+    "name": "geolibre-refresh-atlas",
+    "schedule": "0 6 * * 1",
+    "type": "agent",
+    "scope": "agents/geolibre-portal",
+    "job": "Read jobs/maintain-atlas.md and execute the GeoLibre Planetary Atlas maintenance pipeline: verify every Moon/Mars/bonus-body tile source returns image/png, refresh landmark coordinates, confirm the live route at https://${APP_HOSTNAME}/geolibre/ serves 200, and broadcast a terse status to admins. Remove any dead sources. Do not ask for input — execute autonomously.",
+    "enabled": false
   }
 ]

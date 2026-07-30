@@ -98,6 +98,26 @@ services:
       - traefik.http.services.upload-server.loadbalancer.server.port=3001
     restart: unless-stopped
 
+  # GeoLibre Planetary Atlas — serves agents/geolibre-portal/web at /geolibre/
+  # (self-contained MapLibre globes of the Moon, Mars & more; no API keys)
+  geolibre-web:
+    image: nginx:alpine
+    container_name: thepopebot-geolibre-web
+    volumes:
+      - ./agents/geolibre-portal/web:/usr/share/nginx/html:ro
+      - ./agents/geolibre-portal/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.geolibre-web.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/geolibre`)
+      - traefik.http.routers.geolibre-web.entrypoints=websecure
+      - traefik.http.routers.geolibre-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.geolibre-web.tls.domains[0].main=${SSL_DOMAIN}
+      - traefik.http.routers.geolibre-web.tls.domains[0].sans=*.${SSL_DOMAIN}
+      - traefik.http.routers.geolibre-web.middlewares=geolibre-strip@docker
+      - traefik.http.middlewares.geolibre-strip.stripprefix.prefixes=/geolibre
+      - traefik.http.services.geolibre-web.loadbalancer.server.port=80
+    restart: unless-stopped
+
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
     command: --config /litellm/main.yaml --port 4000
