@@ -1,0 +1,15 @@
+# Ignore everything by default (blocks PDFs, Excel, Word, etc.)
+*
+# Allow small images and text-based files
+!*.png
+!*.jpg
+!*.jpeg
+!*.gif
+!*.svg
+!*.webp
+!*.md
+!*.txt
+!*.csv
+!*.json
+# Allow the .gitignore itself
+!.gitignore

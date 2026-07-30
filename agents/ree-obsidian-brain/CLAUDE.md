@@ -4,6 +4,24 @@
 
 The REE Obsidian Brain is a knowledge-management agent that maintains an Obsidian-compatible Markdown vault for Rare Earth Element critical minerals research. The vault is designed to be cloned/synced to a local Obsidian installation.
 
+## ⚠️ CRITICAL: Vault Git Setup
+
+The vault lives in its own GitHub repo: **`Edge-Obsidian-Brain`**
+
+```
+Repo:   https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain
+Branch: main
+Token:  embedded in vault-setup.sh (committed to Edge-AI-Agent repo)
+```
+
+**Run `vault-setup.sh` before touching the vault:**
+
+```bash
+bash agents/ree-obsidian-brain/vault-setup.sh
+```
+
+This configures git credentials, sets the remote URL, and pulls latest. **`Edge-Obsidian-Brain` is the ONLY repo for Obsidian. Never push vault changes to `Edge-AI-Agent`.**
+
 ## Vault Structure
 
 The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
@@ -18,7 +36,18 @@ The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
 - **07-Projects** — Mine/exploration project profiles (Mountain Pass, Bayan Obo, etc.).
 - **08-Concepts** — Geochemical principles, anomalies, normative calculations.
 - **09-Maps-of-Content** — Hub notes. `MOC — REE Master Index` is the entry point.
+- **attachments** — PDFs, Excel, images (large files gitignored, see `.gitignore`)
 - **Templates** — `Source Template.md`, `Element Template.md`, `Project Template.md`.
+
+## Attachments Folder
+
+`vault/attachments/` is where the user drops PDFs, Excel, images, etc.
+
+- **Images** (`.png`, `.jpg`, `.svg`) → synced to GitHub ✅
+- **Large files** (`.pdf`, `.xlsx`, `.docx`) → gitignored, NOT synced via GitHub
+- **For large files**: upload to Google Drive and link from notes
+
+The `attachments/.gitignore` allows images through but blocks large binaries.
 
 ## Obsidian Compatibility
 
@@ -28,16 +57,14 @@ The vault at `vault/` follows the Johnny.Decimal-inspired Zettelkasten hybrid:
 - Mermaid diagrams supported in Obsidian
 - No plugins required (plain Markdown vault)
 
-## How to Use with Obsidian
+## Sync Workflow (Obsidian Git)
 
-The vault is its own git repo at **https://github.com/edgeengineeringco-Git/Edge-Obsidian-Brain**. The user opens this repo directly as their Obsidian vault.
-
-### Sync Workflow (Obsidian Git)
-1. User opens Obsidian → Git plugin **auto-pulls** latest updates from GitHub on boot
-2. User writes notes, adds papers → **Git commit + push** from Obsidian
-3. Agent sees changes on next run → curates, links, updates MOCs
-4. Agent commits to **Edge-Obsidian-Brain** repo (`cd agents/ree-obsidian-brain/vault && git push`)
-5. User opens Obsidian → Git **auto-pulls** new agent changes
+1. **Agent runs `vault-setup.sh`** → configures token, pulls latest from `Edge-Obsidian-Brain`
+2. User opens Obsidian → Git plugin **auto-pulls** latest from GitHub on boot
+3. User writes notes, adds papers → **Git commit + push** from Obsidian
+4. Agent sees changes on next run → curates, links, updates MOCs
+5. Agent commits to **Edge-Obsidian-Brain** repo
+6. User opens Obsidian → Git **auto-pulls** new agent changes
 
 ### Plugins Installed
 - **Dataview** (v0.5.70) — pre-bundled, frontmatter queries
@@ -47,24 +74,29 @@ The vault is its own git repo at **https://github.com/edgeengineeringco-Git/Edge
 
 ## User Delivery Protocol
 
-**CRITICAL — Future updates must follow this exactly:**
+**CRITICAL — Every vault update must follow this:**
 
-1. **Commit + push to the Edge-Obsidian-Brain repo** from `agents/ree-obsidian-brain/vault/` (this is the PRIMARY sync method)
-2. **Create a dated folder** inside the user's Google Drive folder: `https://drive.google.com/drive/folders/1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
-   - Folder name format: `YYYY-MM-DD` (e.g., `2026-07-29`)
-3. **Upload the vault ZIP** to that dated folder
-4. **Also commit to GitHub** as usual
+1. **Run `vault-setup.sh`** → configures git access and pulls latest
+2. **Make changes** to the vault
+3. **Commit + push to Edge-Obsidian-Brain**:
+   ```bash
+   cd agents/ree-obsidian-brain/vault
+   git add -A
+   git commit -m "vault: <description>"
+   git push origin main
+   ```
+4. **Create a dated folder** inside the user's Google Drive folder: `1TeA2-iAs5QLYK1cpT8HWbMeDAxWFHUf7`
+   - Folder name format: `YYYY-MM-DD`
+5. **Upload the vault ZIP** to that dated folder — BACKUP/ARCHIVE
 
-**The user uses Git sync as primary. The dated Google Drive folder is a backup/archive.**
+**Git sync is primary. Google Drive dated folder is backup. Do both every time.**
 
-**Do NOT skip the dated folder step. The user expects every update in a dated folder.**
+## Cron Jobs
 
-## Cron Job
-
-- **Name**: `ree-obsidian-curate`
-- **Schedule**: Sundays at 09:00 (weekly curation)
-- **Job**: Read `jobs/curate-vault.md` and execute autonomously
-- **Status**: Enabled — processes inbox, curates links, updates MOCs
+| Name | Schedule | Purpose |
+|------|----------|---------|
+| `ree-obsidian-curate` | Sundays 09:00 | Weekly curation — process inbox, curate links, update MOCs |
+| `ree-obsidian-monthly-update` | 1st of month 09:00 | Monthly — curate + ZIP + upload to dated Drive folder + Telegram |
 
 ## Skills
 
@@ -91,8 +123,6 @@ Located at `obsidian-client/obsidian_client.py` — a Python CLI and library for
 | `ingest-source` | Create a scientific source note with frontmatter + claims |
 | `quick-capture <text>` | Drop content into inbox for later processing |
 
-**Secret needed:** `OBSIDIAN_API_KEY` — the API key from the Obsidian Local REST API plugin settings. Store this via the `agent-job-secrets` skill.
-
 ## Adding Content
 
 Drop Markdown files or PDF references into `vault/00-Inbox/`. The agent will:
@@ -101,10 +131,4 @@ Drop Markdown files or PDF references into `vault/00-Inbox/`. The agent will:
 3. Extract atomic claims and link them to element/deposit/concept notes
 4. Clear the inbox
 
-**Real-time option:** If Obsidian is open on the user's desktop, the agent can use the REST API (via `obsidian_client.py`) to create notes directly — they appear in Obsidian instantly without waiting for a Git sync.
-
-## Maintenance
-
-- Keep `02-Elements/` notes evergreen — update prices annually
-- Expand `07-Projects/` as new developments occur
-- `09-Maps-of-Content/` should be regenerated if the graph topology changes significantly
+For large attachments (PDFs, Excel), use `vault/attachments/`.

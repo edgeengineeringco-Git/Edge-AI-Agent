@@ -12,7 +12,6 @@
 Thumbs.db
 
 # Mobile sync
-.obsidian/app.json
 
 # Cache
 .obsidian/cache/
@@ -22,5 +21,16 @@ Thumbs.db
 desktop.ini
 *.ini
 
-# PDFs are too large for GitHub — store in Google Drive instead
+# Large binary files — too large for GitHub, store in Google Drive
+# (attachments folder has its own .gitignore that allows small images)
 *.pdf
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+*.docx
+*.doc
+*.zip
+*.rar
+*.7z
+.obsidian/plugins/obsidian-local-rest-api/data.json

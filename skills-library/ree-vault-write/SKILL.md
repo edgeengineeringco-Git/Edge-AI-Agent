@@ -15,9 +15,13 @@ The vault is its own git repo at **https://github.com/edgeengineeringco-Git/Edge
 agents/ree-obsidian-brain/vault/  (git remote: Edge-Obsidian-Brain)
 ```
 
-**GitHub token** stored at `agents/ree-obsidian-brain/.vault-token` (gitignored) and in git credential store.
+**Before writing, run the setup script to configure git access:**
+```bash
+bash agents/ree-obsidian-brain/vault-setup.sh
+```
+This configures the GitHub token and pulls latest changes. **`Edge-Obsidian-Brain` is the ONLY repo for Obsidian.**
 
-All vault writes go directly to the `Edge-Obsidian-Brain` repo — this is the ONLY repo for Obsidian.
+**Attachments folder:** `vault/attachments/` — for PDFs, Excel, images. Large files are gitignored, small images sync to GitHub.
 
 ## How to Write a Note
 

@@ -164,11 +164,13 @@ agents/geosync-expert/
 **REE Obsidian Brain** — scientific knowledge curator and research librarian for Rare Earth Element critical minerals. Maintains an Obsidian-compatible Markdown vault designed to be opened in Obsidian desktop or mobile.
 
 - **Scope:** `agents/ree-obsidian-brain`
+- **Vault repo:** `Edge-Obsidian-Brain` (separate GitHub repo — the ONLY repo for Obsidian)
+- **Setup:** Run `vault-setup.sh` to configure git access and pull latest
 - **Weekly curation:** `ree-obsidian-curate` in `agent-job/CRONS.json` (Sundays at 09:00)
 - **Monthly update:** `ree-obsidian-monthly-update` in `agent-job/CRONS.json` (1st of every month at 09:00) — creates dated folder in user's Google Drive, zips vault, uploads ZIP
 - **System prompt:** `agents/ree-obsidian-brain/SYSTEM.md`
 - **Jobs:** `agents/ree-obsidian-brain/jobs/curate-vault.md`
-- **Pipeline:** Inbox processing → source note creation → atomic claim extraction → wiki-link curation → MOC updates → integrity check → Telegram notification
+- **Pipeline:** Run setup script → Process inbox → Source note creation → Atomic claim extraction → Wiki-link curation → MOC updates → Integrity check → Push to Edge-Obsidian-Brain → ZIP + upload to Drive → Telegram notification
 - **Skills:** Inherits root skills (`ree-database`, `critical-minerals-ref`, `agent-job-dm`)
 - **Universal write:** Any agent can write to the vault via the `ree-vault-write` skill. Just ask: *"Save this to my REE vault"*
 
