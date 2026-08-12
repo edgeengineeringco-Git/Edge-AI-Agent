@@ -1,0 +1,32 @@
+[
+  {
+    "type": "title",
+    "headline": "Geospatial Data Processing in Engineering",
+    "subtitle": "Education | EDGE Engineers",
+    "sector": "Education"
+  },
+  {
+    "type": "content",
+    "headline": "The Challenge",
+    "bullets": [
+      "Graduates design retaining walls \u2014 but stall on drone point clouds and cut-fill volumes",
+      "Spatial data drives every stage: site investigation, slope monitoring, as-built verification",
+      "The GIS toolchain is rarely taught in a way that maps to the field"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution",
+    "bullets": [
+      "Curriculum: raw ingest \u2192 coordinate transforms \u2192 raster/vector analysis \u2192 reporting",
+      "Trained on real project datasets, not toy exercises",
+      "Teams ramp faster, fewer spatial-data errors, GIS brought in-house"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to transform your operations?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
