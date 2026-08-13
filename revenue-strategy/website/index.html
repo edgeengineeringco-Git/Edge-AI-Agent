@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDGE Global Solutions — AI, Drones & Automation</title>
+    <meta name="description" content="AI-powered automation, drone surveying, sensor technology and digital transformation services across EU, Middle East, Africa, South America, Turkey and Iran.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ═══════════════════ NAVIGATION ═══════════════════ -->
+<nav class="navbar" id="navbar">
+    <div class="nav-inner">
+        <a href="#hero" class="nav-logo">
+            <div class="logo-icon">E</div>
+            EDGE <span>Global</span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#services" data-i18n="nav_services">Services</a></li>
+            <li><a href="#details" data-i18n="nav_solutions">Solutions</a></li>
+            <li><a href="#markets" data-i18n="nav_markets">Markets</a></li>
+            <li><a href="#whyus" data-i18n="nav_why">Why Us</a></li>
+            <li><a href="#contact" data-i18n="nav_contact">Contact</a></li>
+        </ul>
+        <div class="lang-switcher">
+            <button class="lang-btn active" onclick="setLang('en')">EN</button>
+            <button class="lang-btn" onclick="setLang('fr')">FR</button>
+            <button class="lang-btn" onclick="setLang('es')">ES</button>
+            <button class="lang-btn" onclick="setLang('ar')">عربي</button>
+            <button class="lang-btn" onclick="setLang('tr')">TR</button>
+            <button class="lang-btn" onclick="setLang('fa')">فارسی</button>
+        </div>
+        <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<section class="hero" id="hero">
+    <div class="hero-content">
+        <div class="hero-badge">
+            <span class="dot"></span>
+            <span data-i18n="hero_badge">AI-Powered Global Solutions</span>
+        </div>
+        <h1 data-i18n="hero_title">Intelligent <span class="gradient-text">Automation</span> for a Connected World</h1>
+        <p data-i18n="hero_sub">We combine artificial intelligence, drone technology, advanced sensors and autonomous agents to deliver cutting-edge solutions across energy, agriculture, healthcare, tourism, and industrial automation.</p>
+        <div class="hero-buttons">
+            <a href="#contact" class="btn btn-primary" data-i18n="hero_cta">Get Started</a>
+            <a href="#services" class="btn btn-secondary" data-i18n="hero_cta2">Explore Services</a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <div class="stat-number">10+</div>
+                <div class="stat-label" data-i18n="stat_areas">Service Areas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">6</div>
+                <div class="stat-label" data-i18n="stat_regions">Continental Regions</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">50+</div>
+                <div class="stat-label" data-i18n="stat_solutions">Solution Modules</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label" data-i18n="stat_agents">Autonomous Agents</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ SERVICES OVERVIEW ═══════════════════ -->
+<section class="services-section" id="services">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-tag" data-i18n="svc_tag">What We Do</div>
+            <h2 data-i18n="svc_title">Ten Pillars of Intelligent Service</h2>
+            <p data-i18n="svc_sub">From solar panel inspection to AI-powered healthcare platforms — one technology stack, endless applications.</p>
+        </div>
+        <div class="services-grid">
+            <div class="service-card" onclick="document.getElementById('details').scrollIntoView({behavior:'smooth'})">
+                <div class="service-icon">🔆</div>
+                <h3 data-i18n="svc1_title">Solar Energy Services</h3>
+                <p data-i18n="svc1_desc">Thermal drone inspection, panel cleaning, performance monitoring, and degradation analytics for solar farms and rooftops.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏗️</div>
+                <h3 data-i18n="svc2_title">Infrastructure Inspection</h3>
+                <p data-i18n="svc2_desc">Bridge surveys, building heat-loss analysis, construction monitoring, and pipeline corridor assessment via aerial thermal imaging.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🌾</div>
+                <h3 data-i18n="svc3_title">Precision Agriculture</h3>
+                <p data-i18n="svc3_desc">NDVI crop health mapping, irrigation optimization, soil moisture analysis, pest detection, and livestock thermal monitoring.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏥</div>
+                <h3 data-i18n="svc4_title">Healthcare & Medical Tech</h3>
+                <p data-i18n="svc4_desc">Telemedicine platforms, patient management AI, medical tourism booking, thermal screening systems, and health camp coordination.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏨</div>
+                <h3 data-i18n="svc5_title">Tourism & Hospitality</h3>
+                <p data-i18n="svc5_desc">Multilingual AI tour guides, booking automation, aerial content creation, heritage 3D mapping, and recommendation agents.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏪</div>
+                <h3 data-i18n="svc6_title">Retail & Restaurant Automation</h3>
+                <p data-i18n="svc6_desc">WhatsApp/Telegram commerce bots, order management, inventory tracking, multi-location dashboards, and delivery optimization.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏭</div>
+                <h3 data-i18n="svc7_title">Industrial & Energy Auditing</h3>
+                <p data-i18n="svc7_desc">Thermal energy audits, electrical hot-spot detection, cold storage monitoring, process optimization, and environmental compliance.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">📱</div>
+                <h3 data-i18n="svc8_title">App & Agent Development</h3>
+                <p data-i18n="svc8_desc">Custom AI agents, white-label automation platforms, government digital services, e-learning systems, and fintech integrations.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🌍</div>
+                <h3 data-i18n="svc9_title">Environmental Monitoring</h3>
+                <p data-i18n="svc9_desc">Water quality systems, waste management detection, air quality networks, flood early warning, and carbon offset verification.</p>
+                <div class="service-arrow">→</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">📊</div>
+                <h3 data-i18n="svc10_title">Data & AI Consulting</h3>
+                <p data-i18n="svc10_desc">AI transformation consulting, geospatial processing, automation audits, training workshops, and market research intelligence.</p>
+                <div class="service-arrow">→</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ DETAILED SERVICES ═══════════════════ -->
+<section class="details-section" id="details">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-tag" data-i18n="det_tag">Deep Dive</div>
+            <h2 data-i18n="det_title">Solutions That Deliver Results</h2>
+            <p data-i18n="det_sub">Each service module combines our core technologies — AI agents, drone survey, sensor data and autonomous automation.</p>
+        </div>
+
+        <!-- DETAIL 1: Solar -->
+        <div class="service-detail">
+            <div class="detail-content">
+                <h3 data-i18n="det1_title">🔆 Solar Energy Services</h3>
+                <p data-i18n="det1_desc">End-to-end solar asset management from initial feasibility through ongoing performance monitoring.</p>
+                <ul class="detail-list">
+                    <li><span class="check">✓</span><span data-i18n="det1_l1">Thermal drone panel inspection</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det1_l2">Automated cleaning service contracts</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det1_l3">Solar farm feasibility studies</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det1_l4">Real-time performance monitoring dashboard</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det1_l5">Long-term degradation tracking</span></li>
+                </ul>
+            </div>
+            <div class="detail-visual">
+                <div class="visual-icon">☀️</div>
+                <div class="visual-content">
+                    <div class="v-icon">🔆</div>
+                    <h4 data-i18n="det1_v_title">Solar Intelligence</h4>
+                    <p data-i18n="det1_v_sub">Thermal resolution: 640×512px | Detection accuracy: 98.5%</p>
+                    <div class="visual-stats">
+                        <div class="v-stat"><strong>30%</strong><span data-i18n="det1_v_s1">Faster than manual</span></div>
+                        <div class="v-stat"><strong>99.2%</strong><span data-i18n="det1_v_s2">Fault detection rate</span></div>
+                        <div class="v-stat"><strong>€0.02</strong><span data-i18n="det1_v_s3">Cost per panel</span></div>
+                        <div class="v-stat"><strong>48h</strong><span data-i18n="det1_v_s4">Report delivery</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL 2: Agriculture -->
+        <div class="service-detail">
+            <div class="detail-content">
+                <h3 data-i18n="det2_title">🌾 Precision Agriculture</h3>
+                <p data-i18n="det2_desc">Data-driven farming solutions that increase yields while reducing water and chemical inputs.</p>
+                <ul class="detail-list">
+                    <li><span class="check">✓</span><span data-i18n="det2_l1">NDVI and multispectral crop health monitoring</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det2_l2">Irrigation zone optimization</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det2_l3">Early pest and disease detection</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det2_l4">Livestock heat stress monitoring</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det2_l5">Seasonal yield prediction AI</span></li>
+                </ul>
+            </div>
+            <div class="detail-visual">
+                <div class="visual-icon">🌱</div>
+                <div class="visual-content">
+                    <div class="v-icon">🌾</div>
+                    <h4 data-i18n="det2_v_title">Smart Farming</h4>
+                    <p data-i18n="det2_v_sub">Precision agriculture powered by aerial intelligence</p>
+                    <div class="visual-stats">
+                        <div class="v-stat"><strong>25%</strong><span data-i18n="det2_v_s1">Water savings</span></div>
+                        <div class="v-stat"><strong>18%</strong><span data-i18n="det2_v_s2">Yield increase</span></div>
+                        <div class="v-stat"><strong>40%</strong><span data-i18n="det2_v_s3">Less pesticide</span></div>
+                        <div class="v-stat"><strong>3wk</strong><span data-i18n="det2_v_s4">Early detection</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL 3: Automation -->
+        <div class="service-detail">
+            <div class="detail-content">
+                <h3 data-i18n="det3_title">🏪 Business Automation</h3>
+                <p data-i18n="det3_desc">AI-powered automation for restaurants, shops, and service businesses — 24/7, in any language.</p>
+                <ul class="detail-list">
+                    <li><span class="check">✓</span><span data-i18n="det3_l1">WhatsApp & Telegram ordering bots</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det3_l2">Automated inventory management</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det3_l3">Multi-location analytics dashboard</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det3_l4">Delivery route optimization</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det3_l5">Multilingual customer support agents</span></li>
+                </ul>
+            </div>
+            <div class="detail-visual">
+                <div class="visual-icon">🤖</div>
+                <div class="visual-content">
+                    <div class="v-icon">⚡</div>
+                    <h4 data-i18n="det3_v_title">Autonomous Operations</h4>
+                    <p data-i18n="det3_v_sub">AI agents that work while you sleep</p>
+                    <div class="visual-stats">
+                        <div class="v-stat"><strong>24/7</strong><span data-i18n="det3_v_s1">Always on</span></div>
+                        <div class="v-stat"><strong>6</strong><span data-i18n="det3_v_s2">Languages</span></div>
+                        <div class="v-stat"><strong>85%</strong><span data-i18n="det3_v_s3">Task automation</span></div>
+                        <div class="v-stat"><strong>&lt;2s</strong><span data-i18n="det3_v_s4">Response time</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL 4: Healthcare -->
+        <div class="service-detail">
+            <div class="detail-content">
+                <h3 data-i18n="det4_title">🏥 Healthcare Technology</h3>
+                <p data-i18n="det4_desc">Digital health platforms that bridge the gap between patients and providers across borders.</p>
+                <ul class="detail-list">
+                    <li><span class="check">✓</span><span data-i18n="det4_l1">White-label telemedicine platform</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det4_l2">Medical tourism booking engine</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det4_l3">AI appointment scheduling agents</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det4_l4">Thermal screening stations</span></li>
+                    <li><span class="check">✓</span><span data-i18n="det4_l5">Health camp coordination platform</span></li>
+                </ul>
+            </div>
+            <div class="detail-visual">
+                <div class="visual-icon">💊</div>
+                <div class="visual-content">
+                    <div class="v-icon">🏥</div>
+                    <h4 data-i18n="det4_v_title">Digital Health</h4>
+                    <p data-i18n="det4_v_sub">Connecting patients to care across borders</p>
+                    <div class="visual-stats">
+                        <div class="v-stat"><strong>$2B+</strong><span data-i18n="det4_v_s1">Turkey med tourism</span></div>
+                        <div class="v-stat"><strong>60%</strong><span data-i18n="det4_v_s2">Faster booking</span></div>
+                        <div class="v-stat"><strong>15+</strong><span data-i18n="det4_v_s3">Languages</span></div>
+                        <div class="v-stat"><strong>98%</strong><span data-i18n="det4_v_s4">Uptime SLA</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ MARKETS ═══════════════════ -->
+<section class="markets-section" id="markets">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-tag" data-i18n="mkt_tag">Global Reach</div>
+            <h2 data-i18n="mkt_title">Serving Six Continental Regions</h2>
+            <p data-i18n="mkt_sub">Local expertise, global technology. We operate where opportunity meets innovation.</p>
+        </div>
+        <div class="markets-grid">
+            <div class="market-card">
+                <div class="market-flag">🇪🇺</div>
+                <h3 data-i18n="mkt1_name">European Union</h3>
+                <p class="market-desc" data-i18n="mkt1_desc">Energy efficiency mandates, aging infrastructure inspection, precision viticulture, and strict environmental compliance.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt1_t1">Energy Audits</span>
+                    <span class="market-tag" data-i18n="mkt1_t2">Solar</span>
+                    <span class="market-tag" data-i18n="mkt1_t3">Compliance</span>
+                    <span class="market-tag" data-i18n="mkt1_t4">Carbon Markets</span>
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-flag">🌎</div>
+                <h3 data-i18n="mkt2_name">South America</h3>
+                <p class="market-desc" data-i18n="mkt2_desc">Large-scale commercial agriculture, urban restaurant tech, delivery ecosystem integration, and environmental monitoring.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt2_t1">Agribusiness</span>
+                    <span class="market-tag" data-i18n="mkt2_t2">Restaurant Tech</span>
+                    <span class="market-tag" data-i18n="mkt2_t3">Logistics</span>
+                    <span class="market-tag" data-i18n="mkt2_t4">Fintech</span>
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-flag">🌍</div>
+                <h3 data-i18n="mkt3_name">Africa</h3>
+                <p class="market-desc" data-i18n="mkt3_desc">Leapfrog mobile-first markets, WhatsApp commerce, precision agriculture for smallholders, telemedicine, and capacity building.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt3_t1">WhatsApp Bots</span>
+                    <span class="market-tag" data-i18n="mkt3_t2">Telemedicine</span>
+                    <span class="market-tag" data-i18n="mkt3_t3">Agriculture</span>
+                    <span class="market-tag" data-i18n="mkt3_t4">Training</span>
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-flag">🇹🇷</div>
+                <h3 data-i18n="mkt4_name">Turkey</h3>
+                <p class="market-desc" data-i18n="mkt4_desc">Medical tourism hub, post-earthquake infrastructure inspection, manufacturing automation, and booming restaurant sector.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt4_t1">Medical Tourism</span>
+                    <span class="market-tag" data-i18n="mkt4_t2">Construction</span>
+                    <span class="market-tag" data-i18n="mkt4_t3">Manufacturing</span>
+                    <span class="market-tag" data-i18n="mkt4_t4">Hospitality</span>
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-flag">🇮🇷</div>
+                <h3 data-i18n="mkt5_name">Iran</h3>
+                <p class="market-desc" data-i18n="mkt5_desc">Critical water scarcity solutions, untapped heritage tourism, agricultural optimization, and telemedicine for rural communities.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt5_t1">Water Monitoring</span>
+                    <span class="market-tag" data-i18n="mkt5_t2">Heritage Tourism</span>
+                    <span class="market-tag" data-i18n="mkt5_t3">Agriculture</span>
+                    <span class="market-tag" data-i18n="mkt5_t4">Healthcare</span>
+                </div>
+            </div>
+            <div class="market-card">
+                <div class="market-flag">🌙</div>
+                <h3 data-i18n="mkt6_name">Middle East & Arab States</h3>
+                <p class="market-desc" data-i18n="mkt6_desc">Mega-project monitoring, solar farm maintenance in harsh climates, luxury tourism experiences, and Vision 2030 digital transformation.</p>
+                <div class="market-tags">
+                    <span class="market-tag" data-i18n="mkt6_t1">Solar Cleaning</span>
+                    <span class="market-tag" data-i18n="mkt6_t2">Mega Projects</span>
+                    <span class="market-tag" data-i18n="mkt6_t3">Water</span>
+                    <span class="market-tag" data-i18n="mkt6_t4">Smart Cities</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ WHY US ═══════════════════ -->
+<section class="advantages-section" id="whyus">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-tag" data-i18n="why_tag">Our Edge</div>
+            <h2 data-i18n="why_title">Why Choose EDGE Global</h2>
+            <p data-i18n="why_sub">A rare combination of AI, hardware, and domain expertise — under one roof.</p>
+        </div>
+        <div class="advantages-grid">
+            <div class="advantage-item">
+                <div class="adv-icon">🤖</div>
+                <h4 data-i18n="why1_title">Autonomous AI Agents</h4>
+                <p data-i18n="why1_desc">Self-operating agents that schedule jobs, process data, generate reports and deliver results — no human intervention needed.</p>
+            </div>
+            <div class="advantage-item">
+                <div class="adv-icon">🚁</div>
+                <h4 data-i18n="why2_title">Drone + Sensor Fleet</h4>
+                <p data-i18n="why2_desc">Professional-grade thermal, multispectral and gamma-ray sensors mounted on survey-grade drones for precision data acquisition.</p>
+            </div>
+            <div class="advantage-item">
+                <div class="adv-icon">🌍</div>
+                <h4 data-i18n="why3_title">6-Language Capability</h4>
+                <p data-i18n="why3_desc">Full native support in English, French, Spanish, Arabic, Turkish and Farsi — covering all target markets natively.</p>
+            </div>
+            <div class="advantage-item">
+                <div class="adv-icon">⚡</div>
+                <h4 data-i18n="why4_title">Rapid Deployment</h4>
+                <p data-i18n="why4_desc">Modular architecture means we deploy new solutions in days, not months. Same engine, different configurations per market.</p>
+            </div>
+            <div class="advantage-item">
+                <div class="adv-icon">📊</div>
+                <h4 data-i18n="why5_title">Automated Reporting</h4>
+                <p data-i18n="why5_desc">Every service includes intelligent report generation — PDF, HTML, CSV — delivered via email, Telegram, or cloud storage.</p>
+            </div>
+            <div class="advantage-item">
+                <div class="adv-icon">🔒</div>
+                <h4 data-i18n="why6_title">Enterprise Security</h4>
+                <p data-i18n="why6_desc">OAuth 2.0, encrypted data pipelines, GDPR-compliant processing, and secure cloud infrastructure across all regions.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ CTA ═══════════════════ -->
+<section class="cta-section">
+    <div class="container">
+        <h2 data-i18n="cta_title">Ready to Transform Your Operations?</h2>
+        <p data-i18n="cta_sub">Let's discuss how our AI-powered solutions can drive efficiency, reduce costs, and unlock new revenue streams for your business.</p>
+        <a href="#contact" class="btn" data-i18n="cta_btn">Schedule a Consultation</a>
+    </div>
+</section>
+
+<!-- ═══════════════════ CONTACT ═══════════════════ -->
+<section class="contact-section" id="contact">
+    <div class="container">
+        <div class="section-header">
+            <div class="section-tag" data-i18n="con_tag">Get In Touch</div>
+            <h2 data-i18n="con_title">Start Your Project</h2>
+            <p data-i18n="con_sub">Tell us about your needs and we'll design a tailored solution for your market.</p>
+        </div>
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h3 data-i18n="con_info_title">EDGE Global Solutions</h3>
+                <p data-i18n="con_info_desc">Operating across six continents with local expertise and global technology infrastructure.</p>
+                <ul class="contact-items">
+                    <li>
+                        <div class="c-icon">📧</div>
+                        <div><strong data-i18n="con_email_label">Email</strong><span>info@edge-global.solutions</span></div>
+                    </li>
+                    <li>
+                        <div class="c-icon">💬</div>
+                        <div><strong data-i18n="con_tg_label">Telegram</strong><span>@EdgeGlobalBot</span></div>
+                    </li>
+                    <li>
+                        <div class="c-icon">📍</div>
+                        <div><strong data-i18n="con_loc_label">Headquarters</strong><span data-i18n="con_loc_value">Ireland — Serving EU, ME, Africa, Americas</span></div>
+                    </li>
+                    <li>
+                        <div class="c-icon">⏰</div>
+                        <div><strong data-i18n="con_hours_label">Response Time</strong><span data-i18n="con_hours_value">Under 24 hours — AI agents never sleep</span></div>
+                    </li>
+                </ul>
+            </div>
+            <form class="contact-form" onsubmit="handleSubmit(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="form_name">Full Name</label>
+                        <input type="text" required data-i18n-placeholder="form_name_ph" placeholder="Your full name">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="form_email">Email Address</label>
+                        <input type="email" required data-i18n-placeholder="form_email_ph" placeholder="you@company.com">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="form_service">Service Interest</label>
+                    <select>
+                        <option value="" data-i18n="form_select">Select a service area...</option>
+                        <option data-i18n="svc1_title">Solar Energy Services</option>
+                        <option data-i18n="svc2_title">Infrastructure Inspection</option>
+                        <option data-i18n="svc3_title">Precision Agriculture</option>
+                        <option data-i18n="svc4_title">Healthcare & Medical Tech</option>
+                        <option data-i18n="svc5_title">Tourism & Hospitality</option>
+                        <option data-i18n="svc6_title">Retail & Restaurant Automation</option>
+                        <option data-i18n="svc7_title">Industrial & Energy Auditing</option>
+                        <option data-i18n="svc8_title">App & Agent Development</option>
+                        <option data-i18n="svc9_title">Environmental Monitoring</option>
+                        <option data-i18n="svc10_title">Data & AI Consulting</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="form_region">Your Region</label>
+                        <select>
+                            <option value="" data-i18n="form_region_select">Select region...</option>
+                            <option data-i18n="mkt1_name">European Union</option>
+                            <option data-i18n="mkt2_name">South America</option>
+                            <option data-i18n="mkt3_name">Africa</option>
+                            <option data-i18n="mkt4_name">Turkey</option>
+                            <option data-i18n="mkt5_name">Iran</option>
+                            <option data-i18n="mkt6_name">Middle East & Arab States</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="form_budget">Budget Range</label>
+                        <select>
+                            <option value="" data-i18n="form_budget_select">Select range...</option>
+                            <option>€1,000 - €5,000</option>
+                            <option>€5,000 - €15,000</option>
+                            <option>€15,000 - €50,000</option>
+                            <option>€50,000+</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="form_message">Project Details</label>
+                    <textarea data-i18n-placeholder="form_message_ph" placeholder="Tell us about your project..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" data-i18n="form_submit">Send Inquiry</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="nav-logo" style="margin-bottom:0;">
+                    <div class="logo-icon">E</div>
+                    EDGE <span>Global</span>
+                </div>
+                <p data-i18n="footer_brand">AI-powered automation, drone surveying, sensor technology and digital transformation. Serving businesses across EU, Middle East, Africa, South America, Turkey and Iran.</p>
+            </div>
+            <div>
+                <h5 data-i18n="footer_svc">Services</h5>
+                <ul>
+                    <li><a href="#services" data-i18n="svc1_title">Solar Energy</a></li>
+                    <li><a href="#services" data-i18n="svc3_title">Agriculture</a></li>
+                    <li><a href="#services" data-i18n="svc6_title">Automation</a></li>
+                    <li><a href="#services" data-i18n="svc4_title">Healthcare</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 data-i18n="footer_markets">Markets</h5>
+                <ul>
+                    <li><a href="#markets" data-i18n="mkt1_name">European Union</a></li>
+                    <li><a href="#markets" data-i18n="mkt4_name">Turkey</a></li>
+                    <li><a href="#markets" data-i18n="mkt3_name">Africa</a></li>
+                    <li><a href="#markets" data-i18n="mkt6_name">Middle East</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 data-i18n="footer_company">Company</h5>
+                <ul>
+                    <li><a href="#" data-i18n="footer_about">About Us</a></li>
+                    <li><a href="#" data-i18n="footer_careers">Careers</a></li>
+                    <li><a href="#" data-i18n="footer_privacy">Privacy Policy</a></li>
+                    <li><a href="#" data-i18n="footer_terms">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span data-i18n="footer_copy">© 2026 EDGE Global Solutions. All rights reserved.</span>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="i18n.js"></script>
+<script src="i18n-part2.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
