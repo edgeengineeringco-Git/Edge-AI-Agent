@@ -1,0 +1,9 @@
+fastapi>=0.104
+uvicorn
+geopandas
+shapely
+rasterio
+requests
+cdsapi
+earthengine-api
+pytest

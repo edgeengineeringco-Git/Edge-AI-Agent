@@ -1,87 +1,65 @@
-# Irish Terrestrial Dose Agent
+# Irish Terrestrial Dose Indicator — Agent Context
 
-Interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any Irish land point.
-
-## Scope
-
-`agents/terrestrial-dose` — **Ireland only**
+## Purpose
+Commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment".
 
 ## Architecture
 
 ```
-terrestrial-dose/
+agents/terrestrial-dose/
 ├── dose_core/
-│   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
-├── api/
-│   └── main.py                    # FastAPI backend — Ireland only
+│   └── dose_calculation_core.py   # SINGLE SOURCE OF TRUTH — do not modify
 ├── models/
-│   └── analyze_point.py           # Smart analysis on raw Irish data table
-├── ingest/
-│   ├── ireland_data.py            # Irish open data layer fetchers
-│   └── point_sampler.py           # Point sampling (legacy)
-├── web/                           # React + MapLibre frontend (source only)
+│   ├── sample_point.py            # Assembles fixed raw data table at lat/lon
+│   └── analyze_point.py           # Steps A–H (the smart agent analysis)
+├── analysis/
+│   └── short_report.py            # Templated ≤8-line report (no LLM)
+├── api/
+│   └── main.py                    # FastAPI: /dose, /dose/bbox, /health
+├── web/src/                       # React + TypeScript + MapLibre
+│   ├── dose_core.ts               # TypeScript port of dose core
+│   ├── lithology.ts               # Ireland GSI 1:100k geology regions
+│   ├── Map.tsx                    # MapLibre satellite + hover + click
+│   ├── Triangle.tsx               # D3 three-arm dose triangle
+│   ├── Report.tsx                 # Right panel: triangle + report + factors
+│   └── App.tsx                    # Two-pane layout
 ├── tests/
-│   └── test_dose_core.py          # 14 validation tests
+│   └── test_dose_core.py          # 6 validation tests
 ├── irish-dose-standalone.html     # Self-contained HTML for public repo
-└── README.md
+├── Dockerfile
+├── requirements.txt
+├── .env.example
+├── SYSTEM.md                      # Agent identity and instructions
+├── CLAUDE.md                      # This file
+└── README.md                      # Project documentation
 ```
 
-## Source
+## Key Rules
+1. **Ireland only** — bounding box: 51.4–55.4°N, 10.6–5.3°W
+2. **No dose math outside dose_calculation_core.py** — import, never rewrite
+3. **No invented values** — None = unavailable, shown honestly
+4. **No LLM free-text** — templates only (short_report.py)
+5. **Data hierarchy**: Tellus measured > GSI stream > lithology prior
+6. **EPA radon = validation** — never replaces the model
+7. **Irish 200 Bq/m³** action level (stricter than EU 300)
+8. **Paper-ready** — every number traceable to UNSCEAR/ICRP/EU BSS
 
-https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+## Risk Classification
+- GREEN: ≤ 2.2 mSv/yr (≤ UNSCEAR world average)
+- AMBER: 2.2–6.6 mSv/yr (1–3× average)
+- RED: > 6.6 mSv/yr OR radon ≥ 200 Bq/m³ OR Ra-eq ≥ 370 OR gamma ≥ 1000 nGy/h
 
-## Running
+## Data Layers
+| Layer | Source | Resolution | Role |
+|-------|--------|-----------|------|
+| Bedrock geology | GSI Bedrock 1:100k ITM | 100m | Lithology backbone |
+| Tellus radiometric | GSI Tellus (K/U/Th) | ~200m | Measured activities |
+| EPA radon risk map | EPA Ireland | 1km grid | Predicted radon validation |
+| Teagasc soil system | Teagasc Irish SIS | mapped | Soil class, permeability |
+| GSI faults | GSI structural | vector | Radon migration pathways |
 
-```bash
-# Tests
-python3 -c "
-import sys; sys.path.insert(0, '.')
-from tests.test_dose_core import *
-[fn() or print('PASS:', fn.__name__) for fn in [
-  test_world_average_soil, test_granite_radon_dominated_amber,
-  test_carbonate_green, test_monazite_thoron_red,
-  test_measurement_override, test_radon_action_level,
-  test_irish_radon_factor, test_irish_radon_at_100,
-  test_risk_class_irish_green, test_risk_class_irish_radon_amber,
-  test_risk_class_irish_radon_red, test_risk_class_irish_high_dose_red,
-  test_risk_class_irish_raeq_red, test_risk_class_irish_gamma_red
-]]
-print('All 14 tests passed')
-"
+## Standalone HTML
+The file `irish-dose-standalone.html` is deployed to:
+https://edgeengineeringco-git.github.io/edge-ai-agent-site/irish-dose.html
 
-# API server
-pip install fastapi uvicorn
-uvicorn api.main:app --reload --port 8000
-
-# Frontend dev
-cd web && npm install && npm run dev
-```
-
-## API Endpoints
-
-- `GET /health` — health check (Ireland-only coverage)
-- `GET /sample?lat=53.35&lon=-6.26` — raw Irish data table
-- `GET /dose?lat=53.35&lon=-6.26` — full dose fingerprint with Irish risk classification
-- `GET /dose/bbox?south=51.4&west=-10.6&north=55.4&east=-5.3&step=0.1` — GeoJSON grid
-
-## Dose Standards (Ireland)
-
-| Metric | GREEN | AMBER | RED |
-|--------|-------|-------|-----|
-| Total dose (mSv/yr) | ≤ 2.2 | 2.2–6.6 | > 6.6 |
-| Radon (Bq/m³) | ≤ 100 | 100–**200** | ≥ **200** |
-| Gamma rate (nGy/h) | ≤ 59 | 59–1000 | ≥ 1000 |
-| Ra-eq (Bq/kg) | ≤ 370 | 370–740 | ≥ 740 |
-
-- **Irish national radon action level: 200 Bq/m³** (stricter than EU BSS 300)
-- WHO reference: 100 Bq/m³
-- UNSCEAR 2024 global average: 2.2 mSv/yr
-
-## Key Features
-
-- **Tellus airborne radiometric** (K, U, Th) used where available — measurement-grade, overrides lithology prior
-- **EPA radon risk map** used as validation — 1 km grid predicted indoor radon
-- **Irish 200 Bq/m³ action level** in risk classification
-- **GSI Bedrock 1:100k** lithology backbone — 100m resolution
-- **Teagasc soil properties** for permeability
-- Satellite basemap (Esri World Imagery) at town zoom
+To update: copy the file to the public repo and push.

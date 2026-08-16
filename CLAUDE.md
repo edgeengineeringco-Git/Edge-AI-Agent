@@ -139,44 +139,56 @@ agents/edge-kuth-portal/
 
 ### terrestrial-dose
 
-**Irish Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any Irish land point. Ireland-only, measurement-grade. FastAPI backend + React/MapLibre frontend.
+**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant.
 
 - **Scope:** `agents/terrestrial-dose`
 - **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
 - **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
 - **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+- **Live:** https://edgeengineeringco-git.github.io/edge-ai-agent-site/irish-dose.html
 
 **Key features:**
-- Tellus airborne radiometric (K, U, Th) used where available — measurement-grade, overrides lithology prior
-- EPA radon risk map used as validation — 1 km grid predicted indoor radon
-- Irish 200 Bq/m³ radon action level (stricter than EU 300)
-- GSI Bedrock 1:100k lithology backbone — 100m resolution
+- Two-pane layout: satellite map (60%) + report panel (40%)
+- Floating SVG dose triangle (Rn/Tn/γ at 120°) follows cursor
+- Hover 100ms debounce → live dose computation
+- Tellus airborne radiometric (K/U/Th) where available — measurement grade
+- EPA radon risk map validation (1km grid)
+- GSI Bedrock 1:100k lithology backbone (100m)
 - Teagasc soil properties for permeability
-- Satellite basemap centered on Ireland `[-8.5, 53.3]` zoom 7
-- Self-contained standalone HTML: `irish-dose-standalone.html`
+- Irish 200 Bq/m³ radon action level (stricter than EU 300)
+- Risk classification: GREEN/AMBER/RED per EU BSS
+- Confidence meter with provenance trail
+- Templated ≤8-line report (no LLM free text)
 
 ```
 agents/terrestrial-dose/
 ├── SYSTEM.md
 ├── CLAUDE.md
 ├── dose_core/
-│   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
-├── api/
-│   └── main.py                    # FastAPI backend — Ireland only
+│   └── dose_calculation_core.py   # SINGLE SOURCE OF TRUTH (DO NOT MODIFY)
 ├── models/
-│   └── analyze_point.py           # Smart analysis on raw Irish data table
-├── ingest/
-│   ├── ireland_data.py            # Irish open data layer fetchers
-│   └── point_sampler.py           # Point sampling (legacy)
-├── web/                           # React + MapLibre frontend (source only)
+│   ├── sample_point.py            # Assembles raw data table at lat/lon
+│   └── analyze_point.py           # Steps A–H (smart agent analysis)
+├── analysis/
+│   └── short_report.py            # Templated ≤8-line report
+├── api/
+│   └── main.py                    # FastAPI: /dose, /dose/bbox, /health
+├── web/src/                       # React + TypeScript + MapLibre
+│   ├── dose_core.ts               # TypeScript port of dose core
+│   ├── lithology.ts               # Ireland GSI 1:100k geology
+│   ├── Map.tsx                    # MapLibre satellite + hover
+│   ├── Triangle.tsx               # D3 three-arm dose triangle
+│   ├── Report.tsx                 # Right panel
+│   └── App.tsx                    # Two-pane layout
 ├── tests/
-│   └── test_dose_core.py          # 14 validation tests (6 + 8 Irish-specific)
-├── irish-dose-standalone.html     # Self-contained HTML for public repo
-├── data/cache/                    # Runtime cache (not committed)
-├── skills/
-│   └── agent-job-dm → ../../../skills-library/agent-job-dm
-└── jobs/
-    └── process-dose.md
+│   └── test_dose_core.py          # 6 validation tests
+├── irish-dose-standalone.html     # Self-contained HTML (deployed)
+├── Dockerfile
+├── requirements.txt
+├── .env.example
+├── README.md
+└── skills/
+    └── agent-job-dm → ../../../skills-library/agent-job-dm
 ```
 
 ### edge-smart-video
