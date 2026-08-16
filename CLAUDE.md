@@ -75,15 +75,39 @@ agents/edge-critical-minerals/
 
 ### edge-kuth-portal
 
-**Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
+EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files and returns K/U/Th concentration results. Runs natively in thepopebot as a scoped agent — no separate servers or containers needed.
+
+**Processing happens IMMEDIATELY on webhook trigger** — no cron batch delays.
 
 - **Scope:** `agents/edge-kuth-portal`
-- **System prompt:** `agents/edge-kuth-portal/SYSTEM.md`
-- **Jobs:** `agents/edge-kuth-portal/jobs/process-dose.md`
-- **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+- **Upload endpoint:** `/edge-kuth/upload-page` (Traefik → upload-server Docker container)
+- **Webhook trigger:** `/edge-kuth/upload` (TRIGGERS.json, **enabled**) — fires agent on upload server callback
+- **Flow:** Client form POSTs multipart → upload server saves files → triggers agent → agent runs Python → Telegram broadcast
+- **Telegram:** Results CSV broadcast to all admins via `agent-job-dm` skill
+- **Skill:** `edge-kuth-analysis` — invocable by any agent
 
 ```
 agents/edge-kuth-portal/
+├── SYSTEM.md
+├── CLAUDE.md
+├── skills/
+│   ├── agent-job-dm → ../../../skills-library/agent-job-dm
+│   └── edge-kuth-analysis → ../../../skills-library/edge-kuth-analysis
+└── jobs/
+    └── process-spectra.md
+```
+
+### terrestrial-dose
+
+**Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
+
+- **Scope:** `agents/terrestrial-dose`
+- **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
+- **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
+- **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+
+```
+agents/terrestrial-dose/
 ├── SYSTEM.md
 ├── CLAUDE.md
 ├── dose_core/
@@ -99,8 +123,7 @@ agents/edge-kuth-portal/
 │   └── test_dose_core.py          # 6 validation tests
 ├── data/cache/                    # Runtime cache (not committed)
 ├── skills/
-│   ├── agent-job-dm → ../../../skills-library/agent-job-dm
-│   └── edge-kuth-analysis → ../../../skills-library/edge-kuth-analysis
+│   └── agent-job-dm → ../../../skills-library/agent-job-dm
 └── jobs/
     └── process-dose.md
 ```
