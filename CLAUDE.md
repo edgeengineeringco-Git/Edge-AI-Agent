@@ -53,6 +53,46 @@ agents/
 - **CLAUDE.md** — The coding agent automatically picks up `.claude/` and `CLAUDE.md` files relative to its working directory.
 - **Default scope** — When no scope is selected, the agent runs from the repository root with root-level skills.
 
+## Agent Organization Rules
+
+**CRITICAL: Each agent is a SEPARATE, SELF-CONTAINED directory. Never mix code from different agents.**
+
+### Creating a New Agent
+
+1. **Always create a new directory:** `agents/<new-agent-name>/`
+2. **Never add new code to an existing agent** unless it belongs there
+3. **Each agent gets its own:**
+   - `SYSTEM.md` — Agent identity and instructions
+   - `CLAUDE.md` — Agent-specific context
+   - `jobs/` — Job task prompts
+   - `skills/` — Agent-specific skill symlinks (optional)
+4. **Update root `CLAUDE.md`** — Add the new agent to the Agents section below
+
+### Existing Agents (DO NOT mix these)
+
+| Agent | Purpose | Directory |
+|-------|---------|----------|
+| `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
+| `terrestrial-dose` | Terrestrial radiation dose GIS (FastAPI + React) | `agents/terrestrial-dose/` |
+| `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
+| `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
+| `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
+| `ree-obsidian-brain` | REE knowledge vault curation | `agents/ree-obsidian-brain/` |
+
+### What NOT to Do
+
+- ❌ Add terrestrial-dose code to edge-kuth-portal
+- ❌ Add edge-kuth-portal code to terrestrial-dose
+- ❌ Mix unrelated agent code in the same directory
+- ❌ Create agents without their own SYSTEM.md and CLAUDE.md
+
+### What TO Do
+
+- ✅ Create `agents/<new-agent>/` with its own SYSTEM.md, CLAUDE.md, jobs/
+- ✅ Keep each agent focused on ONE purpose
+- ✅ Update root CLAUDE.md when adding new agents
+- ✅ Use skills/ symlinks for shared capabilities
+
 ## Agents
 
 ### edge-critical-minerals
