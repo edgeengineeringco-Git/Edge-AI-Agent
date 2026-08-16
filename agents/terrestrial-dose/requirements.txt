@@ -1,9 +1,9 @@
 fastapi>=0.104
 uvicorn
-geopandas
-shapely
+numpy
 rasterio
+shapely
+geopandas
+cachetools
 requests
-cdsapi
-earthengine-api
 pytest

@@ -139,62 +139,52 @@ agents/edge-kuth-portal/
 
 ### terrestrial-dose
 
-**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant. v3.0 — real WMS data sources.
+**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant. v4.0 — backend API with real raster data.
 
 - **Scope:** `agents/terrestrial-dose`
 - **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
-- **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
 - **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
 - **Live:** https://edgeengineeringco-git.github.io/edge-ai-agent-site/irish-dose.html
 
-**Key features:**
-- Real WMS GetFeatureInfo queries (not hardcoded data)
-- 21 data sources listed with status (WMS connected / unavailable / download only)
-- Layer toggle panel for WMS overlays
-- Bottom panel: data source table (left) + dose summary (right)
-- Dose calculated from actual GSI/EPA/Teagasc WMS responses
-- Irish 200 Bq/m³ radon action level (stricter than EU 300)
-- Risk classification: GREEN/AMBER/RED per EU BSS
-- Short report (8 templated lines with actual data provenance)
+**Architecture:**
+- **Backend** (`api/dose_backend.py`): FastAPI with real GeoTIFF raster loading
+  - RasterLayer class for sampling bedrock, Tellus K/U/Th, EPA radon, Teagasc soils
+  - Falls back to lithology priors when rasters missing
+  - UNSCEAR 2024 dose conversion coefficients
+  - TTLCache for computed results
+- **Frontend** (`irish-dose-standalone.html`): MapLibre + backend API
+  - WMS overlays for map display (7 layers, toggleable)
+  - Bottom panel: data sources + dose summary
+  - Confidence meter with provenance trail
 
-**WMS Data Sources (7 active):**
-1. GSI Bedrock 1:100k → lithology backbone
-2. GSI Quaternary → cover deposits
-3. GSI Groundwater → aquifer overlay
-4. GSI Geochemistry (Tellus) → trace elements
-5. GSI Faults → geological lines
-6. EPA Radon Risk → radon zone validation
-7. Teagasc Soils → soil type, drainage
+**Data sources (real rasters):**
+- GSI Bedrock 1:100k → lithology backbone
+- Tellus radiometric K/U/Th → measured activities
+- EPA Radon Risk → radon zone validation
+- Teagasc Soils → permeability
+- GSI Faults → fault proximity
+- Corine Land Cover, Sentinel-2 NDVI, ESA CCI (optional)
 
 ```
 agents/terrestrial-dose/
-├── SYSTEM.md
-├── CLAUDE.md
-├── dose_core/
-│   └── dose_calculation_core.py   # SINGLE SOURCE OF TRUTH (DO NOT MODIFY)
-├── models/
-│   ├── sample_point.py            # Assembles raw data table at lat/lon
-│   └── analyze_point.py           # Steps A–H (smart agent analysis)
-├── analysis/
-│   └── short_report.py            # Templated ≤8-line report
-├── api/
-│   └── main.py                    # FastAPI: /dose, /dose/bbox, /health
-├── web/src/                       # React + TypeScript + MapLibre
-│   ├── dose_core.ts               # TypeScript port of dose core
-│   ├── lithology.ts               # Ireland GSI 1:100k geology
-│   ├── Map.tsx                    # MapLibre satellite + hover
-│   ├── Triangle.tsx               # D3 three-arm dose triangle
-│   ├── Report.tsx                 # Right panel
-│   └── App.tsx                    # Two-pane layout
-├── tests/
-│   └── test_dose_core.py          # 6 validation tests
-├── irish-dose-standalone.html     # Self-contained HTML (deployed)
+├── api/dose_backend.py            # FastAPI backend (THE MAIN API)
+├── dose_core/dose_calculation_core.py  # Core dose formulas (legacy/tests)
+├── irish-dose-standalone.html     # Frontend HTML (deployed)
+├── data/                          # Runtime raster data (not committed)
+│   ├── gsi_bedrock_100k.tif
+│   ├── tellus_radiometric_k.tif
+│   ├── tellus_radiometric_u.tif
+│   ├── tellus_radiometric_th.tif
+│   ├── epa_radon_map.tif
+│   ├── teagasc_soil_permeability.tif
+│   ├── gsi_faults.geojson
+│   └── era5_season.json
+├── tests/test_dose_core.py
 ├── Dockerfile
 ├── requirements.txt
-├── .env.example
-├── README.md
-└── skills/
-    └── agent-job-dm → ../../../skills-library/agent-job-dm
+├── SYSTEM.md
+├── CLAUDE.md
+└── README.md
 ```
 
 ### edge-smart-video

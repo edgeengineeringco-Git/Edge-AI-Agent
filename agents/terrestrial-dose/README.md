@@ -1,46 +1,52 @@
 # Irish Terrestrial Dose Indicator
 
-**Commercial-grade interactive web application** that estimates and visualises terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution.
+**Commercial-grade interactive web application** estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution.
 
 Built for: MDPI Air journal special issue "Radon in the Environment"
 Regulatory: EU BSS 2013/59/Euratom, Irish action level 200 Bq/m³
 
-## Data Architecture
+## Architecture
 
-### 21 Data Sources
+**Backend API** (`api/dose_backend.py`):
+- FastAPI serving `/dose`, `/dose/bbox`, `/health`
+- Loads real GeoTIFF raster data (rasterio)
+- Tellus radiometric K/U/Th, EPA radon, Teagasc soils, GSI faults
+- Falls back to lithology priors when rasters missing
+- Proper UNSCEAR 2024 dose conversion coefficients
+- TTLCache for computed results
 
-#### WMS Connected (6 active)
-| # | Source | Endpoint | Role |
-|---|--------|----------|------|
-| 1 | GSI Bedrock Geology 1:100k | `gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer` | Lithology backbone |
-| 2 | GSI Quaternary Deposits | `gsi.geodata.gov.ie/server/services/Quaternary/.../WMSServer` | Cover deposits |
-| 3 | GSI Groundwater & Aquifers | `gsi.geodata.gov.ie/server/services/Groundwater/.../WMSServer` | Aquifer overlay |
-| 4 | GSI Geochemistry (Tellus) | `gsi.geodata.gov.ie/server/services/Geochemistry/.../WMSServer` | Stream sediment trace elements |
-| 6 | GSI Faults & Lineaments | `gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer` | Geological lines overlay |
-| 7 | EPA Radon Risk Map | `gis.epa.ie/geoserver/EPA/wms` | Radon risk zone validation |
-| 9 | Teagasc Irish Soil Info | `gis.epa.ie/geoserver/EPA/wms` | Soil type, drainage |
+**Frontend** (`irish-dose-standalone.html`):
+- MapLibre satellite basemap
+- Connects to backend `/dose` endpoint on click
+- WMS overlays for map display (toggleable)
+- Bottom panel: data sources + dose summary
+- Confidence meter with provenance trail
+- Short report (8 templated lines)
 
-#### WMS Unavailable (3)
-| # | Source | Reason |
-|---|--------|--------|
-| 5 | GSI Geophysics (Tellus K/U/Th) | Service returning 499 |
-| 8 | EPA Radiation Monitoring | No public WMS endpoint |
-| 10-15 | Copernicus/NOAA/ISRIC | Need instance IDs or proxy |
+## Data Layout
 
-#### Download Only (6)
-| # | Source | Format |
-|---|--------|--------|
-| 16 | ERA5 | NetCDF/GRIB (cdsapi) |
-| 17 | ESA CCI Soil Moisture | NetCDF |
-| 18 | WGM Gravity (BGI) | GeoTIFF |
-| 19 | Eurostat GEOSTAT | CSV/GeoTIFF |
-| 20 | GEM Active Faults | Shapefile/GeoJSON |
-| 21 | Copernicus GLO-30 DEM | GeoTIFF |
+```
+data/
+  gsi_bedrock_100k.tif           # lithology class raster, EPSG:4326, ~100m
+  tellus_radiometric_k.tif       # K (%) raster
+  tellus_radiometric_u.tif       # eU (ppm) raster
+  tellus_radiometric_th.tif      # eTh (ppm) raster
+  epa_radon_map.tif              # predicted radon Bq/m3, 1km grid
+  teagasc_soil_permeability.tif  # permeability class raster
+  gsi_faults.geojson             # fault lines, EPSG:4326
+  corine_landcover.tif           # land cover code
+  sentinel2_ndvi.tif             # NDVI, 10m (optional)
+  esa_cci_soil_moisture.tif      # volumetric soil moisture (optional)
+  era5_season.json               # {"season": "winter"} - updated externally
+```
 
-### Data Hierarchy (best source wins)
-1. **Tellus airborne radiometric** (measured K/U/Th, ~200m) — measurement grade
-2. **GSI stream sediment geochemistry** (measured U/Th/K, point)
-3. **Lithology prior** from GSI 1:100k (estimated, 100m)
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+pytest tests/
+uvicorn api.dose_backend:app --reload --port 8000
+```
 
 ## Risk Classification
 
@@ -52,40 +58,21 @@ Regulatory: EU BSS 2013/59/Euratom, Irish action level 200 Bq/m³
 
 **Irish action level: 200 Bq/m³** (stricter than EU BSS 300 Bq/m³)
 
-## Quick Start
+## WMS Overlays (map display only)
 
-```bash
-pip install -r requirements.txt
-pytest tests/
-uvicorn api.main:app --reload --port 8000
-```
-
-## API Endpoints
-
-- `GET /health` — Status check
-- `GET /dose?lat=52.98&lon=-6.3` — Dose analysis at point
-- `GET /dose/bbox?lat_min=52.5&lat_max=53.5&lon_min=-7&lon_max=-6&step_km=2` — Grid analysis
-
-## Standalone HTML
-
-`irish-dose-standalone.html` — self-contained HTML with:
-- Real WMS GetFeatureInfo queries (not hardcoded data)
-- All 21 data sources listed with status
-- Layer toggle panel for WMS overlays
-- Bottom panel: data source table + dose summary
-- Irish 200 Bq/m³ action level
-- GREEN/AMBER/RED risk classification per EU BSS
-
-## Docker
-
-```bash
-docker build -t irish-dose .
-docker run -p 8000:8000 irish-dose
-```
+| # | Source | Endpoint | Layer |
+|---|--------|----------|-------|
+| 1 | GSI Bedrock 1:100k | gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer | IE_GSI_Bedrock_Geology_100K_IE26_ITM |
+| 2 | GSI Quaternary | gsi.geodata.gov.ie/server/services/Quaternary/.../WMSServer | IE_GSI_Quaternary_Sediments_50K_IE26_ITM |
+| 3 | GSI Groundwater | gsi.geodata.gov.ie/server/services/Groundwater/.../WMSServer | IE_GSI_Groundwater_Recharge_40K_IE26_ITM |
+| 4 | GSI Geochemistry | gsi.geodata.gov.ie/server/services/Geochemistry/.../WMSServer | C_XRFS_Lanthanum_(La)_(mg_kg¯¹)52276 |
+| 5 | GSI Faults | gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer | IE_GSI_Geological_Lines_100K_IE26_ITM |
+| 6 | EPA Radon Risk | gis.epa.ie/geoserver/EPA/wms | EPA:RadonRiskMapofIreland |
+| 7 | Teagasc Soils | gis.epa.ie/geoserver/EPA/wms | EPA:SOIL_SISNationalSoils |
 
 ## Standards
 
 - UNSCEAR 2024, ICRP 137, EU BSS 2013/59/Euratom
-- Every number traceable to source (provenance trail visible)
+- Every number traceable to source (provenance trail)
 - No invented values (None = unavailable, shown honestly)
-- No LLM free-text analysis (templates only)
+- No LLM free-text (templates only)
