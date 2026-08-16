@@ -3,1156 +3,307 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terrestrial Radiation Dose Indicator</title>
-<meta name="description" content="Geology-driven estimation and visualisation of terrestrial radiation dose (radon, thoron, gamma) for any region worldwide. Based on UNSCEAR 2024, ICRP 137, and EU BSS methodologies.">
+<title>Terrestrial Radiation Dose Indicator — v4 Geology-Primary</title>
+<meta name="description" content="Interactive terrestrial radiation dose estimator — radon, thoron &amp; gamma risk classification powered by OneGeology lithology. UNSCEAR 2024 / ICRP 137 / EU BSS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg-deep:        #0a0e1a;
-  --bg-panel:       #121829;
-  --bg-card:        #1a2138;
-  --bg-card-hi:     #222b48;
-  --border:         #2a3556;
-  --border-hi:      #3a4a72;
-  --text-primary:   #e8ecf4;
-  --text-secondary: #9ba8c4;
-  --text-muted:     #61709a;
-  --green:          #2ed573;
-  --green-dim:      #1a9e52;
-  --amber:          #ffa502;
-  --amber-dim:      #b87600;
-  --red:            #ff4757;
-  --red-dim:        #b32d3a;
-  --blue:           #37dbff;
-  --purple:         #a371ff;
-  --teal:           #00d4aa;
-  --radon:          #ff6b81;
-  --thoron:         #37dbff;
-  --gamma:          #feca57;
-  --radius:         14px;
-  --font: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
-  --mono: 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { background: var(--bg-deep); color: var(--text-primary); font-family: var(--font); line-height: 1.6; overflow-x: hidden; }
-#particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-
-.hero { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; background: radial-gradient(ellipse at 50% 30%, rgba(55,219,255,0.08), transparent 60%), radial-gradient(ellipse at 70% 70%, rgba(255,107,129,0.05), transparent 50%); }
-.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(55,219,255,0.1); border: 1px solid rgba(55,219,255,0.25); padding: 6px 16px; border-radius: 30px; font-size: 0.78rem; color: var(--blue); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 1.5rem; text-transform: uppercase; }
-.hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
-@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 0 rgba(46,213,115,0.5); } 50% { box-shadow: 0 0 0 6px rgba(46,213,115,0); } }
-.hero h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.1; margin-bottom: 0.8rem; background: linear-gradient(135deg, #e8ecf4 0%, #37dbff 40%, #a371ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.hero .subtitle { font-size: clamp(1rem, 2.5vw, 1.35rem); color: var(--text-secondary); max-width: 800px; margin-bottom: 2.5rem; }
-.hero-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; margin-bottom: 2.5rem; }
-.hero-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.5rem; min-width: 140px; backdrop-filter: blur(10px); }
-.hero-stat .val { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, var(--blue), var(--teal)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.hero-stat .lbl { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; }
-.hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; text-decoration: none; cursor: pointer; border: none; transition: transform 0.2s, box-shadow 0.2s; }
-.btn:hover { transform: translateY(-2px); }
-.btn-primary { background: linear-gradient(135deg, var(--blue), var(--teal)); color: #0a0e1a; }
-.btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-hi); }
-.btn-secondary:hover { background: var(--bg-card-hi); }
-.scroll-hint { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px; animation: bounce 2s infinite; }
-@keyframes bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(10px); } }
-
-section.content { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 4rem 2rem; }
-.section-head { text-align: center; margin-bottom: 3rem; }
-.section-head .tag { display: inline-block; font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--blue); margin-bottom: 0.5rem; }
-.section-head h2 { font-size: clamp(1.6rem, 4vw, 2.5rem); font-weight: 700; margin-bottom: 0.8rem; }
-.section-head p { color: var(--text-secondary); max-width: 700px; margin: 0 auto; }
-
-.calc-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-.calc-controls, .calc-results { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
-.calc-controls h3, .calc-results h3 { font-size: 1.1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; }
-.calc-controls h3 .icon, .calc-results h3 .icon { font-size: 1.3rem; }
-.field-group { margin-bottom: 1.5rem; }
-.field-group label { display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-select, input[type="range"] { width: 100%; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font); }
-select:focus, input[type="range"]:focus { outline: 1px solid var(--blue); }
-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239ba8c4' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
-input[type="range"] { -webkit-appearance: none; height: 6px; border-radius: 3px; padding: 0; background: var(--bg-card); }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--blue); cursor: pointer; border: 3px solid var(--bg-deep); }
-.range-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
-.provenance-toggle { display: flex; align-items: center; gap: 10px; margin-top: 1.5rem; font-size: 0.82rem; color: var(--text-secondary); }
-.toggle-switch { position: relative; width: 42px; height: 22px; }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; inset: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: 0.3s; }
-.toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: var(--text-muted); border-radius: 50%; transition: 0.3s; }
-input:checked + .toggle-slider { background: rgba(55,219,255,0.2); border-color: var(--blue); }
-input:checked + .toggle-slider::before { transform: translateX(20px); background: var(--blue); }
-
-.risk-banner { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; font-weight: 700; }
-.risk-green  { background: rgba(46,213,115,0.12); border: 1px solid var(--green); color: var(--green); }
-.risk-amber  { background: rgba(255,165,2,0.12);  border: 1px solid var(--amber); color: var(--amber); }
-.risk-red    { background: rgba(255,71,87,0.12);  border: 1px solid var(--red);   color: var(--red); }
-.risk-banner .dot-lg { width: 14px; height: 14px; border-radius: 50%; }
-.risk-green .dot-lg { background: var(--green); }
-.risk-amber .dot-lg { background: var(--amber); }
-.risk-red .dot-lg   { background: var(--red); }
-
-.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.metric { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
-.metric .lbl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.metric .val { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
-.metric .unit { font-size: 0.8rem; color: var(--text-secondary); font-weight: 400; }
-.metric .src { font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; font-family: var(--mono); }
-
-.triangle-section { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; margin-top: 2rem; }
-.triangle-wrap { display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; justify-content: center; }
-.triangle-svg { flex-shrink: 0; }
-.triangle-legend { flex: 1; min-width: 250px; }
-.legend-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-card); border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--border); transition: border-color 0.3s; }
-.legend-item.radon  { border-left-color: var(--radon); }
-.legend-item.thoron { border-left-color: var(--thoron); }
-.legend-item.gamma  { border-left-color: var(--gamma); }
-.legend-item .val { font-size: 1.2rem; font-weight: 700; margin-left: auto; }
-.legend-item .nm  { font-size: 0.8rem; color: var(--text-muted); }
-.legend-item .lbl { font-weight: 600; font-size: 0.9rem; }
-
-.lithology-table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
-table.lithology { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-table.lithology th { background: var(--bg-card-hi); padding: 14px 16px; text-align: left; font-weight: 700; color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
-table.lithology td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-table.lithology tr:hover td { background: var(--bg-card); cursor: pointer; }
-table.lithology tr.selected td { background: rgba(55,219,255,0.08); }
-.litho-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
-.badge-green  { background: rgba(46,213,115,0.15); color: var(--green); }
-.badge-amber  { background: rgba(255,165,2,0.15);  color: var(--amber); }
-.badge-red    { background: rgba(255,71,87,0.15);  color: var(--red); }
-.mono { font-family: var(--mono); font-size: 0.85rem; }
-
-.risk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-.risk-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; position: relative; overflow: hidden; }
-.risk-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-.risk-card.g::before { background: linear-gradient(90deg, var(--green), var(--green-dim)); }
-.risk-card.a::before { background: linear-gradient(90deg, var(--amber), var(--amber-dim)); }
-.risk-card.r::before { background: linear-gradient(90deg, var(--red), var(--red-dim)); }
-.risk-card h4 { font-size: 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
-.risk-tier-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.risk-tier-row:last-child { border-bottom: none; }
-.risk-tier-row .tier { font-weight: 700; }
-.tier-g { color: var(--green); }
-.tier-a { color: var(--amber); }
-.tier-r { color: var(--red); }
-
-.pipeline { display: flex; flex-direction: column; gap: 12px; }
-.pipeline-step { display: grid; grid-template-columns: 60px 1fr auto; gap: 1.5rem; align-items: center; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; position: relative; transition: transform 0.2s; }
-.pipeline-step:hover { transform: translateX(8px); }
-.step-num { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; background: linear-gradient(135deg, rgba(55,219,255,0.2), rgba(163,113,255,0.15)); border: 1px solid var(--border-hi); color: var(--blue); }
-.step-body h4 { font-size: 1rem; margin-bottom: 4px; }
-.step-body p { font-size: 0.85rem; color: var(--text-secondary); }
-.step-tag { font-size: 0.72rem; padding: 4px 12px; border-radius: 20px; background: var(--bg-card); color: var(--text-muted); white-space: nowrap; }
-
-.source-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; }
-.source-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
-.source-card .src-head { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
-.source-card .src-icon { font-size: 1.5rem; }
-.source-card h4 { font-size: 0.95rem; }
-.source-card .src-type { font-size: 0.72rem; color: var(--text-muted); }
-.source-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
-.source-item:last-child { border-bottom: none; }
-.source-item .nm { font-weight: 600; }
-.source-item .ds { color: var(--text-secondary); font-size: 0.78rem; }
-.source-item .lic { font-size: 0.7rem; color: var(--green); font-family: var(--mono); }
-
-.formula-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
-.formula-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
-.formula-card h4 { font-size: 0.95rem; margin-bottom: 0.8rem; color: var(--blue); }
-.formula-card .eq { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-family: var(--mono); font-size: 0.85rem; color: var(--text-primary); margin: 0.8rem 0; overflow-x: auto; }
-.formula-card .desc { font-size: 0.82rem; color: var(--text-secondary); }
-.formula-card .cite { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-style: italic; }
-
-.prov-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-top: 2rem; }
-.prov-row { display: grid; grid-template-columns: 180px 1fr 1fr 80px; gap: 1rem; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; align-items: center; }
-.prov-row:last-child { border-bottom: none; }
-.prov-row .param { font-weight: 600; }
-.prov-row .prior { color: var(--text-secondary); font-family: var(--mono); }
-.prov-row .measured { color: var(--blue); font-family: var(--mono); }
-.prov-row .conf { text-align: right; }
-.conf-bar { width: 50px; height: 6px; border-radius: 3px; background: var(--bg-card); overflow: hidden; display: inline-block; margin-left: 6px; vertical-align: middle; }
-.conf-bar .fill { height: 100%; border-radius: 3px; }
-
-footer { position: relative; z-index: 1; text-align: center; padding: 3rem 2rem; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.82rem; }
-footer a { color: var(--blue); text-decoration: none; }
-
-@media (max-width: 768px) {
-  .calc-panel { grid-template-columns: 1fr; }
-  .triangle-wrap { flex-direction: column; }
-  .prov-row { grid-template-columns: 1fr; gap: 4px; }
-  .hero-stats { flex-direction: column; gap: 0.8rem; }
-  .hero-stat { min-width: 200px; }
-  .pipeline-step { grid-template-columns: 48px 1fr; }
-  .step-tag { display: none; }
-}
+:root{--bg0:#0a0e17;--bg1:#111827;--bg2:#1a2235;--bg3:#1e2a42;--brd:rgba(55,85,130,.3);--brdB:rgba(90,140,220,.4);--t1:#e8edf5;--t2:#8b9ab8;--t3:#5a6a84;--gn:#22c55e;--gnD:rgba(34,197,94,.15);--am:#f59e0b;--amD:rgba(245,158,11,.15);--rd:#ef4444;--rdD:rgba(239,68,68,.15);--bl:#3b82f6;--blD:rgba(59,130,246,.12);--cy:#06b6d4;--pu:#a855f7;--r:12px;--rl:20px;--fn:'Inter',sans-serif;--mn:'JetBrains Mono',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--fn);background:var(--bg0);color:var(--t1);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:var(--bg0)}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:4px}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:radial-gradient(circle at 20% 50%,rgba(59,130,246,.04) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(168,85,247,.03) 0%,transparent 50%),radial-gradient(circle at 50% 80%,rgba(6,182,212,.03) 0%,transparent 50%),linear-gradient(rgba(55,85,130,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(55,85,130,.06) 1px,transparent 1px);background-size:100% 100%,100% 100%,100% 100%,60px 60px,60px 60px}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,14,23,.92);backdrop-filter:blur(20px) saturate(1.5);border-bottom:1px solid var(--brd);padding:0 2rem;transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 4px 30px rgba(0,0,0,.4)}
+.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:1rem;color:var(--t1);text-decoration:none}
+.nav-brand .ri{width:32px;height:32px;background:conic-gradient(from 0deg,var(--gn),var(--am),var(--rd),var(--gn));border-radius:50%;display:flex;align-items:center;justify-content:center;animation:ss 8s linear infinite}
+.nav-brand .ri::after{content:'\2622';font-size:14px;color:var(--bg0);background:var(--bg0);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;line-height:1}
+@keyframes ss{to{transform:rotate(360deg)}}
+.nav-links{display:flex;gap:4px;list-style:none}
+.nav-links a{color:var(--t2);text-decoration:none;padding:8px 14px;border-radius:8px;font-size:.85rem;font-weight:500;transition:all .2s}
+.nav-links a:hover,.nav-links a.active{color:var(--t1);background:var(--blD)}
+.nav-ver{font-size:.7rem;color:var(--t3);background:var(--bg2);padding:4px 10px;border-radius:20px;border:1px solid var(--brd);font-family:var(--mn)}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 2rem 60px;overflow:hidden}
+.hero-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(34,197,94,.06),transparent),radial-gradient(ellipse 60% 80% at 70% 60%,rgba(245,158,11,.05),transparent),radial-gradient(ellipse 50% 50% at 50% 50%,rgba(239,68,68,.04),transparent)}
+.hero-c{position:relative;z-index:1;max-width:900px;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--brd);padding:6px 16px;border-radius:24px;font-size:.8rem;color:var(--t2);margin-bottom:24px}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--gn);animation:pd 2s ease-in-out infinite}
+@keyframes pd{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);font-weight:900;line-height:1.1;margin-bottom:20px;background:linear-gradient(135deg,#e8edf5 0%,#8b9ab8 50%,#3b82f6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero h1 span{display:block;font-size:.5em;font-weight:600;background:linear-gradient(90deg,var(--gn),var(--am),var(--rd));-webkit-background-clip:text;background-clip:text;margin-top:8px}
+.hero-sub{font-size:1.15rem;color:var(--t2);max-width:700px;margin:0 auto 32px;line-height:1.7}
+.hero-std{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:36px}
+.hero-std .s{background:var(--bg2);border:1px solid var(--brd);padding:8px 16px;border-radius:8px;font-size:.75rem;color:var(--t2);font-family:var(--mn);font-weight:500;transition:all .2s}
+.hero-std .s:hover{border-color:var(--bl);color:var(--bl)}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:10px;font-size:.95rem;font-weight:600;font-family:var(--fn);cursor:pointer;border:none;text-decoration:none;transition:all .25s}
+.btn-p{background:linear-gradient(135deg,var(--bl),var(--pu));color:#fff;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(59,130,246,.4)}
+.btn-s{background:var(--bg2);color:var(--t1);border:1px solid var(--brdB)}
+.btn-s:hover{background:var(--bg3);border-color:var(--bl)}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--brd);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;max-width:900px;margin:-30px auto 0;position:relative;z-index:2}
+.stat-item{background:var(--bg2);padding:24px;text-align:center}
+.stat-v{font-size:1.8rem;font-weight:800;font-family:var(--mn);background:linear-gradient(135deg,var(--cy),var(--bl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-l{font-size:.78rem;color:var(--t3);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+section{position:relative;z-index:1}
+.container{max-width:1400px;margin:0 auto;padding:0 2rem}
+.sec-h{text-align:center;max-width:700px;margin:0 auto 48px}
+.sec-h h2{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;margin-bottom:12px}
+.sec-h p{color:var(--t2);font-size:1rem}
+.sec-l{display:inline-block;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--cy);margin-bottom:8px;font-family:var(--mn)}
+#dosimetry{padding:100px 0 60px}
+.dtw{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);overflow:hidden;box-shadow:0 4px 30px rgba(0,0,0,.2)}
+.dtw table{width:100%;border-collapse:collapse}
+.dtw thead{background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(168,85,247,.08))}
+.dtw th{padding:16px 20px;text-align:left;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);border-bottom:1px solid var(--brd)}
+.dtw td{padding:14px 20px;border-bottom:1px solid rgba(55,85,130,.15);font-size:.9rem}
+.dtw tr:last-child td{border-bottom:none}
+.dtw tr.total{background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.06));font-weight:700}
+.dtw tr.total td{border-top:2px solid var(--gn)}
+.st{display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:4px;font-family:var(--mn);font-weight:500}
+.st.u{background:rgba(239,68,68,.15);color:var(--rd)}.st.k{background:rgba(59,130,246,.15);color:var(--bl)}.st.t{background:rgba(245,158,11,.15);color:var(--am)}.st.d{background:rgba(168,85,247,.15);color:var(--pu)}.st.c{background:rgba(6,182,212,.15);color:var(--cy)}
+.dbc{padding:24px 20px}
+.dbv{display:flex;height:48px;border-radius:10px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}
+.dbs{display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:#fff;transition:flex-basis .6s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.dbs span{position:relative;z-index:1;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.dbl{display:flex;gap:20px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.dbl .li{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--t2)}
+.ld{width:10px;height:10px;border-radius:3px}
+#architecture{padding:100px 0 60px}
+.pipeline{display:grid;grid-template-columns:1fr;gap:0;position:relative;max-width:800px;margin:0 auto}
+.pipeline::before{content:'';position:absolute;left:28px;top:40px;bottom:40px;width:2px;background:linear-gradient(to bottom,var(--bl),var(--pu),var(--cy),var(--gn),var(--am),var(--rd))}
+.ps{display:flex;gap:24px;padding:16px 0;position:relative}
+.pi{width:58px;height:58px;min-width:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;position:relative;z-index:1;border:2px solid;background:var(--bg0);transition:all .3s}
+.ps:hover .pi{transform:scale(1.1)}
+.pc h3{font-size:1rem;font-weight:700;margin-bottom:6px}
+.pc p{font-size:.85rem;color:var(--t2);line-height:1.6}
+.pc code{font-family:var(--mn);font-size:.75rem;background:rgba(59,130,246,.1);color:var(--cy);padding:2px 6px;border-radius:4px}
+#risk{padding:100px 0 60px}
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.rc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:28px;transition:all .3s}
+.rc:hover{transform:translateY(-4px);border-color:var(--brdB);box-shadow:0 8px 40px rgba(0,0,0,.3)}
+.rc-h{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.rc-h .ii{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.rc-h h3{font-size:.95rem;font-weight:700}.rc-h .un{font-size:.75rem;color:var(--t3);font-weight:400}
+.rl{display:flex;flex-direction:column;gap:10px}
+.rl-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;font-size:.85rem;border:1px solid transparent}
+.rl-item .lw{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.rl-item.g{background:var(--gnD)}.rl-item.g .lw{background:var(--gn);box-shadow:0 0 20px rgba(34,197,94,.3)}
+.rl-item.a{background:var(--amD)}.rl-item.a .lw{background:var(--am);box-shadow:0 0 20px rgba(245,158,11,.3)}
+.rl-item.r{background:var(--rdD)}.rl-item.r .lw{background:var(--rd);box-shadow:0 0 20px rgba(239,68,68,.3)}
+#calculator{padding:100px 0 60px}
+.cl{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:960px){.cl{grid-template-columns:1fr}.tc{grid-template-columns:1fr}}
+.cp{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);overflow:hidden}
+.cp-h{padding:20px 24px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between}
+.cp-h h3{font-size:1rem;font-weight:700}
+.cp-b{padding:24px}
+.fg{margin-bottom:20px}
+.fg label{display:block;font-size:.78rem;font-weight:600;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.fg .hint{font-size:.72rem;color:var(--t3);margin-top:4px;font-style:italic}
+select,input[type="number"]{width:100%;padding:10px 14px;border-radius:8px;background:var(--bg1);border:1px solid var(--brd);color:var(--t1);font-family:var(--fn);font-size:.9rem;transition:border-color .2s}
+select:focus,input:focus{outline:none;border-color:var(--bl);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+select{cursor:pointer}select option{background:var(--bg1)}
+.rw{display:flex;align-items:center;gap:12px}
+.rw input[type="range"]{flex:1;padding:0;border:none;background:transparent;-webkit-appearance:none;height:6px}
+.rw input[type="range"]::-webkit-slider-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--gn),var(--am),var(--rd))}
+.rw input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--bl);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.rv{min-width:60px;text-align:right;font-family:var(--mn);font-weight:600;font-size:.9rem}
+.result-card{background:var(--bg1);border-radius:var(--r);padding:16px;margin-bottom:16px;border-left:3px solid var(--bl)}
+.result-card.green{border-left-color:var(--gn)}.result-card.amber{border-left-color:var(--am)}.result-card.red{border-left-color:var(--rd)}
+.result-label{font-size:.72rem;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.result-value{font-size:1.6rem;font-weight:800;font-family:var(--mn)}
+.result-unit{font-size:.85rem;color:var(--t2);font-weight:400}
+.result-detail{font-size:.78rem;color:var(--t3);margin-top:4px}
+#triangle-viz{padding:100px 0 60px}
+.tc{display:grid;grid-template-columns:1fr 380px;gap:24px}
+.tsw{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:32px;display:flex;align-items:center;justify-content:center;min-height:500px}
+.tsw svg{width:100%;max-width:480px;height:auto}
+.ts{display:flex;flex-direction:column;gap:16px}
+.lsc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:24px}
+.tlc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:24px}
+.tli{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(55,85,130,.15)}
+.tli:last-child{border-bottom:none}
+.tld{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.tll{font-size:.85rem;font-weight:600}.tlv{margin-left:auto;font-family:var(--mn);font-size:.85rem;color:var(--t2)}
+.pvc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:24px}
+.pvc h4{font-size:.85rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.pvr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(55,85,130,.1);font-size:.8rem}
+.pvr:last-child{border-bottom:none}
+.pvl{color:var(--t2)}
+.pvb{font-size:.68rem;padding:2px 8px;border-radius:4px;font-weight:600;font-family:var(--mn)}
+.pvb.pr{background:rgba(245,158,11,.15);color:var(--am)}.pvb.me{background:rgba(34,197,94,.15);color:var(--gn)}
+.cfb{height:8px;border-radius:4px;background:var(--bg1);margin-top:12px;overflow:hidden}
+.cfb-f{height:100%;border-radius:4px;transition:width .5s ease;background:linear-gradient(90deg,var(--rd),var(--am),var(--gn)}
+#sources{padding:100px 0 60px}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.sc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--r);padding:20px;transition:all .3s}
+.sc:hover{border-color:var(--brdB);transform:translateY(-2px)}
+.sc-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sc-i{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.sc h4{font-size:.9rem;font-weight:700}.sc p{font-size:.8rem;color:var(--t2);line-height:1.5}
+.stg{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sts{font-size:.65rem;padding:2px 8px;border-radius:4px;font-weight:500;border:1px solid}
+#formulas{padding:100px 0 60px}
+.fcg{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px}
+.fc{background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:28px}
+.fc h3{font-size:1rem;font-weight:700;margin-bottom:6px}
+.fc .sr{font-size:.72rem;color:var(--cy);font-family:var(--mn);margin-bottom:16px}
+.fb{background:var(--bg1);border-radius:8px;padding:16px 20px;margin:12px 0;font-family:var(--mn);font-size:.85rem;line-height:1.8;color:var(--cy);border-left:3px solid var(--bl);overflow-x:auto}
+.fc .notes{font-size:.8rem;color:var(--t3);margin-top:12px;line-height:1.6}
+footer{position:relative;z-index:1;background:var(--bg1);border-top:1px solid var(--brd);padding:48px 2rem;margin-top:60px}
+.fi{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+@media(max-width:768px){.fi{grid-template-columns:1fr 1fr;gap:24px}.nav-links{display:none}.hero{padding:80px 1rem 40px;min-height:auto}.container{padding:0 1rem}.hero h1{font-size:1.8rem}}
+.fb-brand p{font-size:.82rem;color:var(--t3);margin-top:8px;line-height:1.6}
+.f-col h4{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);margin-bottom:14px}
+.f-col a{display:block;color:var(--t3);text-decoration:none;font-size:.82rem;padding:3px 0;transition:color .2s}
+.f-col a:hover{color:var(--bl)}
+.fbot{max-width:1400px;margin:32px auto 0;padding-top:24px;border-top:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:.75rem;color:var(--t3)}
+.ai{opacity:0;transform:translateY(30px);transition:all .6s cubic-bezier(.4,0,.2,1)}.ai.vis{opacity:1;transform:translateY(0)}
 </style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<nav id="topnav"><div class="nav-inner"><a href="#" class="nav-brand"><div class="ri"></div><span>Terrestrial Dose Indicator</span></a><ul class="nav-links"><li><a href="#dosimetry">Dosimetry</a></li><li><a href="#architecture">Pipeline</a></li><li><a href="#risk">Risk</a></li><li><a href="#calculator">Calculator</a></li><li><a href="#triangle-viz">Dose Triangle</a></li><li><a href="#sources">Sources</a></li><li><a href="#formulas">Formulas</a></li></ul><span class="nav-ver">v4.0 \u2014 geology-primary</span></div></nav>
 
-<canvas id="particle-canvas"></canvas>
+<section class="hero"><div class="hero-bg"></div><div class="hero-c">
+<div class="hero-badge"><span class="dot"></span><span>Open-source \u00b7 Paper-ready \u00b7 UNSCEAR 2024 aligned</span></div>
+<h1>Terrestrial Radiation<br>Dose Indicator<span>Geology-Driven \u00b7 Radon \u00b7 Thoron \u00b7 Gamma</span></h1>
+<p class="hero-sub">An interactive tool that estimates and visualises terrestrial radiation dose for any region of the world \u2014 powered by OneGeology lithology as the primary predictor of K/U/Th activity concentrations, with risk classification and VisQuill-style dose fingerprint triangles.</p>
+<div class="hero-std"><span class="s">UNSCEAR 2024</span><span class="s">ICRP 137</span><span class="s">EU BSS 2013/59</span><span class="s">WHO 100 Bq/m\u00b3</span><span class="s">JRC REMAP</span></div>
+<div class="hero-cta"><a href="#calculator" class="btn btn-p">\u26a1 Launch Calculator</a><a href="#triangle-viz" class="btn btn-s">\u25b3 View Dose Triangle</a></div>
+</div></section>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-badge"><span class="dot"></span> UNSCEAR 2024 · ICRP 137 · EU BSS</div>
-  <h1>Terrestrial Radiation<br>Dose Indicator</h1>
-  <p class="subtitle">
-    Geology-driven estimation and visualisation of terrestrial radiation dose —
-    radon, thoron, and gamma — for any region of the world. OneGeology lithology is
-    the primary predictor; radiometric surveys refine where available.
-  </p>
-  <div class="hero-stats">
-    <div class="hero-stat"><div class="val">3.0</div><div class="lbl">mSv/yr global avg</div></div>
-    <div class="hero-stat"><div class="val">2.2</div><div class="lbl">mSv/yr terrestrial scope</div></div>
-    <div class="hero-stat"><div class="val">61</div><div class="lbl">UN member states surveyed</div></div>
-    <div class="hero-stat"><div class="val">~2000</div><div class="lbl">publications synthesised</div></div>
-  </div>
-  <div class="hero-cta">
-    <a href="#calculator" class="btn btn-primary">⚡ Launch Calculator</a>
-    <a href="#methodology" class="btn btn-secondary">📐 View Methodology</a>
-  </div>
-  <div class="scroll-hint">SCROLL ↓</div>
-</section>
+<div class="container"><div class="stats-bar ai">
+<div class="stat-item"><div class="stat-v">3.0</div><div class="stat-l">Total natural mSv/yr (UNSCEAR)</div></div>
+<div class="stat-item"><div class="stat-v">2.2</div><div class="stat-l">Terrestrial scope mSv/yr</div></div>
+<div class="stat-item"><div class="stat-v">1.8</div><div class="stat-l">Inhalation mSv/yr (Rn+Tn)</div></div>
+<div class="stat-item"><div class="stat-v">0.4</div><div class="stat-l">External gamma mSv/yr</div></div>
+</div></div>
 
-<!-- INTERACTIVE CALCULATOR + DOSE TRIANGLE -->
-<section class="content" id="calculator">
-  <div class="section-head">
-    <div class="tag">Layer 3 — Dose Models</div>
-    <h2>Interactive Dose Calculator</h2>
-    <p>Select a lithology class to compute the geology-prior K/U/Th activities, external gamma dose,
-       geogenic radon potential, and global thoron potential. Adjust the sliders to model measurement
-       overrides and see the dose fingerprint update in real time.</p>
-  </div>
-  <div class="calc-panel">
-    <div class="calc-controls">
-      <h3><span class="icon">⚙️</span> Input Parameters</h3>
-      <div class="field-group">
-        <label for="lithology-select">Lithology Class (OneGeology)</label>
-        <select id="lithology-select">
-          <option value="monzogranite">Monzogranite</option>
-          <option value="granite">Granitic rocks (general)</option>
-          <option value="limestone">Limestone / Carbonate</option>
-          <option value="basalt">Basalt / Mafic volcanic</option>
-          <option value="sandstone">Sandstone / Siliciclastic</option>
-          <option value="shale">Shale / Mudstone</option>
-          <option value="urban_soil">Urban soil</option>
-          <option value="world_avg">World-average soil</option>
-          <option value="monazite_bearing">Monazite-bearing (REE terrain)</option>
-          <option value="alkali_intrusive">Alkali intrusive / syenite</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label for="eu-slider">eU (ppm) — Uranium override</label>
-        <input type="range" id="eu-slider" min="0" max="300" step="0.5" value="0">
-        <div class="range-row"><span id="eu-label">Prior</span><span id="eu-value">—</span></div>
-      </div>
-      <div class="field-group">
-        <label for="eth-slider">eTh (ppm) — Thorium override</label>
-        <input type="range" id="eth-slider" min="0" max="1000" step="0.5" value="0">
-        <div class="range-row"><span id="eth-label">Prior</span><span id="eth-value">—</span></div>
-      </div>
-      <div class="field-group">
-        <label for="k-slider">%K — Potassium override</label>
-        <input type="range" id="k-slider" min="0" max="10" step="0.1" value="0">
-        <div class="range-row"><span id="k-label">Prior</span><span id="k-value">—</span></div>
-      </div>
-      <div class="provenance-toggle">
-        <div class="toggle-switch">
-          <input type="checkbox" id="provenance-toggle" checked>
-          <span class="toggle-slider"></span>
-        </div>
-        <span>Show provenance tracking</span>
-      </div>
-    </div>
-    <div class="calc-results">
-      <h3><span class="icon">📊</span> Dose Results</h3>
-      <div id="risk-banner-container"></div>
-      <div class="metric-grid">
-        <div class="metric"><div class="lbl">External Gamma</div><div class="val" id="gamma-val">—</div><div class="unit">nGy/h</div><div class="src" id="gamma-src"></div></div>
-        <div class="metric"><div class="lbl">Annual Gamma Dose</div><div class="val" id="gamma-annual">—</div><div class="unit">mSv/yr</div><div class="src" id="gamma-annual-src"></div></div>
-        <div class="metric"><div class="lbl">Indoor Radon (est.)</div><div class="val" id="radon-val">—</div><div class="unit">Bq/m³</div><div class="src" id="radon-src"></div></div>
-        <div class="metric"><div class="lbl">Radon Dose</div><div class="val" id="radon-dose">—</div><div class="unit">mSv/yr</div><div class="src" id="radon-dose-src"></div></div>
-        <div class="metric"><div class="lbl">Thoron Dose</div><div class="val" id="thoron-dose">—</div><div class="unit">mSv/yr</div><div class="src" id="thoron-src"></div></div>
-        <div class="metric"><div class="lbl">Total Terrestrial</div><div class="val" id="total-dose">—</div><div class="unit">mSv/yr</div><div class="src" id="total-src"></div></div>
-      </div>
-    </div>
-  </div>
+<section id="dosimetry"><div class="container">
+<div class="sec-h ai"><span class="sec-l">UNSCEAR 2024 \u00b7 ~2,000 publications \u00b7 61 member states</span><h2>Dosimetric Background</h2><p>Total natural background radiation breakdown. The tool\u2019s terrestrial scope covers external terrestrial + radon/thoron inhalation (2.2 mSv/yr world average).</p></div>
+<div class="dtw ai"><table><thead><tr><th>Component</th><th>Source</th><th>Global Avg (mSv/yr)</th><th>Chain</th></tr></thead><tbody>
+<tr><td><strong>Inhalation</strong> (radon + thoron + progeny)</td><td>Indoor Rn-222, Rn-220, Po-218/214/212</td><td style="font-family:var(--mn);font-weight:700">1.8</td><td><span class="st u">U-238</span> <span class="st t">Th-232</span></td></tr>
+<tr><td><strong>External terrestrial gamma</strong></td><td>\u03b3 from K-40, U-238, Th-232 in soil/rock</td><td style="font-family:var(--mn);font-weight:700">0.4</td><td><span class="st k">K-40</span> <span class="st u">U-238</span> <span class="st t">Th-232</span></td></tr>
+<tr><td><strong>Ingestion</strong> (natural radionuclides)</td><td>Dietary K-40, U, Th</td><td style="font-family:var(--mn);font-weight:700">0.5</td><td><span class="st d">diet</span></td></tr>
+<tr><td><strong>Cosmic</strong></td><td>Altitude &amp; latitude dependent</td><td style="font-family:var(--mn);font-weight:700">0.3</td><td><span class="st c">cosmic</span></td></tr>
+<tr class="total"><td colspan="2"><strong>Total Natural Background</strong></td><td style="font-family:var(--mn);font-size:1.1rem">3.0</td><td><span class="st" style="background:rgba(34,197,94,.15);color:var(--gn)">WORLD_AVG</span></td></tr>
+</tbody></table>
+<div class="dbc"><div class="dbv"><div class="dbs" style="flex-basis:60%;background:linear-gradient(135deg,#ef4444,#dc2626)"><span>Inhalation 1.8</span></div><div class="dbs" style="flex-basis:13.3%;background:linear-gradient(135deg,#3b82f6,#2563eb)"><span>\u03b3 0.4</span></div><div class="dbs" style="flex-basis:16.7%;background:linear-gradient(135deg,#a855f7,#9333ea)"><span>Ingest 0.5</span></div><div class="dbs" style="flex-basis:10%;background:linear-gradient(135deg,#06b6d4,#0891b2)"><span>Cosmic 0.3</span></div></div>
+<div class="dbl"><div class="li"><div class="ld" style="background:#ef4444"></div>Inhalation (Rn+Tn)</div><div class="li"><div class="ld" style="background:#3b82f6"></div>External gamma</div><div class="li"><div class="ld" style="background:#a855f7"></div>Ingestion</div><div class="li"><div class="ld" style="background:#06b6d4"></div>Cosmic</div></div></div>
+</div></div></section>
 
-  <!-- DOSE TRIANGLE -->
-  <div class="triangle-section">
-    <div class="section-head" style="margin-bottom:1.5rem;">
-      <div class="tag">Layer 5 — Visualisation</div>
-      <h3 style="font-size:1.3rem;">Dose Fingerprint Triangle</h3>
-      <p style="font-size:0.85rem;">VisQuill-style per-polygon dose triangle. Arms represent radon (Rn-222), thoron (Rn-220), and external gamma, normalised to viewport maximum.</p>
-    </div>
-    <div class="triangle-wrap">
-      <div class="triangle-svg">
-        <svg id="dose-triangle" width="340" height="320" viewBox="0 0 340 320">
-          <g id="grid-triangles" stroke="#2a3556" fill="none" stroke-width="0.5" opacity="0.5"></g>
-          <text x="170" y="25" text-anchor="middle" fill="#ff6b81" font-size="11" font-weight="700">RADON (Rn-222)</text>
-          <text x="20" y="305" text-anchor="middle" fill="#37dbff" font-size="11" font-weight="700">THORON (Rn-220)</text>
-          <text x="320" y="305" text-anchor="middle" fill="#feca57" font-size="11" font-weight="700">GAMMA (K/U/Th)</text>
-          <polygon id="dose-poly" points="" fill="rgba(55,219,255,0.15)" stroke="#37dbff" stroke-width="2"/>
-          <circle id="v-radon" cx="170" cy="50" r="5" fill="#ff6b81" stroke="#0a0e1a" stroke-width="2"/>
-          <circle id="v-thoron" cx="50" cy="270" r="5" fill="#37dbff" stroke="#0a0e1a" stroke-width="2"/>
-          <circle id="v-gamma" cx="290" cy="270" r="5" fill="#feca57" stroke="#0a0e1a" stroke-width="2"/>
-        </svg>
-      </div>
-      <div class="triangle-legend">
-        <div class="legend-item radon">
-          <span class="lbl">⚑ Radon</span>
-          <span class="nm">U-238 chain · inhalation</span>
-          <span class="val" id="leg-radon">—</span>
-        </div>
-        <div class="legend-item thoron">
-          <span class="lbl">⚑ Thoron</span>
-          <span class="nm">Th-232 chain · inhalation</span>
-          <span class="val" id="leg-thoron">—</span>
-        </div>
-        <div class="legend-item gamma">
-          <span class="lbl">⚑ Gamma</span>
-          <span class="nm">K-40, U-238, Th-232 · external</span>
-          <span class="val" id="leg-gamma">—</span>
-        </div>
-        <div style="margin-top:1rem;padding:12px;background:var(--bg-card);border-radius:8px;font-size:0.8rem;color:var(--text-secondary);">
-          <strong>Dominant source:</strong> <span id="dominant-src" style="color:var(--blue);">—</span><br>
-          <span id="dominant-note" style="font-size:0.75rem;color:var(--text-muted);"></span>
-        </div>
-      </div>
-    </div>
-  </div>
+<section id="architecture"><div class="container">
+<div class="sec-h ai"><span class="sec-l">6-Layer Pipeline</span><h2>Logic Chain Architecture</h2><p>Geology as the primary predictor \u2014 OneGeology lithology drives K/U/Th estimation globally, with measurements refining the prior where available.</p></div>
+<div class="pipeline">
+<div class="ps ai"><div class="pi" style="border-color:var(--bl);color:var(--bl)">\U0001f4e5</div><div class="pc"><h3>Layer 1 \u2014 INGEST</h3><p>Fetch per bounding-box: <code>OneGeology WFS</code> (primary), Sentinel-2 composites, GLO-30 DEM + hillshades, GEM faults, SoilGrids, FOREGS geochemistry, JRC Atlas, airborne radiometric (if available). Cache to PostGIS with provenance.</p></div></div>
+<div class="ps ai"><div class="pi" style="border-color:var(--pu);color:var(--pu)">\U0001f52c</div><div class="pc"><h3>Layer 2 \u2014 FEATURE EXTRACTION</h3><p>Lithology class per polygon from OneGeology. K/U/Th via <code>LITHOLOGY_ACTIVITIES</code> lookup (primary), with override from airborne radiometric / geochemical atlas \u2192 ppm eU (\u00d712.22), eTh (\u00d74.06), %K (\u00d7313) \u2192 Bq/kg. Lineament density from DEM + Sentinel-2 + GEM faults.</p></div></div>
+<div class="ps ai"><div class="pi" style="border-color:var(--cy);color:var(--cy)">\u2699\ufe0f</div><div class="pc"><h3>Layer 3 \u2014 DOSE MODELS</h3><p>All calculations via <code>dose_calculation_core.py v4</code>. External gamma (UNSCEAR coefficients), Geogenic Radon Potential (GRP), Global Thoron Potential (GTP). Measured C<sub>Rn</sub>/C<sub>Tn</sub> override geogenic estimates.</p></div></div>
+<div class="ps ai"><div class="pi" style="border-color:var(--gn);color:var(--gn)">\U0001f6a6</div><div class="pc"><h3>Layer 4 \u2014 RISK CLASSIFICATION</h3><p>Traffic-light system: dose \u22642.2 / 2.2\u20136.6 / &gt;6.6 mSv/yr; radon &lt;100 / 100\u2013300 / \u2265300 Bq/m\u00b3; gamma &lt;59 / 59\u20131000 / \u22651000 nGy/h; Ra-eq &lt;370 / 370\u2013740 / \u2265740 Bq/kg. Flags: WHO, EU BSS, UNSCEAR upper-normal.</p></div></div>
+<div class="ps ai"><div class="pi" style="border-color:var(--am);color:var(--am)">\u25b3</div><div class="pc"><h3>Layer 5 \u2014 VISUALISATION</h3><p>VisQuill-style dose fingerprint triangle per polygon: arms = radon / thoron / gamma (mSv/yr). Colour by dominant source. Risk traffic-light overlay. Provenance panel: <em>geology prior</em> vs <em>measured</em> per parameter + confidence score.</p></div></div>
+<div class="ps ai"><div class="pi" style="border-color:var(--rd);color:var(--rd)">\U0001f916</div><div class="pc"><h3>Layer 6 \u2014 AGENT LOOP</h3><p>Coverage-gap detection (\u201cno airborne eTh \u2192 using lithology prior for Th/thoron\u201d). Confidence scoring per polygon. Provenance logging for paper-readiness. Threshold alerts.</p></div></div>
+</div></div></section>
 
-  <!-- PROVENANCE PANEL -->
-  <div class="prov-panel" id="prov-panel">
-    <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
-      <span class="icon">🔍</span> Provenance & Confidence Tracking
-    </h3>
-    <div class="prov-row" style="font-weight:700;color:var(--text-secondary);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">
-      <span>Parameter</span><span>Geology Prior</span><span>Measured Override</span><span style="text-align:right;">Conf.</span>
-    </div>
-    <div id="prov-rows"></div>
-    <div style="margin-top:1rem;padding:12px;background:var(--bg-card);border-radius:8px;font-size:0.8rem;color:var(--text-secondary);">
-      <strong style="color:var(--text-primary);">Overall confidence:</strong>
-      <span id="overall-conf" style="color:var(--green);font-weight:700;">—</span>
-      <span id="conf-note" style="font-size:0.75rem;color:var(--text-muted);display:block;margin-top:4px;"></span>
-    </div>
-  </div>
-</section>
+<section id="risk"><div class="container">
+<div class="sec-h ai"><span class="sec-l">Layer 4 \u00b7 UNSCEAR 2024 thresholds</span><h2>Risk Classification</h2><p>Traffic-light risk tiers aligned with international radiological protection standards.</p></div>
+<div class="rg">
+<div class="rc ai"><div class="rc-h"><div class="ii" style="background:rgba(59,130,246,.15);color:var(--bl)">\u2622</div><div><h3>Annual Terrestrial Dose</h3><span class="un">mSv/yr</span></div></div><div class="rl"><div class="rl-item g"><div class="lw"></div><span><strong>GREEN</strong> \u2014 \u2264 2.2 mSv/yr (at or below world average)</span></div><div class="rl-item a"><div class="lw"></div><span><strong>AMBER</strong> \u2014 2.2 \u2013 6.6 mSv/yr (1\u20133\u00d7 world average)</span></div><div class="rl-item r"><div class="lw"></div><span><strong>RED</strong> \u2014 &gt; 6.6 mSv/yr (&gt;3\u00d7 world average)</span></div></div></div>
+<div class="rc ai"><div class="rc-h"><div class="ii" style="background:rgba(239,68,68,.15);color:var(--rd)">Rn</div><div><h3>Indoor Radon (Rn-222)</h3><span class="un">Bq/m\u00b3</span></div></div><div class="rl"><div class="rl-item g"><div class="lw"></div><span><strong>GREEN</strong> \u2014 &lt; 100 Bq/m\u00b3 (WHO guideline)</span></div><div class="rl-item a"><div class="lw"></div><span><strong>AMBER</strong> \u2014 100 \u2013 300 Bq/m\u00b3 (EU BSS reference)</span></div><div class="rl-item r"><div class="lw"></div><span><strong>RED</strong> \u2014 \u2265 300 Bq/m\u00b3 (EU BSS action level)</span></div></div></div>
+<div class="rc ai"><div class="rc-h"><div class="ii" style="background:rgba(59,130,246,.15);color:var(--bl)">\u03b3</div><div><h3>Gamma Dose Rate</h3><span class="un">nGy/h</span></div></div><div class="rl"><div class="rl-item g"><div class="lw"></div><span><strong>GREEN</strong> \u2014 &lt; 59 nGy/h (world avg outdoor)</span></div><div class="rl-item a"><div class="lw"></div><span><strong>AMBER</strong> \u2014 59 \u2013 1000 nGy/h (elevated)</span></div><div class="rl-item r"><div class="lw"></div><span><strong>RED</strong> \u2014 \u2265 1000 nGy/h (UNSCEAR upper-normal 1500)</span></div></div></div>
+<div class="rc ai"><div class="rc-h"><div class="ii" style="background:rgba(245,158,11,.15);color:var(--am)">Ra<sub>eq</sub></div><div><h3>Radium Equivalent</h3><span class="un">Bq/kg</span></div></div><div class="rl"><div class="rl-item g"><div class="lw"></div><span><strong>GREEN</strong> \u2014 &lt; 370 Bq/kg (I\u03b3 &lt; 1)</span></div><div class="rl-item a"><div class="lw"></div><span><strong>AMBER</strong> \u2014 370 \u2013 740 Bq/kg</span></div><div class="rl-item r"><div class="lw"></div><span><strong>RED</strong> \u2014 \u2265 740 Bq/kg (EU BSS activity index \u22651)</span></div></div></div>
+</div></div></section>
 
-<!-- LITHOLOGY-ACTIVITY LOOKUP TABLE -->
-<section class="content">
-  <div class="section-head">
-    <div class="tag">Layer 2 — Feature Extraction</div>
-    <h2>Lithology → Activity Lookup Table</h2>
-    <p>OneGeology lithology polygons map to characteristic K/U/Th activity concentrations (Bq/kg). This table
-       is the <strong>primary predictor</strong> — radiometric/geochemical surveys override the prior where available.
-       Click any row to load it into the calculator above.</p>
-  </div>
-  <div class="lithology-table-wrap">
-    <table class="lithology" id="litho-table">
-      <thead>
-        <tr>
-          <th>Lithology Class</th>
-          <th>Ra-226 / U-238 (Bq/kg)</th>
-          <th>Th-232 (Bq/kg)</th>
-          <th>K-40 (Bq/kg)</th>
-          <th>eU (ppm)</th>
-          <th>eTh (ppm)</th>
-          <th>%K</th>
-          <th>Risk Tier</th>
-        </tr>
-      </thead>
-      <tbody id="litho-tbody"></tbody>
-    </table>
-  </div>
-</section>
+<section id="calculator"><div class="container">
+<div class="sec-h ai"><span class="sec-l">dose_calculation_core.py v4 \u00b7 No magic numbers</span><h2>Interactive Dose Calculator</h2><p>Select a lithology or enter custom K/U/Th values. All calculations use UNSCEAR 2024 coefficients \u2014 every constant traceable to standards.</p></div>
+<div class="cl ai">
+<div class="cp"><div class="cp-h"><h3>\u2699\ufe0f Input Parameters</h3></div><div class="cp-b">
+<div class="fg"><label>Lithology (OneGeology primary predictor)</label>
+<select id="lithSelect" onchange="calcFromLith()">
+<option value="monzogranite">Monzogranite</option><option value="granitic_rocks" selected>Granitic Rocks</option><option value="granodiorite">Granodiorite</option><option value="diorite">Diorite</option><option value="gabbro_basalt">Gabbro / Basalt</option><option value="syenite">Syenite</option><option value="dolerite">Dolerite (Diabase)</option><option value="rhyolite">Rhyolite (volcanic)</option><option value="andesite">Andesite</option><option value="sandstone">Sandstone</option><option value="limestone">Limestone</option><option value="dolomite">Dolomite</option><option value="shale_mudstone">Shale / Mudstone</option><option value="slate_phyllite">Slate / Phyllite</option><option value="schist">Schist (mica-rich)</option><option value="gneiss">Gneiss</option><option value="quartzite">Quartzite</option><option value="marble">Marble</option><option value="serpentinite">Serpentinite</option><option value="monazite_bearing">Monazite-bearing (REE/Th-rich)</option><option value="alluvium">Alluvium / River Sediment</option><option value="glacial_till">Glacial Till</option><option value="peat_bog">Peat / Bog</option><option value="urban_soil">Urban Soil / Fill</option><option value="world_average">World Average Soil</option><option value="custom">Custom K/U/Th values\u2026</option></select>
+<div class="hint">Primary predictor via OneGeology WFS lithology classification</div></div>
+<div id="customInputs" style="display:none">
+<div class="fg"><label>Ra-226 / U-238 Activity (Bq/kg)</label><input type="number" id="customRa" value="40" min="0" max="500" onchange="calcCustom()"><div class="hint">U-238 chain \u00b7 eU \u00d712.22 Bq/kg per ppm</div></div>
+<div class="fg"><label>Th-232 Activity (Bq/kg)</label><input type="number" id="customTh" value="40" min="0" max="500" onchange="calcCustom()"><div class="hint">Th-232 chain \u00b7 eTh \u00d74.06 Bq/kg per ppm</div></div>
+<div class="fg"><label>K-40 Activity (Bq/kg)</label><input type="number" id="customK" value="400" min="0" max="3000" onchange="calcCustom()"><div class="hint">K-40 \u00b7 %K \u00d7313 Bq/kg per percent</div></div>
+</div>
+<div class="fg"><label>Permeability Factor (for GRP)</label><div class="rw"><input type="range" id="permFactor" min="0" max="1" step="0.01" value="0.5" oninput="updP();calcFromLith()"><span class="rv" id="permDisp">0.50</span></div><div class="hint">0 = impermeable (clay) \u00b7 1 = highly permeable (gravel/fractured granite)</div></div>
+<div class="fg"><label>Proximity to Fault (km)</label><div class="rw"><input type="range" id="faultDist" min="0" max="20" step="0.5" value="5" oninput="updF();calcFromLith()"><span class="rv" id="faultDisp">5.0 km</span></div><div class="hint">GEM Global Active Faults Database \u00b7 closer = higher radon migration</div></div>
+<div class="fg"><label>Occupancy Factor</label><div class="rw"><input type="range" id="occFactor" min="0.1" max="1" step="0.05" value="0.8" oninput="updO();calcFromLith()"><span class="rv" id="occDisp">0.80</span></div><div class="hint">Fraction of year indoors (0.8 = typical residential)</div></div>
+</div></div>
+<div class="cp"><div class="cp-h"><h3>\U0001f4ca Dose Results</h3><span id="riskBadge" class="pvb pr">\u2014</span></div><div class="cp-b" id="resultsPanel"></div></div>
+</div></div></section>
 
-<!-- RISK CLASSIFICATION -->
-<section class="content" id="risk">
-  <div class="section-head">
-    <div class="tag">Layer 4 — Risk Classification</div>
-    <h2>Risk Tier System</h2>
-    <p>Traffic-light classification based on UNSCEAR 2024 global averages and ICRP / EU BSS / WHO thresholds.</p>
-  </div>
-  <div class="risk-grid">
-    <div class="risk-card g">
-      <h4><span style="color:var(--green);">●</span> GREEN — Normal Background</h4>
-      <div class="risk-tier-row"><span class="tier tier-g">Annual terrestrial dose</span><span>≤ 2.2 mSv/yr</span></div>
-      <div class="risk-tier-row"><span class="tier tier-g">Indoor radon</span><span>&lt; 100 Bq/m³</span></div>
-      <div class="risk-tier-row"><span class="tier tier-g">Gamma dose rate</span><span>&lt; 59 nGy/h</span></div>
-      <div class="risk-tier-row"><span class="tier tier-g">Radium equivalent</span><span>&lt; 370 Bq/kg</span></div>
-    </div>
-    <div class="risk-card a">
-      <h4><span style="color:var(--amber);">●</span> AMBER — Elevated</h4>
-      <div class="risk-tier-row"><span class="tier tier-a">Annual terrestrial dose</span><span>2.2 – 6.6 mSv/yr (1–3× avg)</span></div>
-      <div class="risk-tier-row"><span class="tier tier-a">Indoor radon</span><span>100 – 300 Bq/m³</span></div>
-      <div class="risk-tier-row"><span class="tier tier-a">Gamma dose rate</span><span>59 – 1000 nGy/h</span></div>
-      <div class="risk-tier-row"><span class="tier tier-a">Radium equivalent</span><span>370 – 740 Bq/kg</span></div>
-    </div>
-    <div class="risk-card r">
-      <h4><span style="color:var(--red);">●</span> RED — High Risk</h4>
-      <div class="risk-tier-row"><span class="tier tier-r">Annual terrestrial dose</span><span>&gt; 6.6 mSv/yr (&gt;3× avg)</span></div>
-      <div class="risk-tier-row"><span class="tier tier-r">Indoor radon</span><span>≥ 300 Bq/m³</span></div>
-      <div class="risk-tier-row"><span class="tier tier-r">Gamma dose rate</span><span>≥ 1000 nGy/h</span></div>
-      <div class="risk-tier-row"><span class="tier tier-r">Radium equivalent</span><span>≥ 740 Bq/kg</span></div>
-    </div>
-  </div>
-  <div style="margin-top:1.5rem;padding:1rem 1.5rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem;color:var(--text-secondary);">
-    <strong style="color:var(--text-primary);">Additional flags:</strong>
-    WHO radon reference level (100 Bq/m³) · UNSCEAR upper-normal gamma (1500 nGy/h) ·
-    EU BSS activity index I ≥ 1 (construction material) · EU BSS radon reference level (300 Bq/m³ → ~10 mSv/yr)
-  </div>
-</section>
+<section id="triangle-viz"><div class="container">
+<div class="sec-h ai"><span class="sec-l">VisQuill-style \u00b7 Layer 5</span><h2>Dose Fingerprint Triangle</h2><p>Three-arm triangle representing radon, thoron, and gamma dose contributions \u2014 coloured by dominant source to flag geological affinity and REE prospectivity.</p></div>
+<div class="tc ai">
+<div class="tsw"><svg id="doseTriangle" viewBox="-20 -20 340 300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="ts">
+<div class="lsc"><h4 style="font-size:.9rem;font-weight:700;margin-bottom:14px">\U0001f5b0\ufe0f Select Lithology</h4><div class="fg" style="margin-bottom:0"><select id="triLith" onchange="updTri()">
+<option value="monzogranite">Monzogranite</option><option value="granitic_rocks" selected>Granitic Rocks</option><option value="granodiorite">Granodiorite</option><option value="diorite">Diorite</option><option value="gabbro_basalt">Gabbro / Basalt</option><option value="syenite">Syenite</option><option value="sandstone">Sandstone</option><option value="limestone">Limestone</option><option value="shale_mudstone">Shale / Mudstone</option><option value="schist">Schist (mica-rich)</option><option value="monazite_bearing">Monazite-bearing (REE)</option><option value="urban_soil">Urban Soil</option><option value="world_average">World Average Soil</option></select></div></div>
+<div class="tlc"><h4 style="font-size:.85rem;font-weight:700;margin-bottom:14px">Arm Values (mSv/yr)</h4>
+<div class="tli"><div class="tld" style="background:var(--rd)"></div><span class="tll">Radon (Rn-222)</span><span class="tlv" id="tlRn">\u2014</span></div>
+<div class="tli"><div class="tld" style="background:var(--am)"></div><span class="tll">Thoron (Rn-220)</span><span class="tlv" id="tlTn">\u2014</span></div>
+<div class="tli"><div class="tld" style="background:var(--bl)"></div><span class="tll">Gamma (ext)</span><span class="tlv" id="tlG">\u2014</span></div>
+<div class="tli" style="border-bottom:none"><div class="tld" style="background:var(--gn)"></div><span class="tll" style="font-weight:700">Total Terrestrial</span><span class="tlv" id="tlTotal" style="font-weight:700;color:var(--t1)">\u2014</span></div>
+</div>
+<div class="pvc"><h4>\U0001f4cb Provenance</h4>
+<div class="pvr"><span class="pvl">K/U/Th source</span><span class="pvb pr" id="provKUTh">geology prior</span></div>
+<div class="pvr"><span class="pvl">Radon estimate</span><span class="pvb pr" id="provRn">GRP geogenic</span></div>
+<div class="pvr"><span class="pvl">Thoron estimate</span><span class="pvb pr" id="provTn">GTP geogenic</span></div>
+<div class="pvr"><span class="pvl">Gamma model</span><span class="pvb me" id="provG">UNSCEAR 2024</span></div>
+<div class="cfb"><div class="cfb-f" id="confBar" style="width:30%"></div></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span style="font-size:.68rem;color:var(--t3)">Confidence</span><span style="font-size:.68rem;color:var(--t2);font-family:var(--mn)" id="confPct">30%</span></div>
+</div></div></div></div></section>
 
-<!-- METHODOLOGY & FORMULAS -->
-<section class="content" id="methodology">
-  <div class="section-head">
-    <div class="tag">Dosimetric Background — UNSCEAR 2024</div>
-    <h2>Methodology & Dose Equations</h2>
-    <p>Every conversion constant is traceable to UNSCEAR 2024, ICRP 137, or EU BSS 2013/59/Euratom. No magic numbers in the UI.</p>
-  </div>
-  <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;overflow-x:auto;">
-    <h3 style="margin-bottom:1rem;font-size:1rem;">Natural Background Radiation — Global Average (UNSCEAR 2024)</h3>
-    <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-      <thead>
-        <tr style="border-bottom:1px solid var(--border);">
-          <th style="text-align:left;padding:10px 12px;color:var(--text-secondary);">Component</th>
-          <th style="text-align:left;padding:10px 12px;color:var(--text-secondary);">Source</th>
-          <th style="text-align:right;padding:10px 12px;color:var(--text-secondary);">Global Avg (mSv/yr)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">Inhalation (radon + thoron + progeny)</td><td style="padding:8px 12px;color:var(--text-secondary);">U-238 &amp; Th-232 chains</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--radon);">1.8</td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">External terrestrial</td><td style="padding:8px 12px;color:var(--text-secondary);">K-40, U-238, Th-232 in soil/rock</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--gamma);">0.4</td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">Ingestion (natural radionuclides)</td><td style="padding:8px 12px;color:var(--text-secondary);">Dietary K-40, U, Th</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--text-muted);">0.5</td></tr>
-        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px;">Cosmic</td><td style="padding:8px 12px;color:var(--text-secondary);">Altitude / latitude</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--text-muted);">0.3</td></tr>
-        <tr style="font-weight:800;"><td style="padding:8px 12px;">Total natural</td><td></td><td style="padding:8px 12px;text-align:right;font-size:1.1rem;color:var(--blue);">3.0</td></tr>
-      </tbody>
-    </table>
-    <p style="margin-top:1rem;font-size:0.82rem;color:var(--text-secondary);">
-      <strong style="color:var(--text-primary);">Tool scope:</strong> External terrestrial (0.4) + radon/thoron inhalation (1.8) = <strong style="color:var(--blue);">2.2 mSv/yr</strong> — excludes ingestion &amp; cosmic.
-    </p>
-  </div>
-  <div class="formula-grid">
-    <div class="formula-card">
-      <h4>External Gamma Dose Rate</h4>
-      <div class="eq">D<sub>air</sub> = 0.462·A<sub>Ra</sub> + 0.604·A<sub>Th</sub> + 0.041·A<sub>K</sub></div>
-      <p class="desc">Absorbed dose rate in air (nGy/h) from activity concentrations (Bq/kg). Coefficients are UNSCEAR standard conversion factors.</p>
-      <p class="cite">UNSCEAR 2024; A_Ra = U-238 chain, A_Th = Th-232 chain, A_K = K-40</p>
-    </div>
-    <div class="formula-card">
-      <h4>Annual External Dose</h4>
-      <div class="eq">E<sub>ext</sub> = D<sub>air</sub> × 8760 × OF × 0.7 × 10⁻⁶</div>
-      <p class="desc">8760 hours/year; OF = occupancy factor (0.2 outdoor + 0.8 indoor); 0.7 Sv/Gy conversion; ×10⁻⁶ to convert nGy→mSv.</p>
-      <p class="cite">UNSCEAR 2024 methodology</p>
-    </div>
-    <div class="formula-card">
-      <h4>Activity Concentration → Bq/kg</h4>
-      <div class="eq">A<sub>U</sub> = eU(ppm) × 12.22<br>A<sub>Th</sub> = eTh(ppm) × 4.06<br>A<sub>K</sub> = K(%) × 313</div>
-      <p class="desc">Conversion from radiometric survey units (ppm eU, ppm eTh, %K) to activity concentrations (Bq/kg).</p>
-      <p class="cite">IAEA; UNSCEAR conversion constants</p>
-    </div>
-    <div class="formula-card">
-      <h4>Geogenic Radon Potential (GRP)</h4>
-      <div class="eq">GRP = f(A<sub>Ra226</sub>, permeability, fault_dist, lineament_density, lithology_factor)</div>
-      <p class="desc">Radon source term (Ra-226) modulated by soil permeability, proximity to faults, lineament density, and lithology-specific emanation factor.</p>
-      <p class="cite">EU radon potential models; USGS geogenic RP</p>
-    </div>
-    <div class="formula-card">
-      <h4>Global Thoron Potential (GTP)</h4>
-      <div class="eq">A<sub>Th232</sub> → emanation(0.1–0.3)<br>→ indoor gas → EEC(×0.02)<br>→ dose (×40 nSv × 7000h)</div>
-      <p class="desc">Thoron estimated geogenically from Th-232 (globally available via geochemistry + eTh radiometry). Calibrated so world-average soil yields ~0.1 mSv/yr.</p>
-      <p class="cite">UNSCEAR 2024; RadoNorm thoron methodology</p>
-    </div>
-    <div class="formula-card">
-      <h4>Radium Equivalent Activity</h4>
-      <div class="eq">Ra<sub>eq</sub> = A<sub>Ra</sub> + 1.43·A<sub>Th</sub> + 0.077·A<sub>K</sub></div>
-      <p class="desc">Weighted sum assigning hazard equivalence to a single radium activity. Used for construction material safety (EU BSS activity index).</p>
-      <p class="cite">OECD/NEA; EU BSS 2013/59/Euratom</p>
-    </div>
-    <div class="formula-card">
-      <h4>Radon → Effective Dose</h4>
-      <div class="eq">E<sub>Rn</sub> = C<sub>Rn</sub> × F × t × DCF</div>
-      <p class="desc">C_Rn = indoor concentration (Bq/m³); F = equilibrium factor (0.4 default); t = annual exposure hours; DCF = dose conversion factor per ICRP 137.</p>
-      <p class="cite">ICRP 137 (3 mSv per mJ·h·m⁻³); EU BSS: 300 Bq/m³ → ~10 mSv/yr</p>
-    </div>
-    <div class="formula-card">
-      <h4>EU BSS Activity Index</h4>
-      <div class="eq">I = A<sub>Ra</sub>/300 + A<sub>Th</sub>/200 + A<sub>K</sub>/3000</div>
-      <p class="desc">Activity concentration index for building materials. I ≥ 1 triggers dose assessment under EU BSS 2013/59/Euratom.</p>
-      <p class="cite">EU BSS 2013/59/Euratom, Annex VIII</p>
-    </div>
-  </div>
-</section>
+<section id="sources"><div class="container">
+<div class="sec-h ai"><span class="sec-l">Open data \u00b7 Full provenance \u00b7 License-logged</span><h2>Data Source Registry</h2><p>Every displayed number is traceable to a cited data source. Open data only; license per source logged.</p></div>
+<div class="sg">
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(59,130,246,.15);color:var(--bl)">\U0001f30d</div><h4>OneGeology</h4></div><p>Global portal of national geological surveys. Lithology polygons via WMS/WFS. <strong>Primary predictor</strong> for K/U/Th activities worldwide.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--bl);border-color:rgba(59,130,246,.3)">WFS</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">PRIMARY</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(34,197,94,.15);color:var(--gn)">\U0001f4e1</div><h4>Sentinel-2 (Copernicus/GEE)</h4></div><p>10\u201320 m multispectral, 5-day revisit. B12-B11-B2 false-colour, B4/B2 ferric, B11/B12 clays, edge filters for lineaments.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">Copernicus</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(245,158,11,.15);color:var(--am)">\U0001f4a5</div><h4>GEM Global Active Faults</h4></div><p>Global Earthquake Model fault database (GitHub, open). Radon migration pathways &amp; structural controls on geogenic radon potential.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open (GitHub)</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(239,68,68,.15);color:var(--rd)">\u2622</div><h4>JRC REMAP Atlas</h4></div><p>European Atlas of Natural Radiation. Indoor radon, terrestrial gamma, cosmic dose, soil radionuclides. Validation/override source for European regions.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">EU JRC</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(168,85,247,.15);color:var(--pu)">\U0001f9ea</div><h4>FOREGS / G-BASE / GEMAS</h4></div><p>Geochemical atlases \u2014 stream sediment U/Th/K\u2082O. Permeability &amp; K/U/Th source terms for radon/thoron estimation. Override prior where available.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">Geochemistry</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(6,182,212,.15);color:var(--cy)">\U0001f5fa\ufe0f</div><h4>USGS / BGS / GSI / BRGM</h4></div><p>National geological surveys via GeoSciML. Detailed local geology (USGS NGMDB, BGS UK, GSI Ireland, BRGM France) for high-resolution lithology.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Public Domain</span><span class="sts" style="color:var(--bl);border-color:rgba(59,130,246,.3)">GeoSciML</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(59,130,246,.15);color:var(--bl)">\U0001f3d4\ufe0f</div><h4>Copernicus GLO-30 / SRTM DEM</h4></div><p>Digital elevation models for hillshades, multi-azimuth lineament extraction, elevation &amp; latitude corrections (cosmic dose component).</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">DEM</span></div></div>
+<div class="sc ai"><div class="sc-h"><div class="sc-i" style="background:rgba(245,158,11,.15);color:var(--am)">\U0001f310</div><h4>SoilGrids (ISRIC) / FAO HWSD</h4></div><p>Global soil property maps \u2014 texture, permeability, depth to bedrock. Essential inputs for Geogenic Radon Potential (GRP) estimation.</p><div class="stg"><span class="sts" style="color:var(--gn);border-color:rgba(34,197,94,.3)">Open</span><span class="sts" style="color:var(--t3);border-color:var(--brd)">ISRIC</span></div></div>
+</div></div></section>
 
-<!-- 6-LAYER PIPELINE -->
-<section class="content" id="pipeline">
-  <div class="section-head">
-    <div class="tag">Core Architecture</div>
-    <h2>6-Layer Processing Pipeline</h2>
-    <p>From raw geological data to paper-ready provenance — geology is the primary predictor at every stage.</p>
-  </div>
-  <div class="pipeline">
-    <div class="pipeline-step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <h4>INGEST</h4>
-        <p>Per bounding box: OneGeology lithology (PRIMARY), Sentinel-2 composites, GLO-30 DEM, GEM faults, SoilGrids, geochemical atlas U/Th/K₂O, JRC Atlas, airborne radiometric. Cache to PostGIS with provenance.</p>
-      </div>
-      <div class="step-tag">Open data · licence-logged</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <h4>FEATURE EXTRACTION</h4>
-        <p>Lithology class per polygon (OneGeology ground truth). K/U/Th activities: PRIMARY via lithology→activity lookup table; OVERRIDE via airborne radiometric / geochemical atlas. Lineament density, fault distance, soil permeability, elevation, latitude.</p>
-      </div>
-      <div class="step-tag">Geology-primary</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <h4>DOSE MODELS</h4>
-        <p>External gamma (UNSCEAR coefficients), Geogenic Radon Potential (GRP), Global Thoron Potential (GTP). Measured C_Rn / C_Tn override geogenic estimates where available. All via dose_calculation_core.py v4 — no re-implementation.</p>
-      </div>
-      <div class="step-tag">dose_calculation_core.py</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <h4>RISK CLASSIFICATION</h4>
-        <p>Traffic-light tiers: annual terrestrial dose, indoor radon, gamma dose rate, radium equivalent. Flags: WHO radon (100 Bq/m³), UNSCEAR upper-normal (1500 nGy/h), EU BSS activity index I ≥ 1.</p>
-      </div>
-      <div class="step-tag">UNSCEAR 2024 base</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="step-num">5</div>
-      <div class="step-body">
-        <h4>VISUALISATION</h4>
-        <p>VisQuill-style dose fingerprint triangle per polygon (radon / thoron / gamma arms). Colour by dominant source. Risk traffic-light overlay. Timeline slider (seasonal/annual). MapLibre GL JS base map. Provenance panel with per-parameter confidence.</p>
-      </div>
-      <div class="step-tag">MapLibre GL JS</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="step-num">6</div>
-      <div class="step-body">
-        <h4>AGENT LOOP</h4>
-        <p>Coverage-gap detection ("no airborne eTh for region X → using lithology prior for Th/thoron"). Confidence scoring per polygon. Provenance logging for paper-readiness. Threshold alerts.</p>
-      </div>
-      <div class="step-tag">Paper-ready provenance</div>
-    </div>
-  </div>
-</section>
-
-<!-- DATA SOURCE REGISTRY -->
-<section class="content" id="sources">
-  <div class="section-head">
-    <div class="tag">Layer 1 — Data Sources</div>
-    <h2>Data Source Registry</h2>
-    <p>Open data only. Every displayed number cites its source. Licence logged per dataset.</p>
-  </div>
-  <div class="source-grid">
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">🪨</span><div><h4>Geology & Lithology</h4><div class="src-type">PRIMARY PREDICTOR</div></div></div>
-      <div class="source-item"><div class="nm">OneGeology</div><div class="ds">Global portal of national geological surveys, lithology polygons, WMS/WFS</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">USGS National Geologic Map Database</div><div class="ds">Detailed US geology</div><div class="lic">Public Domain</div></div>
-      <div class="source-item"><div class="nm">National surveys (GSI, BGS, BRGM)</div><div class="ds">Via GeoSciML</div><div class="lic">Open</div></div>
-    </div>
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">🛰️</span><div><h4>Remote Sensing</h4><div class="src-type">Lithology refinement</div></div></div>
-      <div class="source-item"><div class="nm">Sentinel-2 (Copernicus/GEE)</div><div class="ds">10–20 m, 5-day; B12-B11-B2 false-colour, B4/B2 ferric, B11/B12 clays</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">Sentinel-1 SAR</div><div class="ds">Surface roughness, structural mapping</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">ASTER TIR</div><div class="ds">Silicate mineral mapping</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">Landsat 8/9; Copernicus GLO-30 DEM / SRTM</div><div class="ds">Multi-azimuth lineaments</div><div class="lic">Open</div></div>
-    </div>
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">⚡</span><div><h4>Structural</h4><div class="src-type">Radon migration pathways</div></div></div>
-      <div class="source-item"><div class="nm">GEM Global Active Faults Database</div><div class="ds">GitHub, open — radon migration pathways</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">USGS Quaternary Fault & Fold</div><div class="ds">National fault lines</div><div class="lic">Public Domain</div></div>
-    </div>
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">☢️</span><div><h4>Radiation Products</h4><div class="src-type">Validation / Override</div></div></div>
-      <div class="source-item"><div class="nm">European Atlas of Natural Radiation (JRC REMAP)</div><div class="ds">Radon, terrestrial gamma, cosmic, soil radionuclides</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">European Indoor Radon Map</div><div class="ds">Measured indoor radon by grid cell</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">USGS geogenic radon potential</div><div class="ds">US-wide radon potential model</div><div class="lic">Public Domain</div></div>
-      <div class="source-item"><div class="nm">RadoNorm (incl. thoron)</div><div class="ds">European radon + thoron survey</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">Airborne gamma-ray spectrometry</div><div class="ds">Direct K/U/Th → override prior</div><div class="lic">Varies</div></div>
-    </div>
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">🧪</span><div><h4>Soil & Geochemistry</h4><div class="src-type">Permeability + K/U/Th source terms</div></div></div>
-      <div class="source-item"><div class="nm">SoilGrids (ISRIC)</div><div class="ds">Global soil properties, permeability</div><div class="lic">Open (CC-BY 4.0)</div></div>
-      <div class="source-item"><div class="nm">FAO HWSD</div><div class="ds">Harmonised world soil database</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">FOREGS Geochemical Atlas</div><div class="ds">Stream sediment U/Th/K₂O</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">G-BASE; USGS National Geochemical Database</div><div class="ds">Regional geochemistry</div><div class="lic">Open / PD</div></div>
-      <div class="source-item"><div class="nm">GEMAS</div><div class="ds">European agricultural soil geochemistry</div><div class="lic">Open</div></div>
-    </div>
-    <div class="source-card">
-      <div class="src-head"><span class="src-icon">🌌</span><div><h4>Cosmic (optional)</h4><div class="src-type">Total background context</div></div></div>
-      <div class="source-item"><div class="nm">NCRP 160 / UNSCEAR models</div><div class="ds">Altitude + latitude cosmic ray dose</div><div class="lic">Cited</div></div>
-      <div class="source-item"><div class="nm">MAIRE+</div><div class="ds">Cosmic ray exposure modelling</div><div class="lic">Open</div></div>
-      <div class="source-item"><div class="nm">NOAA geomagnetic</div><div class="ds">Magnetic field models for latitude correction</div><div class="lic">Open</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- GLOBAL THORON SCALING -->
-<section class="content">
-  <div class="section-head">
-    <div class="tag">Worldwide Thoron Coverage</div>
-    <h2>Global Thoron Scaling</h2>
-    <p>No global thoron measurement network exists. Thoron is estimated geogenically from Th-232 — globally available via geochemistry and eTh radiometry.</p>
-  </div>
-  <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;">
-    <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:center;margin-bottom:1.5rem;">
-      <div style="background:var(--bg-card);border:1px solid var(--thoron);border-radius:10px;padding:1rem 1.5rem;text-align:center;">
-        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Th-232 Activity</div>
-        <div style="font-size:1.3rem;font-weight:700;color:var(--thoron);">Source Term</div>
-      </div>
-      <div style="font-size:1.5rem;color:var(--text-muted);">→</div>
-      <div style="background:var(--bg-card);border:1px solid var(--border-hi);border-radius:10px;padding:1rem 1.5rem;text-align:center;">
-        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Emanation</div>
-        <div style="font-size:1.3rem;font-weight:700;color:var(--text-primary);">0.1 – 0.3</div>
-      </div>
-      <div style="font-size:1.5rem;color:var(--text-muted);">→</div>
-      <div style="background:var(--bg-card);border:1px solid var(--border-hi);border-radius:10px;padding:1rem 1.5rem;text-align:center;">
-        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Indoor Gas</div>
-        <div style="font-size:1.3rem;font-weight:700;color:var(--text-primary);">Gas conc.</div>
-      </div>
-      <div style="font-size:1.5rem;color:var(--text-muted);">→</div>
-      <div style="background:var(--bg-card);border:1px solid var(--border-hi);border-radius:10px;padding:1rem 1.5rem;text-align:center;">
-        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">EEC</div>
-        <div style="font-size:1.3rem;font-weight:700;color:var(--text-primary);">× 0.02</div>
-      </div>
-      <div style="font-size:1.5rem;color:var(--text-muted);">→</div>
-      <div style="background:var(--bg-card);border:1px solid var(--green);border-radius:10px;padding:1rem 1.5rem;text-align:center;">
-        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Dose</div>
-        <div style="font-size:1.3rem;font-weight:700;color:var(--green);">×40 nSv × 7000h</div>
-      </div>
-    </div>
-    <p style="text-align:center;color:var(--text-secondary);font-size:0.88rem;max-width:800px;margin:0 auto;">
-      Calibrated so world-average soil yields <strong style="color:var(--thoron);">~0.1 mSv/yr</strong> thoron dose.
-      In Th-rich terrains (monazite / REE), thoron becomes a <strong style="color:var(--red);">dominant arm</strong> —
-      critical for REE prospectivity assessment.
-    </p>
-  </div>
-</section>
-
-<!-- STANDARDS & REFERENCES -->
-<section class="content">
-  <div class="section-head">
-    <div class="tag">Defensibility</div>
-    <h2>Standards & References</h2>
-    <p>Every number traceable to cited data sources and international standards.</p>
-  </div>
-  <div class="formula-grid">
-    <div class="formula-card">
-      <h4>📖 UNSCEAR 2024</h4>
-      <p class="desc">United Nations Scientific Committee on the Effects of Atomic Radiation — latest global report. Total natural background ≈ 3.0 mSv/yr (up from 2.4 due to improved data/methodology). Based on ~2,000 publications and data from 61 member states including national radon AND thoron surveys.</p>
-      <p class="cite">UNSCEAR 2024 Report to the General Assembly</p>
-    </div>
-    <div class="formula-card">
-      <h4>📖 ICRP 137</h4>
-      <p class="desc">International Commission on Radiological Protection Publication 137. Radon dose conversion: 3 mSv per mJ·h·m⁻³. Establishes the framework for occupational and public radon dose assessment.</p>
-      <p class="cite">ICRP Publication 137 (2017)</p>
-    </div>
-    <div class="formula-card">
-      <h4>📖 EU BSS 2013/59/Euratom</h4>
-      <p class="desc">European Basic Safety Standards Directive. Radon reference level: 300 Bq/m³ (indoor) → ~10 mSv/yr. Activity index I for building materials. Establishes legal framework for radiation protection in EU member states.</p>
-      <p class="cite">Council Directive 2013/59/Euratom</p>
-    </div>
-    <div class="formula-card">
-      <h4>📖 WHO Radon Handbook</h4>
-      <p class="desc">World Health Organization Handbook on Indoor Radon. Recommends national reference level of 100 Bq/m³ (or 300 where not feasible). Public health guidance for radon risk reduction.</p>
-      <p class="cite">WHO Handbook on Indoor Radon (2009)</p>
-    </div>
-  </div>
-</section>
+<section id="formulas"><div class="container">
+<div class="sec-h ai"><span class="sec-l">Every constant traceable \u00b7 No magic numbers</span><h2>Reference Formulas</h2><p>Core dosimetric equations implemented in dose_calculation_core.py v4. All coefficients from UNSCEAR 2024, ICRP 137, and EU BSS.</p></div>
+<div class="fcg">
+<div class="fc ai"><h3>External Gamma Dose Rate</h3><span class="sr">UNSCEAR 2000 / 2024 \u2014 Activity-to-dose conversion</span>
+<div class="fb">D_air (nGy/h) = 0.462 \u00d7 A_Ra + 0.604 \u00d7 A_Th + 0.041 \u00d7 A_K</div>
+<p class="notes">Where A_Ra = Ra-226 activity (Bq/kg), A_Th = Th-232 activity (Bq/kg), A_K = K-40 activity (Bq/kg). Coefficients from UNSCEAR gamma dose conversion factors.</p>
+<div class="fb">E_ext (mSv/yr) = D_air \u00d7 8760 \u00d7 OF \u00d7 0.7 \u00d7 10\u207b\u2076</div>
+<p class="notes">8760 = hours/year; OF = occupancy fraction; 0.7 = Sv/Gy conversion for effective dose; 10\u207b\u2076 = nGy to Gy.</p></div>
+<div class="fc ai"><h3>Geogenic Radon Potential (GRP)</h3><span class="sr">ICRP 137 \u00b7 EU BSS 2013/59/Euratom</span>
+<div class="fb">C_Rn_indoor = A_Ra \u00d7 \u03c1_soil \u00d7 \u03b7 \u00d7 f_fault \u00d7 perm_factor \u00d7 (1/(EF+ALR)) \u00d7 k_struct</div>
+<p class="notes">A_Ra = Ra-226 source (Bq/kg) from lithology prior; \u03b7 = emanation coefficient (0.1\u20130.3); f_fault = proximity-to-fault enhancement; perm_factor = soil permeability; EF = enclosure factor; ALR = air change rate.</p>
+<div class="fb">E_Rn (mSv/yr) = GRP \u00d7 K_Rn<br>GRP = A_Ra \u00d7 perm \u00d7 fault_enhance<br>K_Rn = 0.035 (calibrated vs UNSCEAR world avg)</div>
+<p class="notes">WHO reference level: 100 Bq/m\u00b3. EU BSS: 300 Bq/m\u00b3 action level.</p></div>
+<div class="fc ai"><h3>Global Thoron Potential (GTP)</h3><span class="sr">Geogenic from Th-232 \u00b7 No global measurement network</span>
+<div class="fb">C_Tn_indoor = A_Th232 \u00d7 \u03b7_Tn \u00d7 perm_factor \u00d7 k_struct<br>\u03b7_Tn = emanation (0.1 \u2013 0.3) for thoron<br>EEC_Tn = C_Tn \u00d7 0.02 (equilibrium factor)</div>
+<p class="notes">No global thoron measurement network \u2192 estimated geogenically from Th-232. Calibrated so world-average soil yields ~0.1 mSv/yr. In Th-rich terrains (monazite/REE), thoron becomes a dominant arm \u2014 critical for REE prospectivity.</p>
+<div class="fb">E_Tn (mSv/yr) = Tn_source \u00d7 K_Tn<br>Tn_source = A_Th232 \u00d7 \u03b7 \u00d7 perm<br>K_Tn = 0.25 (calibrated: Th-rich terrains flag REE prospectivity)</div>
+<p class="notes">Th-232 \u2192 emanation (0.1\u20130.3) \u2192 indoor gas \u2192 EEC (\u00d70.02) \u2192 dose (\u00d740 nSv \u00d7 7000h).</p></div>
+<div class="fc ai"><h3>Lithology \u2192 Activity Lookup</h3><span class="sr">OneGeology PRIMARY \u00b7 Bq/kg per lithology class</span>
+<div class="fb">LITHOLOGY_ACTIVITIES = {<br>  monzogranite: {Ra: 29, Th: 34, K: 883},<br>  granitic:     {Ra: 68, Th: 72, K: 866},<br>  urban_soil:   {Ra: 24, Th: 52, K: 352},<br>  limestone:    {Ra:  8, Th:  5, K: 100},<br>  monazite:     {Ra: 50, Th:200, K: 500},<br>  ...<br>}</div>
+<p class="notes">Override: airborne radiometric / geochemical atlas \u2192 ppm eU (\u00d712.22 Bq/kg), eTh (\u00d74.06), %K (\u00d7313) \u2192 replaces the prior. Full provenance tracking (prior vs measured per parameter).</p></div>
+</div></div></section>
 
 <footer>
-  <p><strong>Terrestrial Radiation Dose Indicator</strong> — v4 (Geology as Primary Predictor)</p>
-  <p style="margin-top:0.5rem;">All dose calculations traceable to UNSCEAR 2024 · ICRP 137 · EU BSS 2013/59/Euratom · WHO</p>
-  <p style="margin-top:0.5rem;">Geology-driven · Open data · Paper-ready provenance · <a href="https://github.com/edgeengineeringco-Git/Edge-AI-Agent">GitHub Repository</a></p>
+<div class="fi">
+<div class="fb-brand"><strong style="font-size:1rem">\u2622 Terrestrial Dose Indicator v4</strong><p>A paper-ready, geology-driven tool for estimating terrestrial radiation dose. Every number traceable to UNSCEAR 2024, ICRP 137, and EU BSS 2013/59/Euratom. OneGeology lithology is the primary predictor of K/U/Th activity concentrations worldwide.</p></div>
+<div class="f-col"><h4>Standards</h4><a href="https://www.unscear.org/unscear/en/publications.html" target="_blank">UNSCEAR 2024</a><a href="https://www.icrp.org/publication.asp?id=ICRP%20Publication%20137" target="_blank">ICRP 137</a><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32013L0059" target="_blank">EU BSS 2013/59</a><a href="https://www.who.int/publications/i/item/9789241503402" target="_blank">WHO Handbook</a></div>
+<div class="f-col"><h4>Data Sources</h4><a href="https://www.onegeology.org/" target="_blank">OneGeology</a><a href="https://remap.jrc.ec.europa.eu/" target="_blank">JRC REMAP</a><a href="https://github.com/GEMScienceTools/GEM-Global-Active-Faults" target="_blank">GEM Faults</a><a href="https://soilgrids.org/" target="_blank">SoilGrids</a></div>
+<div class="f-col"><h4>Technical</h4><a href="#formulas">Formulas</a><a href="#sources">Source Registry</a><a href="#architecture">Pipeline</a><a href="#risk">Risk Matrix</a></div>
+</div>
+<div class="fbot"><span>\u00a9 2026 EDGE Engineering \u00b7 Terrestrial Dose Indicator v4 \u00b7 Open Source</span><span style="font-family:var(--mn)">UNSCEAR 2024 \u00b7 ICRP 137 \u00b7 EU BSS 2013/59</span></div>
 </footer>
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════════════
-   LITHOLOGY → ACTIVITY LOOKUP TABLE (Bq/kg)
-   This is the PRIMARY PREDICTOR — the geology prior.
-   Radiometric/geochemical surveys override these values where available.
-   ═══════════════════════════════════════════════════════════════════════════ */
-const LITHOLOGY_ACTIVITIES = {
-  monzogranite:       { name: "Monzogranite",                    Ra226: 29,  Th232: 34,  K40: 883,  permeability: 0.5,  emanation: 0.20, thoron_emanation: 0.15, lithFactor: 1.5 },
-  granite:            { name: "Granitic rocks (general)",        Ra226: 68,  Th232: 72,  K40: 866,  permeability: 0.5,  emanation: 0.25, thoron_emanation: 0.20, lithFactor: 2.0 },
-  limestone:          { name: "Limestone / Carbonate",            Ra226: 15,  Th232: 12,  K40: 90,   permeability: 0.2,  emanation: 0.10, thoron_emanation: 0.05, lithFactor: 0.3 },
-  basalt:             { name: "Basalt / Mafic volcanic",          Ra226: 12,  Th232: 15,  K40: 180,  permeability: 0.3,  emanation: 0.10, thoron_emanation: 0.08, lithFactor: 0.4 },
-  sandstone:          { name: "Sandstone / Siliciclastic",        Ra226: 25,  Th232: 22,  K40: 400,  permeability: 0.6,  emanation: 0.15, thoron_emanation: 0.15, lithFactor: 1.0 },
-  shale:              { name: "Shale / Mudstone",                 Ra226: 35,  Th232: 38,  K40: 600,  permeability: 0.1,  emanation: 0.12, thoron_emanation: 0.12, lithFactor: 1.2 },
-  urban_soil:         { name: "Urban soil",                       Ra226: 24,  Th232: 52,  K40: 352,  permeability: 0.4,  emanation: 0.15, thoron_emanation: 0.15, lithFactor: 0.8 },
-  world_avg:          { name: "World-average soil",              Ra226: 35,  Th232: 30,  K40: 400,  permeability: 0.3,  emanation: 0.15, thoron_emanation: 0.15, lithFactor: 1.0 },
-  monazite_bearing:   { name: "Monazite-bearing (REE terrain)",  Ra226: 120, Th232: 450, K40: 600,  permeability: 0.4,  emanation: 0.25, thoron_emanation: 0.80, lithFactor: 3.0 },
-  alkali_intrusive:   { name: "Alkali intrusive / syenite",      Ra226: 80,  Th232: 120, K40: 1000, permeability: 0.5,  emanation: 0.22, thoron_emanation: 0.25, lithFactor: 2.5 },
-};
-
-/* ── Conversion constants (IAEA / UNSCEAR) ────────────────────────────────── */
-const CONV = { eU_to_Bq: 12.22, eTh_to_Bq: 4.06, Kpct_to_Bq: 313 };
-/* Inverse: Bq/kg → survey units */
-const INV = { Bq_to_eU: 1/12.22, Bq_to_eTh: 1/4.06, Bq_to_Kpct: 1/313 };
-
-/* ── UNSCEAR gamma coefficients ───────────────────────────────────────────── */
-const GAMMA_COEFF = { Ra: 0.462, Th: 0.604, K: 0.041 };
-const OCCUPANCY = 0.8 + 0.2; // indoor + outdoor weighting → ~1.0
-const SV_PER_GY = 0.7;
-const HOURS_PER_YEAR = 8760;
-const WORLD_AVG_DOSE = 2.2; // mSv/yr (terrestrial scope)
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   DOSE CALCULATION CORE (JavaScript port of dose_calculation_core.py v4)
-   Every constant is traceable to UNSCEAR 2024 / ICRP 137 / EU BSS.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function computeGammaDoseRate(A_Ra, A_Th, A_K) {
-  // D_air (nGy/h) = 0.462·A_Ra + 0.604·A_Th + 0.041·A_K
-  return GAMMA_COEFF.Ra * A_Ra + GAMMA_COEFF.Th * A_Th + GAMMA_COEFF.K * A_K;
-}
-
-function computeAnnualGamma(D_air) {
-  // E_ext = D_air × 8760 × OF × 0.7 × 1e-6  (mSv/yr)
-  return D_air * HOURS_PER_YEAR * OCCUPANCY * SV_PER_GY * 1e-6;
-}
-
-function computeRadonEstimate(litho, A_Ra) {
-  // Geogenic Radon Potential → estimated indoor radon (Bq/m³)
-  // Model: C_Rn = A_Ra × emanation_factor × k_Rn
-  // Calibrated so world-average soil (A_Ra=35, eman=0.15) yields ~40 Bq/m³ indoor (UNSCEAR global mean)
-  // k_Rn = 40 / (35 × 0.15) ≈ 7.62
-  const k_Rn = 7.62;
-  return A_Ra * litho.emanation * k_Rn;
-}
-
-function computeRadonDose(C_Rn) {
-  // E_Rn = C_Rn × F × t × DCF
-  // F = 0.4 equilibrium factor; t = 7000 h indoor exposure; DCF ≈ 9 nSv/(Bq·h·m⁻³)
-  // ICRP 137: 300 Bq/m³ → ~10 mSv/yr → 300 × 0.4 × 7000 × 9e-6 = 7.56 → adjust DCF
-  // Using the UNSCEAR conversion: ~0.0128 mSv/yr per Bq/m³ (at F=0.4, 7000h)
-  const F = 0.4, t = 7000, DCF_nSv = 9.0;
-  return C_Rn * F * t * DCF_nSv * 1e-6; // mSv/yr
-}
-
-function computeThoronDose(A_Th, litho) {
-  // Global Thoron Potential (GTP): Th-232 → emanation → indoor gas → EEC → dose
-  // Model: D_Tn = A_Th × thoron_emanation × k_Th
-  // Uses lithology-specific thoron emanation factor (can differ from radon emanation).
-  // Monazite-bearing terrains have very high thoron emanation (monazite sand surface release).
-  // Calibrated so world-average soil (A_Th=30, thoron_eman=0.15) yields ~0.1 mSv/yr.
-  // k_Th = 0.1 / (30 × 0.15) ≈ 0.0222
-  const k_Th = 0.0222;
-  const thoronEmanation = litho.thoron_emanation || litho.emanation || 0.15;
-  return A_Th * thoronEmanation * k_Th;
-}
-
-function computeRadiumEquivalent(A_Ra, A_Th, A_K) {
-  // Ra_eq = A_Ra + 1.43·A_Th + 0.077·A_K
-  return A_Ra + 1.43 * A_Th + 0.077 * A_K;
-}
-
-function computeActivityIndex(A_Ra, A_Th, A_K) {
-  // EU BSS: I = A_Ra/300 + A_Th/200 + A_K/3000
-  return A_Ra/300 + A_Th/200 + A_K/3000;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   RISK CLASSIFICATION
-   ═══════════════════════════════════════════════════════════════════════════ */
-function classifyRisk(totalDose, C_Rn, gammaRate, raEq) {
-  const checks = {
-    dose:  totalDose <= WORLD_AVG_DOSE ? 'g' : (totalDose <= 6.6 ? 'a' : 'r'),
-    radon: C_Rn < 100 ? 'g' : (C_Rn < 300 ? 'a' : 'r'),
-    gamma: gammaRate < 59 ? 'g' : (gammaRate < 1000 ? 'a' : 'r'),
-    raEq:  raEq < 370 ? 'g' : (raEq < 740 ? 'a' : 'r'),
-  };
-  // Overall = worst tier
-  const vals = Object.values(checks);
-  const overall = vals.includes('r') ? 'r' : (vals.includes('a') ? 'a' : 'g');
-  return { checks, overall };
-}
-
-const TIER_NAMES = { g: 'GREEN', a: 'AMBER', r: 'RED' };
-const TIER_LABELS = {
-  g: 'Normal Background',
-  a: 'Elevated',
-  r: 'High Risk',
-};
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   DOSE TRIANGLE RENDERER (VisQuill-style SVG)
-   ═══════════════════════════════════════════════════════════════════════════ */
-function renderTriangle(radonDose, thoronDose, gammaDose) {
-  const svg = document.getElementById('dose-triangle');
-  const cx = 170, cy = 170, R = 130; // center & radius
-
-  // Draw grid triangles at 25%, 50%, 75%, 100%
-  const gridG = document.getElementById('grid-triangles');
-  gridG.innerHTML = '';
-  for (let f = 0.25; f <= 1.0; f += 0.25) {
-    const pts = trianglePoints(cx, cy, R * f);
-    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    poly.setAttribute('points', pts.map(p => p.join(',')).join(' '));
-    gridG.appendChild(poly);
-  }
-
-  // Normalise arm lengths to viewport max (so at least one arm reaches the edge)
-  const maxDose = Math.max(radonDose, thoronDose, gammaDose, 0.1);
-  const rFrac = radonDose / maxDose;
-  const tFrac = thoronDose / maxDose;
-  const gFrac = gammaDose / maxDose;
-
-  // Compute vertex positions: top=radon, bottom-left=thoron, bottom-right=gamma
-  const vRadon  = [cx, cy - R * rFrac];
-  const vThoron = [cx - R * tFrac * 0.866, cy + R * tFrac * 0.5];
-  const vGamma  = [cx + R * gFrac * 0.866, cy + R * gFrac * 0.5];
-
-  const poly = document.getElementById('dose-poly');
-  poly.setAttribute('points', vRadon.join(',') + ' ' + vThoron.join(',') + ' ' + vGamma.join(','));
-
-  // Colour by dominant source
-  let dominant = 'radon', dominantVal = radonDose, dominantColor = '#ff6b81';
-  if (thoronDose > dominantVal) { dominant = 'thoron'; dominantVal = thoronDose; dominantColor = '#37dbff'; }
-  if (gammaDose > dominantVal) { dominant = 'gamma'; dominantVal = gammaDose; dominantColor = '#feca57'; }
-
-  poly.setAttribute('fill', dominantColor + '22');
-  poly.setAttribute('stroke', dominantColor);
-
-  // Move vertex circles
-  document.getElementById('v-radon').setAttribute('cx', vRadon[0]);
-  document.getElementById('v-radon').setAttribute('cy', vRadon[1]);
-  document.getElementById('v-thoron').setAttribute('cx', vThoron[0]);
-  document.getElementById('v-thoron').setAttribute('cy', vThoron[1]);
-  document.getElementById('v-gamma').setAttribute('cx', vGamma[0]);
-  document.getElementById('v-gamma').setAttribute('cy', vGamma[1]);
-
-  // Update legend
-  document.getElementById('leg-radon').textContent = radonDose.toFixed(2) + ' mSv/yr';
-  document.getElementById('leg-thoron').textContent = thoronDose.toFixed(2) + ' mSv/yr';
-  document.getElementById('leg-gamma').textContent = gammaDose.toFixed(2) + ' mSv/yr';
-
-  // Dominant source
-  const domMap = {
-    radon: { label: 'Radon-dominated (U geology)', note: 'Uranium-rich lithology driving inhalation dose' },
-    thoron: { label: 'Thoron-dominated (Th/monazite/REE)', note: '⚠ REE prospectivity flag — thoron is dominant arm' },
-    gamma: { label: 'Gamma-dominated (potassic lithology)', note: 'High K-40 / U / Th external dose' },
-  };
-  document.getElementById('dominant-src').textContent = domMap[dominant].label;
-  document.getElementById('dominant-src').style.color = dominantColor;
-  document.getElementById('dominant-note').textContent = domMap[dominant].note;
-}
-
-function trianglePoints(cx, cy, R) {
-  return [
-    [cx, cy - R],
-    [cx - R * 0.866, cy + R * 0.5],
-    [cx + R * 0.866, cy + R * 0.5],
-  ];
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PROVENANCE TRACKING
-   ═══════════════════════════════════════════════════════════════════════════ */
-function renderProvenance(params) {
-  const container = document.getElementById('prov-rows');
-  container.innerHTML = '';
-  let measuredCount = 0;
-  let total = 0;
-
-  params.forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'prov-row';
-
-    const isMeasured = p.measured !== null;
-    if (isMeasured) measuredCount++;
-    total++;
-
-    const confColor = p.conf >= 0.8 ? 'var(--green)' : (p.conf >= 0.4 ? 'var(--amber)' : 'var(--red)');
-
-    row.innerHTML = `
-      <span class="param">${p.name}</span>
-      <span class="prior">${p.prior}</span>
-      <span class="measured">${isMeasured ? p.measured : '— (geology prior)'}</span>
-      <span class="conf">${Math.round(p.conf * 100)}%
-        <span class="conf-bar"><span class="fill" style="width:${p.conf*100}%;background:${confColor};"></span></span>
-      </span>
-    `;
-    container.appendChild(row);
-  });
-
-  const overallConf = total > 0 ? measuredCount / total : 0;
- const confEl = document.getElementById('overall-conf');
-  const noteEl = document.getElementById('conf-note');
-  confEl.textContent = Math.round(overallConf * 100) + '%';
-  const confColor2 = overallConf >= 0.67 ? 'var(--green)' : (overallConf >= 0.33 ? 'var(--amber)' : 'var(--red)');
-  confEl.style.color = confColor2;
-
-  if (overallConf < 0.33) {
-    noteEl.textContent = 'Low confidence — estimates based primarily on lithology prior. Radiometric/geochemical survey data recommended for this region.';
-  } else if (overallConf < 0.67) {
-    noteEl.textContent = 'Moderate confidence — some parameters have measured overrides. Thoron confidence lower when geogenic-only.';
-  } else {
-    noteEl.textContent = 'High confidence — most parameters have measured data. Provenance suitable for publication.';
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   LITHOLOGY TABLE BUILDER
-   ═══════════════════════════════════════════════════════════════════════════ */
-function buildLithologyTable() {
-  const tbody = document.getElementById('litho-tbody');
-  tbody.innerHTML = '';
-
-  for (const [key, litho] of Object.entries(LITHOLOGY_ACTIVITIES)) {
-    const eU = (litho.Ra226 * INV.Bq_to_eU).toFixed(1);
-    const eTh = (litho.Th232 * INV.Bq_to_eTh).toFixed(1);
-    const Kpct = (litho.K40 * INV.Bq_to_Kpct).toFixed(1);
-
-    // Quick risk assessment for the badge
-    const dAir = computeGammaDoseRate(litho.Ra226, litho.Th232, litho.K40);
-    const raEq = computeRadiumEquivalent(litho.Ra226, litho.Th232, litho.K40);
-    const cRn = computeRadonEstimate(litho, litho.Ra226);
-    const gammaAnnual = computeAnnualGamma(dAir);
-    const radonDose = computeRadonDose(cRn);
-    const thoronDose = computeThoronDose(litho.Th232, litho);
-    const totalDose = gammaAnnual + radonDose + thoronDose;
-    const risk = classifyRisk(totalDose, cRn, dAir, raEq);
-    const tier = TIER_NAMES[risk.overall];
-
-    const tr = document.createElement('tr');
-    tr.dataset.key = key;
-    tr.innerHTML = `
-      <td><strong>${litho.name}</strong></td>
-      <td class="mono">${litho.Ra226}</td>
-      <td class="mono">${litho.Th232}</td>
-      <td class="mono">${litho.K40}</td>
-      <td class="mono">${eU}</td>
-      <td class="mono">${eTh}</td>
-      <td class="mono">${Kpct}</td>
-      <td><span class="litho-badge badge-${risk.overall}">${tier}</span></td>
-    `;
-    tr.addEventListener('click', () => {
-      document.getElementById('lithology-select').value = key;
-      // Reset sliders to 0 (use prior)
-      document.getElementById('eu-slider').value = 0;
-      document.getElementById('eth-slider').value = 0;
-      document.getElementById('k-slider').value = 0;
-      updateCalculation();
-      document.getElementById('calculator').scrollIntoView({ behavior: 'smooth' });
-    });
-    tbody.appendChild(tr);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN CALCULATION UPDATE
-   ═══════════════════════════════════════════════════════════════════════════ */
-function updateCalculation() {
-  const lithoKey = document.getElementById('lithology-select').value;
-  const litho = LITHOLOGY_ACTIVITIES[lithoKey];
-
-  // Prior values
-  const prior_eU = litho.Ra226 * INV.Bq_to_eU;
-  const prior_eTh = litho.Th232 * INV.Bq_to_eTh;
-  const prior_Kpct = litho.K40 * INV.Bq_to_Kpct;
-
-  // Slider values (0 = use prior; >0 = override)
-  const euSlider = parseFloat(document.getElementById('eu-slider').value);
-  const ethSlider = parseFloat(document.getElementById('eth-slider').value);
-  const kSlider = parseFloat(document.getElementById('k-slider').value);
-
-  // Determine effective values: slider > 0 means override
-  const euUsed = euSlider > 0 ? euSlider : prior_eU;
-  const ethUsed = ethSlider > 0 ? ethSlider : prior_eTh;
-  const kUsed = kSlider > 0 ? kSlider : prior_Kpct;
-
-  // Convert to Bq/kg
-  const A_Ra = euUsed * CONV.eU_to_Bq;
-  const A_Th = ethUsed * CONV.eTh_to_Bq;
-  const A_K = kUsed * CONV.Kpct_to_Bq;
-
-  // Track provenance
-  const euMeasured = euSlider > 0;
-  const ethMeasured = ethSlider > 0;
-  const kMeasured = kSlider > 0;
-
-  // Update slider labels
-  document.getElementById('eu-label').textContent = euMeasured ? 'Measured' : 'Prior (geology)';
-  document.getElementById('eu-value').textContent = euUsed.toFixed(1) + ' ppm';
-  document.getElementById('eth-label').textContent = ethMeasured ? 'Measured' : 'Prior (geology)';
-  document.getElementById('eth-value').textContent = ethUsed.toFixed(1) + ' ppm';
-  document.getElementById('k-label').textContent = kMeasured ? 'Measured' : 'Prior (geology)';
-  document.getElementById('k-value').textContent = kUsed.toFixed(2) + ' %';
-
-  // ── DOSE CALCULATIONS ──
-  const dAir = computeGammaDoseRate(A_Ra, A_Th, A_K);
-  const gammaAnnual = computeAnnualGamma(dAir);
-  const cRn = computeRadonEstimate(litho, A_Ra);
-  const radonDose = computeRadonDose(cRn);
-  const thoronDose = computeThoronDose(A_Th, litho);
-  const totalDose = gammaAnnual + radonDose + thoronDose;
-  const raEq = computeRadiumEquivalent(A_Ra, A_Th, A_K);
-  const actIdx = computeActivityIndex(A_Ra, A_Th, A_K);
-  const risk = classifyRisk(totalDose, cRn, dAir, raEq);
-
-  // ── UPDATE UI ──
-  document.getElementById('gamma-val').textContent = dAir.toFixed(1);
-  document.getElementById('gamma-src').textContent = euMeasured || ethMeasured || kMeasured ? 'Radiometric override' : 'Lithology prior → UNSCEAR γ coeff.';
-
-  document.getElementById('gamma-annual').textContent = gammaAnnual.toFixed(3);
-  document.getElementById('gamma-annual-src').textContent = 'D_air × 8760 × OF × 0.7 × 1e⁻⁶';
-
-  document.getElementById('radon-val').textContent = Math.round(cRn);
-  document.getElementById('radon-src').textContent = euMeasured ? 'Measured eU → GRP model' : 'Geology prior (Ra-226) → GRP';
-
-  document.getElementById('radon-dose').textContent = radonDose.toFixed(2);
-  document.getElementById('radon-dose-src').textContent = 'C_Rn × F(0.4) × 7000h × DCF (ICRP 137)';
-
-  document.getElementById('thoron-dose').textContent = thoronDose.toFixed(3);
-  document.getElementById('thoron-src').textContent = ethMeasured ? 'Measured eTh → GTP' : 'Geology prior (Th-232) → GTP (geogenic)';
-
-  document.getElementById('total-dose').textContent = totalDose.toFixed(2);
-  const worldPct = ((totalDose / WORLD_AVG_DOSE) * 100).toFixed(0);
-  document.getElementById('total-src').textContent = 'γ + Rn + Tn = ' + worldPct + '% of world avg (2.2 mSv/yr)';
-
-  // ── RISK BANNER ──
-  const bannerContainer = document.getElementById('risk-banner-container');
-  const tier = TIER_NAMES[risk.overall];
-  const tierLabel = TIER_LABELS[risk.overall];
-  bannerContainer.innerHTML = `
-    <div class="risk-banner risk-${tier === 'GREEN' ? 'green' : tier === 'AMBER' ? 'amber' : 'red'}">
-      <span class="dot-lg"></span>
-      <span>${tier} — ${tierLabel}</span>
-      <span style="margin-left:auto;font-size:0.82rem;opacity:0.8;">Activity index I = ${actIdx.toFixed(2)} ${actIdx >= 1 ? '⚠ (EU BSS threshold)' : ''}</span>
-    </div>
-  `;
-
-  // ── DOSE TRIANGLE ──
-  renderTriangle(radonDose, thoronDose, gammaAnnual);
-
-  // ── PROVENANCE ──
-  const provToggle = document.getElementById('provenance-toggle');
-  const provPanel = document.getElementById('prov-panel');
-  provPanel.style.display = provToggle.checked ? 'block' : 'none';
-
-  if (provToggle.checked) {
-    const params = [
-      {
-        name: 'Ra-226 / U-238',
-        prior: prior_eU.toFixed(1) + ' ppm eU (' + litho.name + ')',
-        measured: euMeasured ? euSlider.toFixed(1) + ' ppm eU' : null,
-        conf: euMeasured ? 0.9 : 0.3,
-      },
-      {
-        name: 'Th-232',
-        prior: prior_eTh.toFixed(1) + ' ppm eTh (' + litho.name + ')',
-        measured: ethMeasured ? ethSlider.toFixed(1) + ' ppm eTh' : null,
-        conf: ethMeasured ? 0.85 : 0.25,
-      },
-      {
-        name: 'K-40',
-        prior: prior_Kpct.toFixed(2) + ' % K (' + litho.name + ')',
-        measured: kMeasured ? kSlider.toFixed(2) + ' % K' : null,
-        conf: kMeasured ? 0.9 : 0.35,
-      },
-      {
-        name: 'Indoor Radon',
-        prior: 'Geogenic GRP estimate',
-        measured: null, // Would be overridden by measured C_Rn
-        conf: 0.2,
-      },
-      {
-        name: 'Thoron (GTP)',
-        prior: 'Geogenic from Th-232',
-        measured: null, // Would be overridden by measured C_Tn
-        conf: ethMeasured ? 0.5 : 0.15,
-      },
-    ];
-    renderProvenance(params);
-  }
-
-  // ── HIGHLIGHT TABLE ROW ──
-  document.querySelectorAll('#litho-tbody tr').forEach(tr => {
-    tr.classList.toggle('selected', tr.dataset.key === lithoKey);
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PARTICLE BACKGROUND (subtle floating dots)
-   ═══════════════════════════════════════════════════════════════════════════ */
-function initParticles() {
-  const canvas = document.getElementById('particle-canvas');
-  const ctx = canvas.getContext('2d');
-  let particles = [];
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  const count = 60;
-  const colors = ['rgba(55,219,255,0.3)', 'rgba(163,113,255,0.2)', 'rgba(255,107,129,0.15)'];
-
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 2 + 0.5,
-      c: colors[Math.floor(Math.random() * colors.length)],
-    });
-  }
-
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      if (p.x < 0) p.x = canvas.width;
-      if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height;
-      if (p.y > canvas.height) p.y = 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = p.c;
-      ctx.fill();
-    });
-    requestAnimationFrame(animate);
-  }
-  animate();
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   INITIALIZATION
-   ═══════════════════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  buildLithologyTable();
-  initParticles();
-
-  // Wire up event listeners
-  document.getElementById('lithology-select').addEventListener('change', () => {
-    // Reset sliders when lithology changes
-    document.getElementById('eu-slider').value = 0;
-    document.getElementById('eth-slider').value = 0;
-    document.getElementById('k-slider').value = 0;
-    updateCalculation();
-  });
-
-  ['eu-slider', 'eth-slider', 'k-slider'].forEach(id => {
-    document.getElementById(id).addEventListener('input', updateCalculation);
-  });
-
-  document.getElementById('provenance-toggle').addEventListener('change', updateCalculation);
-
-  // Initial render
-  updateCalculation();
-});
-</script>
+<script src="terrestrial-dose-indicator.js"></script>
 </body>
 </html>
