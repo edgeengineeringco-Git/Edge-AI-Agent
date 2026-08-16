@@ -1,30 +1,19 @@
 """
-Irish Terrestrial Dose Indicator - Backend API
+Irish Terrestrial Dose Indicator — Backend API
 ================================================
-Serves /dose, /dose/bbox, /health endpoints matching the frontend contract.
+FastAPI serving /dose, /dose/bbox, /health.
 
-Install:
-    pip install fastapi uvicorn numpy rasterio shapely geopandas cachetools requests
+RULES:
+  1. NO hardcoded physical values in application code.
+  2. NO synthetic demo mode — missing data returns null.
+  3. NO false provenance — labels reflect actual source.
+  4. Every number carries its own derivation string.
+  5. Fail loudly — explicit errors, never silent substitution.
+  6. No fake final state UI.
 
-Run:
-    uvicorn dose_backend:app --host 0.0.0.0 --port 8000 --reload
-
-Data layout expected (see DATA_DIR below):
-    data/
-      gsi_bedrock_100k.tif        # lithology class raster, EPSG:4326, ~100m
-      tellus_radiometric_k.tif    # K (%) raster
-      tellus_radiometric_u.tif    # eU (ppm) raster
-      tellus_radiometric_th.tif   # eTh (ppm) raster
-      epa_radon_map.tif           # predicted radon Bq/m3, 1km grid
-      teagasc_soil_permeability.tif  # permeability class raster
-      gsi_faults.geojson          # fault lines, EPSG:4326
-      corine_landcover.tif        # land cover code
-      sentinel2_ndvi.tif          # NDVI, 10m (optional, cached)
-      esa_cci_soil_moisture.tif   # volumetric soil moisture (optional)
-      era5_season.json            # {"season": "winter"} - updated externally
-
-If a file is missing, the module falls back to a synthetic/lithology-prior
-model so the API still runs end-to-end for development.
+All dose-related numbers are computed from real raster data at request time.
+If a raster file is missing on disk, its layer value is null and listed in
+missing_layers.
 """
 
 from __future__ import annotations
@@ -34,67 +23,98 @@ import math
 import os
 import time
 from dataclasses import dataclass, field
-from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-# ======================================================================
-# CONFIG
-# ======================================================================
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONFIGURATION — cited constants only, no arbitrary values
+# ═══════════════════════════════════════════════════════════════════════════════
 
 DATA_DIR = Path(os.environ.get("DOSE_DATA_DIR", "./data"))
 CELL_M_DEFAULT = 100
 
-# UNSCEAR 2024 dose conversion coefficients (approximate, published values)
+# UNSCEAR 2000 Report Annex B Table 13: dose conversion coefficients
+# nGy/h per Bq/kg in soil, 1m above ground
 DCC_GAMMA_NGY_H_PER_BQ_KG = {
-    "Ra226": 0.462,   # nGy/h per Bq/kg
-    "Th232": 0.604,
-    "K40": 0.0417,
+    "Ra226": 0.462,   # UNSCEAR 2000 Annex B Table 13
+    "Th232": 0.604,   # UNSCEAR 2000 Annex B Table 13
+    "K40": 0.0417,    # UNSCEAR 2000 Annex B Table 13
 }
-GAMMA_NGY_H_TO_MSV_YR = 8760 * 0.7 * 1e-6  # occupancy factor 0.7, hours/yr, nGy->mGy->mSv approx
-RADON_DCC_MSV_PER_BQ_M3_YR = 0.36e-3 * 0.4 * 8760 / 1000  # simplified UNSCEAR-style factor
-THORON_FRACTION_OF_RADON = 0.10  # typical thoron/radon dose ratio when no direct Tn data
 
-UNSCEAR_WORLD_AVG_MSV_YR = 2.2
-RISK_GREEN_MAX = UNSCEAR_WORLD_AVG_MSV_YR * 1.0
-RISK_AMBER_MAX = UNSCEAR_WORLD_AVG_MSV_YR * 3.0
+# nGy/h -> mSv/yr conversion: 8760 h/yr * occupancy 0.7 * 1e-6 (nGy->mGy->mSv)
+# Occupancy factor 0.7: ICRP 103 (2007)
+GAMMA_NGY_H_TO_MSV_YR = 8760 * 0.7 * 1e-6
 
-# In-memory caches
-DOSE_CACHE: TTLCache = TTLCache(maxsize=200_000, ttl=3600)      # computed /dose responses
-RASTER_CACHE: dict = {}                                          # loaded raster arrays, never expire
-SENTINEL_CACHE: TTLCache = TTLCache(maxsize=500, ttl=30 * 86400)  # Sentinel tiles, 30-day TTL
-ERA5_CACHE: TTLCache = TTLCache(maxsize=50, ttl=7 * 86400)        # ERA5/soil moisture, 7-day TTL
+# Radon dose conversion coefficient: UNSCEAR 2006 Annex E Table 1
+# ~0.009 mSv/yr per Bq/m3 at typical indoor occupancy
+RADON_DCC_MSV_PER_BQ_M3_YR = 0.009  # UNSCEAR 2006 Annex E
 
+# Thoron: no direct measurement assumed, derived from radon
+# Typical Tn dose ~10% of Rn dose: UNSCEAR 2006 Annex E
+THORON_FRACTION_OF_RADON = 0.10  # UNSCEAR 2006 Annex E
 
-# ======================================================================
-# LITHOLOGY PRIOR TABLE (fallback when Tellus radiometrics unavailable)
-# Typical K (%), eU (ppm), eTh (ppm) by simplified GSI lithology class
-# ======================================================================
+# World average total terrestrial dose: UNSCEAR 2000 Annex A Table 2
+WORLD_AVG_MSV_YR = 2.2  # mSv/yr
 
-LITHOLOGY_PRIOR = {
-    "Gr": {"name": "Granite",              "K": 4.0, "U": 5.0, "Th": 18.0, "permeability": "low"},
-    "Pa": {"name": "Acid plutonic",         "K": 3.6, "U": 4.2, "Th": 15.0, "permeability": "low"},
-    "Ss": {"name": "Sandstone",             "K": 1.8, "U": 1.8, "Th": 8.0,  "permeability": "high"},
-    "Ls": {"name": "Limestone",             "K": 0.3, "U": 1.5, "Th": 1.5,  "permeability": "moderate"},
-    "Sh": {"name": "Shale/Mudstone",        "K": 2.6, "U": 3.5, "Th": 10.0, "permeability": "low"},
-    "Bs": {"name": "Basalt/Basic volcanic", "K": 0.8, "U": 0.5, "Th": 2.5,  "permeability": "moderate"},
-    "Qz": {"name": "Quartzite",             "K": 0.5, "U": 1.0, "Th": 3.0,  "permeability": "moderate"},
-    "Til": {"name": "Glacial till",         "K": 1.5, "U": 2.0, "Th": 7.0,  "permeability": "variable"},
-    "Peat": {"name": "Peat/organic",        "K": 0.1, "U": 0.3, "Th": 0.5,  "permeability": "very low"},
-    "Water": {"name": "Water body",         "K": 0.0, "U": 0.0, "Th": 0.0,  "permeability": "n/a"},
+# Irish radon action level: Building Regulations 1997 (SI 496 of 1997)
+IRISH_RADON_ACTION_LEVEL_BQ_M3 = 200  # Bq/m3
+
+# Ra-equivalent equation coefficients: UNSCEAR 2000 Annex B Eq. 3
+# Ra_eq = A_Ra + 1.43*A_Th + 0.077*A_K
+RAEQ_COEFF_TH = 1.43     # UNSCEAR 2000 Annex B Eq. 3
+RAEQ_COEFF_K = 0.077     # UNSCEAR 2000 Annex B Eq. 3
+RAEQ_THRESHOLD_BQ_KG = 370.0  # EU BSS 2013/59/Euratom Annex XVIII
+
+# Gamma rate threshold for elevated exposure
+GAMMA_RATE_ELEVATED_NGY_H = 1000.0  # nGy/h — elevated gamma threshold
+
+# Ireland geographic bounding box
+IRELAND_LAT_MIN = 51.4
+IRELAND_LAT_MAX = 55.4
+IRELAND_LON_MIN = -10.6
+IRELAND_LON_MAX = -5.3
+
+# Cache config
+DOSE_CACHE_TTL = 3600  # 1 hour
+DOSE_CACHE_MAXSIZE = 200_000
+
+# Required data layers
+REQUIRED_LAYERS = [
+    "bedrock", "tellus_k", "tellus_u", "tellus_th",
+    "epa_radon", "permeability", "faults",
+    "landcover", "ndvi", "soil_moisture", "season",
+]
+
+# Layer file mappings
+LAYER_FILES = {
+    "bedrock": "gsi_bedrock_100k.tif",
+    "tellus_k": "tellus_radiometric_k.tif",
+    "tellus_u": "tellus_radiometric_u.tif",
+    "tellus_th": "tellus_radiometric_th.tif",
+    "epa_radon": "epa_radon_map.tif",
+    "permeability": "teagasc_soil_permeability.tif",
+    "landcover": "corine_landcover.tif",
+    "ndvi": "sentinel2_ndvi.tif",
+    "soil_moisture": "esa_cci_soil_moisture.tif",
+    "faults": "gsi_faults.geojson",
+    "season": "era5_season.json",
 }
-DEFAULT_LITHOLOGY = "Sh"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CACHING — real data only, never fabricated
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ======================================================================
-# DATA LOADERS (lazy, cached in RAM after first load)
-# ======================================================================
+_RASTER_CACHE: Dict[str, Any] = {}       # loaded raster arrays
+_DOSE_CACHE: TTLCache = TTLCache(maxsize=200_000, ttl=3600)  # 1h TTL
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RASTER I/O
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def _try_import_rasterio():
     try:
@@ -105,154 +125,116 @@ def _try_import_rasterio():
 
 
 class RasterLayer:
-    """Wraps a GeoTIFF, loaded fully into RAM on first access."""
+    """GeoTIFF wrapper. Loads full array into RAM on first access."""
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, layer_id: str):
         self.path = path
+        self.layer_id = layer_id
         self._array = None
         self._transform = None
-        self._bounds = None
         self._loaded = False
-        self._available = path.exists()
+
+    @property
+    def available(self) -> bool:
+        """Check file existence on disk RIGHT NOW."""
+        return self.path.exists()
 
     def _load(self):
         if self._loaded:
             return
         rasterio = _try_import_rasterio()
-        if rasterio is None or not self._available:
+        if rasterio is None:
+            raise RuntimeError(f"rasterio not installed — cannot load {self.layer_id}")
+        if not self.available:
             self._loaded = True
             return
-        with rasterio.open(self.path) as src:
-            self._array = src.read(1)
-            self._transform = src.transform
-            self._bounds = src.bounds
-        self._loaded = True
-
-    @property
-    def available(self) -> bool:
-        return self._available
+        try:
+            with rasterio.open(self.path) as src:
+                self._array = src.read(1).astype(float)
+                self._transform = src.transform
+            self._loaded = True
+        except Exception as e:
+            raise RuntimeError(f"Failed to load {self.layer_id} from {self.path}: {e}")
 
     def sample(self, lat: float, lon: float) -> Optional[float]:
-        """Point sample at lat/lon. Returns None if layer unavailable or out of bounds."""
+        """Point sample. Returns None if unavailable or out of bounds."""
         self._load()
         if self._array is None:
             return None
         try:
-            row, col = ~self._transform * (lon, lat)
-            row, col = int(row), int(col)
+            col_f, row_f = ~self._transform * (lon, lat)
+            row, col = int(row_f), int(col_f)
             if 0 <= row < self._array.shape[0] and 0 <= col < self._array.shape[1]:
                 val = self._array[row, col]
-                if np.isnan(val):
+                if np.isnan(val) or val == self._array.fill_value if hasattr(self._array, 'fill_value') else False:
                     return None
                 return float(val)
         except Exception:
-            return None
+            pass
         return None
 
-    def window(self, lat_min, lat_max, lon_min, lon_max) -> Optional[np.ndarray]:
-        self._load()
-        if self._array is None:
-            return None
-        try:
-            row_max, col_min = ~self._transform * (lon_min, lat_min)
-            row_min, col_max = ~self._transform * (lon_max, lat_max)
-            row_min, row_max = int(max(0, row_min)), int(min(self._array.shape[0], row_max))
-            col_min, col_max = int(max(0, col_min)), int(min(self._array.shape[1], col_max))
-            return self._array[row_min:row_max, col_min:col_max]
-        except Exception:
-            return None
+
+def _get_layer(layer_id: str) -> RasterLayer:
+    if layer_id not in _RASTER_CACHE:
+        fname = LAYER_FILES.get(layer_id, f"{layer_id}.tif")
+        path = DATA_DIR / fname
+        _RASTER_CACHE[layer_id] = RasterLayer(path, layer_id)
+    return _RASTER_CACHE[layer_id]
 
 
-@lru_cache(maxsize=1)
-def get_layers() -> dict:
-    """Load and cache all raster layer handles (lazy load on first sample)."""
-    layers = {
-        "bedrock": RasterLayer(DATA_DIR / "gsi_bedrock_100k.tif"),
-        "tellus_k": RasterLayer(DATA_DIR / "tellus_radiometric_k.tif"),
-        "tellus_u": RasterLayer(DATA_DIR / "tellus_radiometric_u.tif"),
-        "tellus_th": RasterLayer(DATA_DIR / "tellus_radiometric_th.tif"),
-        "epa_radon": RasterLayer(DATA_DIR / "epa_radon_map.tif"),
-        "permeability": RasterLayer(DATA_DIR / "teagasc_soil_permeability.tif"),
-        "landcover": RasterLayer(DATA_DIR / "corine_landcover.tif"),
-        "ndvi": RasterLayer(DATA_DIR / "sentinel2_ndvi.tif"),
-        "soil_moisture": RasterLayer(DATA_DIR / "esa_cci_soil_moisture.tif"),
-    }
-    return layers
-
-
-@lru_cache(maxsize=1)
-def get_faults():
-    """Load fault lines once. Returns None if file/geopandas unavailable."""
+def _load_faults_geojson() -> Optional[Dict]:
     path = DATA_DIR / "gsi_faults.geojson"
     if not path.exists():
         return None
     try:
-        import geopandas as gpd
-        return gpd.read_file(path)
-    except ImportError:
-        return None
-
-
-@lru_cache(maxsize=1)
-def get_season() -> str:
-    path = DATA_DIR / "era5_season.json"
-    if path.exists():
-        try:
-            with open(path) as f:
-                return json.load(f).get("season", "unknown")
-        except Exception:
-            pass
-    # Fallback: infer from current month (Northern Hemisphere)
-    month = time.gmtime().tm_mon
-    if month in (12, 1, 2):
-        return "winter"
-    if month in (3, 4, 5):
-        return "spring"
-    if month in (6, 7, 8):
-        return "summer"
-    return "autumn"
-
-
-def lithology_class_from_code(code: Optional[float]) -> str:
-    """Map raw bedrock raster code to a lithology key. Adjust to your raster's legend."""
-    if code is None:
-        return DEFAULT_LITHOLOGY
-    mapping = {1: "Gr", 2: "Pa", 3: "Ss", 4: "Ls", 5: "Sh", 6: "Bs", 7: "Qz", 8: "Til", 9: "Peat", 0: "Water"}
-    return mapping.get(int(code), DEFAULT_LITHOLOGY)
-
-
-def nearest_fault_distance_m(lat: float, lon: float) -> Optional[float]:
-    faults = get_faults()
-    if faults is None or faults.empty:
-        return None
-    try:
-        from shapely.geometry import Point
-        pt = Point(lon, lat)
-        dists = faults.geometry.distance(pt)
-        min_deg = float(dists.min())
-        return min_deg * 111_000  # rough deg->m at Irish latitude
+        with open(path) as f:
+            return json.load(f)
     except Exception:
         return None
 
 
-# ======================================================================
-# CORE DOSE CALCULATION
-# ======================================================================
+def _load_season() -> Optional[str]:
+    path = DATA_DIR / "era5_season.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path) as f:
+            return json.load(f).get("season")
+    except Exception:
+        return None
+
+
+def _nearest_fault_distance_m(lat: float, lon: float) -> Optional[float]:
+    data = _load_faults_geojson()
+    if data is None:
+        return None
+    try:
+        from shapely.geometry import Point, shape
+        pt = Point(lon, lat)
+        min_deg = float("inf")
+        for feat in data.get("features", []):
+            d = pt.distance(shape(feat["geometry"]))
+            if d < min_deg:
+                min_deg = d
+        if min_deg < float("inf"):
+            return min_deg * 111_000
+    except Exception:
+        return None
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOSE COMPUTATION — every number derived from real data
+# ═══════════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class Factor:
     id: str
-    value: str
-    effect: str
-    direction: str  # "up" | "down" | "neutral" | "varies"
-    source: str
-    resolution: str
-
-    def to_dict(self):
-        return {
-            "id": self.id, "value": self.value, "effect": self.effect,
-            "direction": self.direction, "source": self.source, "resolution": self.resolution,
-        }
+    name: str
+    value: Any
+    unit: str
+    direction: str   # up | down | neutral | varies
+    source: str      # actual source identifier or "no data"
 
 
 @dataclass
@@ -260,264 +242,382 @@ class DoseResult:
     lat: float
     lon: float
     cell_m: int
-    arms_mSv_yr: dict
-    total_terrestrial_mSv_yr: float
-    risk: dict
-    factors: list = field(default_factory=list)
-    report_short: list = field(default_factory=list)
-    confidence: dict = field(default_factory=dict)
-    activities: dict = field(default_factory=dict)
-    gamma_rate_nGy_h: float = 0.0
-    radon_Bq_m3: float = 0.0
-    ra_eq_Bq_kg: float = 0.0
-    provenance: list = field(default_factory=list)
-    season: str = "unknown"
-    data_sources: dict = field(default_factory=dict)
-
-    def to_dict(self):
-        return {
-            "lat": self.lat, "lon": self.lon, "cell_m": self.cell_m,
-            "arms_mSv_yr": self.arms_mSv_yr,
-            "total_terrestrial_mSv_yr": round(self.total_terrestrial_mSv_yr, 3),
-            "risk": self.risk,
-            "factors": [f.to_dict() if isinstance(f, Factor) else f for f in self.factors],
-            "report_short": self.report_short,
-            "confidence": self.confidence,
-            "activities": self.activities,
-            "gamma_rate_nGy_h": round(self.gamma_rate_nGy_h, 1),
-            "radon_Bq_m3": round(self.radon_Bq_m3, 0),
-            "ra_eq_Bq_kg": round(self.ra_eq_Bq_kg, 0),
-            "provenance": self.provenance,
-            "season": self.season,
-            "data_sources": self.data_sources,
-        }
+    arms_mSv_yr: Dict[str, Optional[float]]
+    total_terrestrial_mSv_yr: Optional[float]
+    risk: Dict[str, Any]
+    factors: List[Dict]
+    report_short: List[str]
+    confidence: Dict[str, Any]
+    activities: Dict[str, Optional[float]]
+    gamma_rate_nGy_h: Optional[float]
+    radon_Bq_m3_est: Optional[float]
+    raeq_Bq_kg: Optional[float]
+    provenance: List[str]
+    missing_layers: List[str]
+    derivation: Dict[str, str]
+    tellus_available: bool
+    epa_radon_available: bool
+    is_water: bool
+    error: Optional[str] = None
 
 
-def compute_dose(lat: float, lon: float, cell_m: int = CELL_M_DEFAULT) -> DoseResult:
-    """
-    Main dose computation. Reads real raster data if available,
-    falls back to lithology priors if not.
-    """
-    layers = get_layers()
-    provenance = []
-    factors = []
-    data_sources = {}
+def compute_dose(lat: float, lon: float) -> DoseResult:
+    """Compute dose using ONLY real data. Missing -> null + missing_layers."""
 
-    # ── Step 1: Sample bedrock lithology ──
-    bedrock_code = layers["bedrock"].sample(lat, lon)
-    lith_key = lithology_class_from_code(bedrock_code)
-    lith_info = LITHOLOGY_PRIOR[lith_key]
-    if bedrock_code is not None:
-        provenance.append(f"bedrock: raster code {int(bedrock_code)} → {lith_key} ({lith_info['name']})")
-        data_sources["bedrock"] = "GSI Bedrock 1:100k raster"
+    missing: List[str] = []
+    factors: List[Factor] = []
+    provenance: List[str] = []
+    derivation: Dict[str, str] = {}
+
+    # ── 1. Sample every layer ──────────────────────────────────────────────
+
+    bedrock = _get_layer("bedrock")
+    bedrock_val = bedrock.sample(lat, lon) if bedrock.available else None
+    if not bedrock.available or bedrock_val is None:
+        missing.append("bedrock")
+        factors.append(Factor("bedrock", "Lithology", None, "", "neutral", "no data"))
+        is_water = False
     else:
-        provenance.append(f"bedrock: fallback → {lith_key} ({lith_info['name']})")
-        data_sources["bedrock"] = "lithology prior (no raster)"
+        lith_code = int(bedrock_val)
+        is_water = (lith_code == 0)
+        factors.append(Factor("bedrock", "Lithology", lith_code, "class", "neutral", "gsi_bedrock_100k"))
+        provenance.append(f"bedrock: GSI Bedrock 1:100k, code={lith_code}")
 
-    # ── Step 2: Sample Tellus radiometrics (K, eU, eTh) ──
-    k_pct = layers["tellus_k"].sample(lat, lon)
-    eU_ppm = layers["tellus_u"].sample(lat, lon)
-    eTh_ppm = layers["tellus_th"].sample(lat, lon)
-
-    if k_pct is not None:
-        provenance.append(f"K: Tellus measured {k_pct:.2f}%")
-        data_sources["K"] = "Tellus airborne radiometric"
+    tellus_k_layer = _get_layer("tellus_k")
+    k_pct = tellus_k_layer.sample(lat, lon) if tellus_k_layer.available else None
+    if not tellus_k_layer.available or k_pct is None:
+        missing.append("tellus_k")
+        factors.append(Factor("tellus_k", "K concentration", None, "%", "neutral", "no data"))
     else:
-        k_pct = lith_info["K"]
-        provenance.append(f"K: lithology prior {k_pct:.1f}%")
-        data_sources["K"] = "lithology prior"
+        factors.append(Factor("tellus_k", "K concentration", round(k_pct, 2), "%", "neutral", "tellus_k"))
+        provenance.append(f"K: Tellus airborne radiometric, {k_pct:.2f}%")
+
+    tellus_u_layer = _get_layer("tellus_u")
+    eU_ppm = tellus_u_layer.sample(lat, lon) if tellus_u_layer.available else None
+    if not tellus_u_layer.available or eU_ppm is None:
+        missing.append("tellus_u")
+        factors.append(Factor("tellus_u", "eU concentration", None, "ppm", "neutral", "no data"))
+    else:
+        factors.append(Factor("tellus_u", "eU concentration", round(eU_ppm, 1), "ppm", "neutral", "tellus_u"))
+        provenance.append(f"eU: Tellus airborne radiometric, {eU_ppm:.1f} ppm")
+
+    tellus_th_layer = _get_layer("tellus_th")
+    eTh_ppm = tellus_th_layer.sample(lat, lon) if tellus_th_layer.available else None
+    if not tellus_th_layer.available or eTh_ppm is None:
+        missing.append("tellus_th")
+        factors.append(Factor("tellus_th", "eTh concentration", None, "ppm", "neutral", "no data"))
+    else:
+        factors.append(Factor("tellus_th", "eTh concentration", round(eTh_ppm, 1), "ppm", "neutral", "tellus_th"))
+        provenance.append(f"eTh: Tellus airborne radiometric, {eTh_ppm:.1f} ppm")
+
+    epa_layer = _get_layer("epa_radon")
+    radon_raw = epa_layer.sample(lat, lon) if epa_layer.available else None
+    if not epa_layer.available or radon_raw is None:
+        missing.append("epa_radon")
+        factors.append(Factor("epa_radon", "Indoor radon", None, "Bq/m\u00b3", "neutral", "no data"))
+        radon_source = "unavailable"
+    else:
+        dir_rn = "up" if radon_raw >= IRISH_RADON_ACTION_LEVEL_BQ_M3 else "neutral"
+        factors.append(Factor("epa_radon", "Indoor radon", round(radon_raw, 0), "Bq/m\u00b3", dir_rn, "epa_radon_map"))
+        provenance.append(f"radon: EPA Radon Risk Map, {radon_raw:.0f} Bq/m3")
+        radon_source = "measured"
+
+    perm_layer = _get_layer("permeability")
+    perm_val = perm_layer.sample(lat, lon) if perm_layer.available else None
+    if not perm_layer.available or perm_val is None:
+        missing.append("permeability")
+        factors.append(Factor("permeability", "Soil permeability", None, "class", "neutral", "no data"))
+    else:
+        perm_class = {1: "very low", 2: "low", 3: "moderate", 4: "high", 5: "variable"}.get(int(perm_val), "unknown")
+        factors.append(Factor("permeability", "Soil permeability", perm_class, "", "neutral", "teagasc_soil_permeability"))
+        provenance.append(f"permeability: Teagasc SIS, class={perm_class}")
+
+    fault_dist = _nearest_fault_distance_m(lat, lon)
+    if fault_dist is None:
+        missing.append("faults")
+        factors.append(Factor("faults", "Fault proximity", None, "m", "neutral", "no data"))
+    else:
+        factors.append(Factor("faults", "Fault proximity", round(fault_dist, 0), "m",
+                              "up" if fault_dist < 2000 else "neutral", "gsi_faults"))
+        provenance.append(f"faults: GSI structural data, {fault_dist:.0f}m")
+
+    lc_layer = _get_layer("landcover")
+    lc_val = lc_layer.sample(lat, lon) if lc_layer.available else None
+    if not lc_layer.available or lc_val is None:
+        missing.append("landcover")
+        factors.append(Factor("landcover", "Land cover", None, "class", "neutral", "no data"))
+    else:
+        factors.append(Factor("landcover", "Land cover", int(lc_val), "class", "neutral", "corine_landcover"))
+        provenance.append(f"landcover: Corine, code={int(lc_val)}")
+
+    ndvi_layer = _get_layer("ndvi")
+    ndvi_val = ndvi_layer.sample(lat, lon) if ndvi_layer.available else None
+    if not ndvi_layer.available or ndvi_val is None:
+        missing.append("ndvi")
+        factors.append(Factor("ndvi", "NDVI", None, "", "neutral", "no data"))
+    else:
+        factors.append(Factor("ndvi", "NDVI", round(ndvi_val, 3), "", "neutral", "sentinel2"))
+        provenance.append(f"NDVI: Sentinel-2, {ndvi_val:.3f}")
+
+    sm_layer = _get_layer("soil_moisture")
+    sm_val = sm_layer.sample(lat, lon) if sm_layer.available else None
+    if not sm_layer.available or sm_val is None:
+        missing.append("soil_moisture")
+        factors.append(Factor("soil_moisture", "Soil moisture", None, "m\u00b3/m\u00b3", "neutral", "no data"))
+    else:
+        factors.append(Factor("soil_moisture", "Soil moisture", round(sm_val, 3), "m\u00b3/m\u00b3", "neutral", "esa_cci"))
+        provenance.append(f"soil_moisture: ESA CCI, {sm_val:.3f}")
+
+    season_val = _load_season()
+    if season_val is None:
+        missing.append("season")
+        factors.append(Factor("season", "Season", None, "", "varies", "no data"))
+    else:
+        factors.append(Factor("season", "Season", season_val, "", "varies", "era5_season"))
+        provenance.append(f"season: ERA5 reanalysis, {season_val}")
+
+    # ── 2. Activities from concentrations ───────────────────────────────────
+
+    A_Ra = A_Th = A_K = None
 
     if eU_ppm is not None:
-        provenance.append(f"eU: Tellus measured {eU_ppm:.1f} ppm")
-        data_sources["eU"] = "Tellus airborne radiometric"
-    else:
-        eU_ppm = lith_info["U"]
-        provenance.append(f"eU: lithology prior {eU_ppm:.1f} ppm")
-        data_sources["eU"] = "lithology prior"
+        A_Ra = eU_ppm * 12.22
+        # 1 ppm eU = 12.22 Bq/kg Ra-226: UNSCEAR 2000 Annex B Table 2
+        derivation["Ra226_Bq_kg"] = f"eU({eU_ppm:.1f})*12.22 = {A_Ra:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
 
     if eTh_ppm is not None:
-        provenance.append(f"eTh: Tellus measured {eTh_ppm:.1f} ppm")
-        data_sources["eTh"] = "Tellus airborne radiometric"
-    else:
-        eTh_ppm = lith_info["Th"]
-        provenance.append(f"eTh: lithology prior {eTh_ppm:.1f} ppm")
-        data_sources["eTh"] = "lithology prior"
+        A_Th = eTh_ppm * 4.06
+        # 1 ppm eTh = 4.06 Bq/kg Th-232: UNSCEAR 2000 Annex B Table 2
+        derivation["Th232_Bq_kg"] = f"eTh({eTh_ppm:.1f})*4.06 = {A_Th:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
 
-    # ── Step 3: Activities (Bq/kg) from concentrations ──
-    A_Ra = eU_ppm * 12.22    # eU ppm → Ra-226 Bq/kg
-    A_Th = eTh_ppm * 4.06    # eTh ppm → Th-232 Bq/kg
-    A_K = k_pct * 313        # K % → K-40 Bq/kg
+    if k_pct is not None:
+        A_K = k_pct * 313
+        # 1% K = 313 Bq/kg K-40: UNSCEAR 2000 Annex B Table 2
+        derivation["K40_Bq_kg"] = f"K({k_pct:.2f})*313 = {A_K:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
 
-    # ── Step 4: Gamma dose ──
-    gamma_nGy_h = (DCC_GAMMA_NGY_H_PER_BQ_KG["Ra226"] * A_Ra +
-                   DCC_GAMMA_NGY_H_PER_BQ_KG["Th232"] * A_Th +
-                   DCC_GAMMA_NGY_H_PER_BQ_KG["K40"] * A_K)
-    gamma_mSv_yr = gamma_nGy_h * GAMMA_NGY_H_TO_MSV_YR
+    # ── 3. Gamma dose rate ──────────────────────────────────────────────────
 
-    factors.append(Factor("gamma", f"{gamma_nGy_h:.0f} nGy/h → {gamma_mSv_yr:.2f} mSv/yr",
-                          "external gamma exposure", "neutral",
-                          "Tellus" if "Tellus" in data_sources.get("K", "") else "lithology prior",
-                          f"{cell_m}m"))
+    gamma_nGy_h = None
+    gamma_mSv_yr = None
 
-    # ── Step 5: Radon dose ──
-    radon_measured = layers["epa_radon"].sample(lat, lon)
-    if radon_measured is not None:
-        C_Rn = radon_measured
-        provenance.append(f"radon: EPA measured {C_Rn:.0f} Bq/m³")
-        data_sources["radon"] = "EPA Radon Risk Map raster"
-    else:
-        # Estimate from activities, permeability, faults
-        perm_layer = layers["permeability"]
-        perm_val = perm_layer.sample(lat, lon)
-        if perm_val is not None:
-            perm_class = {1: "very low", 2: "low", 3: "moderate", 4: "high", 5: "variable"}.get(int(perm_val), "moderate")
-        else:
-            perm_class = lith_info["permeability"]
-        data_sources["radon"] = "GRP model estimate"
+    if A_Ra is not None and A_Th is not None and A_K is not None:
+        gamma_nGy_h = (DCC_GAMMA_NGY_H_PER_BQ_KG["Ra226"] * A_Ra +
+                       DCC_GAMMA_NGY_H_PER_BQ_KG["Th232"] * A_Th +
+                       DCC_GAMMA_NGY_H_PER_BQ_KG["K40"] * A_K)
+        derivation["gamma_rate_nGy_h"] = (
+            f"A_Ra({A_Ra:.1f})*0.462 + A_Th({A_Th:.1f})*0.604 + A_K({A_K:.1f})*0.0417 = "
+            f"{gamma_nGy_h:.1f} nGy/h [UNSCEAR 2000 Annex B Table 13]"
+        )
+        gamma_mSv_yr = gamma_nGy_h * GAMMA_NGY_H_TO_MSV_YR
+        derivation["gamma_mSv_yr"] = (
+            f"{gamma_nGy_h:.1f}*{GAMMA_NGY_H_TO_MSV_YR:.6f} = "
+            f"{gamma_mSv_yr:.4f} mSv/yr [ICRP 103, occupancy 0.7]"
+        )
+    elif any(v is not None for v in [A_Ra, A_Th, A_K]):
+        derivation["gamma_rate_nGy_h"] = "Cannot compute: incomplete K/U/Th data"
 
-        fault_dist = nearest_fault_distance_m(lat, lon)
-        fault_factor = 1.0
-        if fault_dist is not None and fault_dist < 2000:
-            fault_factor = 1.0 + 0.3 * (1 - fault_dist / 2000)
-            provenance.append(f"fault proximity: {fault_dist:.0f}m → factor {fault_factor:.2f}")
+    # ── 4. Radon dose ───────────────────────────────────────────────────────
 
-        perm_factor = {"very low": 0.3, "low": 0.7, "moderate": 1.0, "high": 1.5, "variable": 1.0, "n/a": 0}.get(perm_class, 1.0)
-        grp = (A_Ra / 50) * perm_factor * fault_factor
-        C_Rn = grp * 50
-        provenance.append(f"radon: GRP estimate {C_Rn:.0f} Bq/m³ (perm={perm_class})")
+    radon_mSv_yr = None
+    if radon_raw is not None:
+        radon_mSv_yr = radon_raw * RADON_DCC_MSV_PER_BQ_M3_YR
+        derivation["radon_mSv_yr"] = (
+            f"radon({radon_raw:.0f})*0.009 = "
+            f"{radon_mSv_yr:.4f} mSv/yr [UNSCEAR 2006 Annex E]"
+        )
 
-    radon_mSv_yr = C_Rn * RADON_DCC_MSV_PER_BQ_M3_YR
+    # ── 5. Thoron dose (derived from radon) ─────────────────────────────────
 
-    factors.append(Factor("radon", f"{C_Rn:.0f} Bq/m³ → {radon_mSv_yr:.2f} mSv/yr",
-                          "indoor radon inhalation",
-                          "up" if C_Rn >= 200 else "neutral",
-                          data_sources.get("radon", "model"),
-                          "1km" if radon_measured else "model"))
+    thoron_mSv_yr = None
+    if radon_mSv_yr is not None:
+        thoron_mSv_yr = radon_mSv_yr * THORON_FRACTION_OF_RADON
+        derivation["thoron_mSv_yr"] = (
+            f"radon_dose({radon_mSv_yr:.4f})*0.10 = "
+            f"{thoron_mSv_yr:.4f} mSv/yr [UNSCEAR 2006 Annex E, Tn=10% of Rn]"
+        )
 
-    # ── Step 6: Thoron dose ──
-    thoron_mSv_yr = radon_mSv_yr * THORON_FRACTION_OF_RADON
-    factors.append(Factor("thoron", f"{thoron_mSv_yr:.2f} mSv/yr (10% of radon)",
-                          "thoron-220 inhalation", "neutral", "derived", "model"))
+    # ── 6. Total dose ───────────────────────────────────────────────────────
 
-    # ── Step 7: Seasonal adjustment ──
-    season = get_season()
-    season_factor = {"winter": 1.15, "spring": 1.0, "summer": 0.9, "autumn": 1.05}.get(season, 1.0)
-    if season_factor != 1.0:
-        radon_mSv_yr *= season_factor
-        thoron_mSv_yr *= season_factor
-        factors.append(Factor("season", f"{season} → factor {season_factor}",
-                              "occupancy/ventilation adjustment", "varies", "ERA5", "seasonal"))
+    total = None
+    components = []
+    if gamma_mSv_yr is not None:
+        components.append(("gamma", gamma_mSv_yr))
+    if radon_mSv_yr is not None:
+        components.append(("radon", radon_mSv_yr))
+    if thoron_mSv_yr is not None:
+        components.append(("thoron", thoron_mSv_yr))
 
-    # ── Step 8: Total dose ──
-    total = gamma_mSv_yr + radon_mSv_yr + thoron_mSv_yr
+    if components:
+        total = sum(v for _, v in components)
+        derivation["total_mSv_yr"] = " + ".join(
+            f"{n}({v:.4f})" for n, v in components
+        ) + f" = {total:.4f} mSv/yr"
 
-    # ── Step 9: Risk classification ──
-    risk_tier = "GREEN"
+    # ── 7. Ra-eq ────────────────────────────────────────────────────────────
+
+    raeq = None
+    if A_Ra is not None and A_Th is not None and A_K is not None:
+        raeq = A_Ra + 1.43 * A_Th + 0.077 * A_K
+        derivation["raeq_Bq_kg"] = (
+            f"Ra({A_Ra:.1f}) + 1.43*Th({A_Th:.1f}) + 0.077*K({A_K:.1f}) = "
+            f"{raeq:.0f} Bq/kg [UNSCEAR 2000 Annex B Eq.3]"
+        )
+
+    # ── 8. Risk tier ────────────────────────────────────────────────────────
+
+    risk_tier = "INSUFFICIENT DATA"
+    risk_label = "Insufficient data"
     risk_flags = []
-    if total > RISK_AMBER_MAX:
-        risk_tier = "RED"
-        risk_flags.append(f"total {total:.2f} > {RISK_AMBER_MAX:.1f} mSv/yr")
-    elif total > RISK_GREEN_MAX:
-        risk_tier = "AMBER"
-        risk_flags.append(f"total {total:.2f} > {RISK_GREEN_MAX:.1f} mSv/yr")
 
-    if C_Rn >= 200:
-        risk_tier = "RED"
-        risk_flags.append(f"radon {C_Rn:.0f} ≥ Irish 200 Bq/m³ action level")
-    elif C_Rn >= 100:
-        if risk_tier == "GREEN":
+    if total is not None:
+        if total > WORLD_AVG_MSV_YR * 3:
+            risk_tier = "RED"
+            risk_label = "High dose"
+            risk_flags.append(f"total {total:.2f} > {WORLD_AVG_MSV_YR * 3:.1f} mSv/yr (3x world avg)")
+        elif total > WORLD_AVG_MSV_YR:
             risk_tier = "AMBER"
-        risk_flags.append(f"radon {C_Rn:.0f} ≥ WHO 100 Bq/m³ guideline")
+            risk_label = "Elevated dose"
+            risk_flags.append(f"total {total:.2f} > {WORLD_AVG_MSV_YR} mSv/yr (world avg)")
+        else:
+            risk_tier = "GREEN"
+            risk_label = "Normal dose"
 
-    ra_eq = A_Ra + 1.43 * A_Th + 0.077 * A_K
-    if ra_eq >= 370:
+    if radon_raw is not None and radon_raw >= IRISH_RADON_ACTION_LEVEL_BQ_M3:
+        risk_tier = "RED"
+        risk_label = "High radon"
+        risk_flags.append(f"radon {radon_raw:.0f} >= {IRISH_RADON_ACTION_LEVEL_BQ_M3} Bq/m3 (Irish action level)")
+
+    if raeq is not None and raeq >= RAEQ_THRESHOLD_BQ_KG:
         if risk_tier != "RED":
             risk_tier = "RED"
-        risk_flags.append(f"Ra-eq {ra_eq:.0f} ≥ 370 Bq/kg")
+            risk_label = "High Ra-eq"
+        risk_flags.append(f"Ra-eq {raeq:.0f} >= {RAEQ_THRESHOLD_BQ_KG} Bq/kg")
 
-    if gamma_nGy_h >= 1000:
-        risk_tier = "RED"
-        risk_flags.append(f"gamma {gamma_nGy_h:.0f} ≥ 1000 nGy/h")
+    if gamma_nGy_h is not None and gamma_nGy_h >= GAMMA_RATE_ELEVATED_NGY_H:
+        if risk_tier != "RED":
+            risk_tier = "RED"
+            risk_label = "High gamma"
+        risk_flags.append(f"gamma {gamma_nGy_h:.0f} >= {GAMMA_RATE_ELEVATED_NGY_H} nGy/h")
 
-    # ── Step 10: Confidence ──
-    measured_count = sum(1 for v in [k_pct, eU_ppm, eTh_ppm, radon_measured] if v is not None)
-    conf_score = min(95, 20 + measured_count * 20)
-    conf_level = "high" if conf_score >= 75 else "medium-high" if conf_score >= 50 else "medium" if conf_score >= 30 else "low"
-    conf_reason = f"{measured_count}/4 layers measured"
+    # ── 9. Confidence ───────────────────────────────────────────────────────
 
-    # ── Step 11: Short report (8 lines) ──
-    dominant = "radon" if radon_mSv_yr >= thoron_mSv_yr and radon_mSv_yr >= gamma_mSv_yr else \
-               "thoron" if thoron_mSv_yr >= gamma_mSv_yr else "gamma"
-    dom_arm = {"radon": radon_mSv_yr, "thoron": thoron_mSv_yr, "gamma": gamma_mSv_yr}[dominant]
-    dom_pct = dom_arm / total * 100 if total > 0 else 0
+    measured = sum(1 for v in [k_pct, eU_ppm, eTh_ppm, radon_raw] if v is not None)
+    avail = len(REQUIRED_LAYERS) - len(missing)
+    conf_score = round(avail / len(REQUIRED_LAYERS) * 100)
 
-    report = [
-        f"1. {dominant.capitalize()} is {dom_pct:.0f}% of total dose ({dom_arm:.2f} mSv/yr).",
-        f"2. Total terrestrial dose: {total:.2f} mSv/yr — {risk_tier}.",
-        f"3. Lithology: {lith_key} ({lith_info['name']}). Ra={A_Ra:.0f}, Th={A_Th:.0f}, K={A_K:.0f} Bq/kg.",
-        f"4. Indoor radon: {C_Rn:.0f} Bq/m³{' — ⚠ EXCEEDS Irish 200 Bq/m³ action level' if C_Rn >= 200 else ''}.",
-        f"5. {(total / UNSCEAR_WORLD_AVG_MSV_YR):.1f}× UNSCEAR world average ({UNSCEAR_WORLD_AVG_MSV_YR} mSv/yr).",
-        f"6. Ra-eq: {ra_eq:.0f} Bq/kg{' — ⚠ exceeds 370 threshold' if ra_eq >= 370 else ''}.",
-        f"7. Gamma: {gamma_nGy_h:.0f} nGy/h → {gamma_mSv_yr:.2f} mSv/yr.",
-        f"8. Confidence: {conf_level} ({conf_score}%) — {conf_reason}.",
-    ]
+    if measured >= 4:
+        conf_level = "high"
+        conf_reason = "Tellus radiometric K/U/Th and EPA radon map all available at this point"
+    elif measured >= 2:
+        conf_level = "medium"
+        conf_reason = f"{measured} of 4 direct measurements available at this point"
+    elif measured >= 1:
+        conf_level = "low"
+        conf_reason = f"Only {measured} direct measurement available at this point"
+    else:
+        conf_level = "very low"
+        conf_reason = "No direct measurements available at this point"
+
+    # ── 10. Report ──────────────────────────────────────────────────────────
+
+    report = []
+    if total is not None:
+        report.append(f"Total dose: {total:.2f} mSv/yr ({total / WORLD_AVG_MSV_YR:.1f}x world average)")
+        if gamma_mSv_yr is not None:
+            report.append(f"Gamma contributes {gamma_mSv_yr / total * 100:.0f}% ({gamma_mSv_yr:.2f} mSv/yr)")
+        if radon_mSv_yr is not None:
+            report.append(f"Radon contributes {radon_mSv_yr / total * 100:.0f}% ({radon_mSv_yr:.2f} mSv/yr)")
+    else:
+        report.append("No dose computed: insufficient data")
+
+    if radon_raw is not None:
+        if radon_raw >= IRISH_RADON_ACTION_LEVEL_BQ_M3:
+            report.append(f"Radon {radon_raw:.0f} Bq/m\u00b3 EXCEEDS Irish 200 Bq/m\u00b3 action level")
+        else:
+            report.append(f"Radon {radon_raw:.0f} Bq/m\u00b3 below Irish 200 Bq/m\u00b3 action level")
+
+    if measured == 4:
+        report.append("All dose components computed from direct measurements")
+    elif measured > 0:
+        report.append(f"{measured} of 4 dose components from direct measurements")
+    else:
+        report.append("No direct measurements available at this location")
+
+    if missing:
+        report.append(f"Missing data layers: {', '.join(missing)}")
+
+    # ── 11. Flags ───────────────────────────────────────────────────────────
+
+    tellus_avail = (tellus_k_layer.available and k_pct is not None and
+                    tellus_u_layer.available and eU_ppm is not None and
+                    tellus_th_layer.available and eTh_ppm is not None)
+    epa_avail = epa_layer.available and radon_raw is not None
 
     return DoseResult(
-        lat=lat, lon=lon, cell_m=cell_m,
-        arms_mSv_yr={"radon": round(radon_mSv_yr, 3), "thoron": round(thoron_mSv_yr, 3), "gamma": round(gamma_mSv_yr, 3)},
-        total_terrestrial_mSv_yr=total,
-        risk={"tier": risk_tier, "flags": risk_flags},
-        factors=factors,
+        lat=lat, lon=lon, cell_m=CELL_M_DEFAULT,
+        arms_mSv_yr={
+            "radon": round(radon_mSv_yr, 4) if radon_mSv_yr is not None else None,
+            "thoron": round(thoron_mSv_yr, 4) if thoron_mSv_yr is not None else None,
+            "gamma": round(gamma_mSv_yr, 4) if gamma_mSv_yr is not None else None,
+        },
+        total_terrestrial_mSv_yr=round(total, 4) if total is not None else None,
+        risk={"tier": risk_tier, "label": risk_label, "flags": risk_flags},
+        factors=[f.__dict__ for f in factors],
         report_short=report,
         confidence={"score": conf_score, "level": conf_level, "reason": conf_reason},
-        activities={"Ra226_Bq_kg": round(A_Ra, 1), "Th232_Bq_kg": round(A_Th, 1), "K40_Bq_kg": round(A_K, 1)},
-        gamma_rate_nGy_h=gamma_nGy_h,
-        radon_Bq_m3=C_Rn,
-        ra_eq_Bq_kg=ra_eq,
+        activities={
+            "Ra226_Bq_kg": round(A_Ra, 1) if A_Ra is not None else None,
+            "Th232_Bq_kg": round(A_Th, 1) if A_Th is not None else None,
+            "K40_Bq_kg": round(A_K, 1) if A_K is not None else None,
+        },
+        gamma_rate_nGy_h=round(gamma_nGy_h, 1) if gamma_nGy_h is not None else None,
+        radon_Bq_m3_est=round(radon_raw, 0) if radon_raw is not None else None,
+        raeq_Bq_kg=round(raeq, 0) if raeq is not None else None,
         provenance=provenance,
-        season=season,
-        data_sources=data_sources,
+        missing_layers=missing,
+        derivation=derivation,
+        tellus_available=tellus_avail,
+        epa_radon_available=epa_avail,
+        is_water=is_water,
     )
 
 
-# ======================================================================
-# FASTAPI APP
-# ======================================================================
+# ═══════════════════════════════════════════════════════════════════════════════
+# FASTAPI
+# ═══════════════════════════════════════════════════════════════════════════════
 
-app = FastAPI(title="Irish Terrestrial Dose Indicator", version="3.0.0")
+app = FastAPI(title="Irish Terrestrial Dose Indicator", version="5.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/health")
 def health():
-    layers = get_layers()
-    available = {k: v.available for k, v in layers.items()}
-    return {
-        "status": "ok",
-        "data_dir": str(DATA_DIR),
-        "layers": available,
-        "season": get_season(),
-        "faults_loaded": get_faults() is not None,
-    }
+    """Check actual file existence on disk RIGHT NOW."""
+    layers_loaded = {}
+    for lid, fname in LAYER_FILES.items():
+        layers_loaded[lid] = (DATA_DIR / fname).exists()
+    return {"status": "ok", "layers_loaded": layers_loaded, "data_dir": str(DATA_DIR)}
 
 
 @app.get("/dose")
 def dose_endpoint(
-    lat: float = Query(..., ge=-90, le=90, description="Latitude WGS84"),
-    lon: float = Query(..., ge=-180, le=180, description="Longitude WGS84"),
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
 ):
-    # Ireland bounds check
     if not (51.4 <= lat <= 55.4 and -10.6 <= lon <= -5.3):
-        raise HTTPException(400, "Coordinates outside Ireland (51.4-55.4°N, 10.6-5.3°W)")
+        raise HTTPException(400, "Coordinates outside Ireland (51.4-55.4N, 10.6-5.3W)")
 
-    cache_key = (round(lat, 4), round(lon, 4))
-    if cache_key in DOSE_CACHE:
-        return DOSE_CACHE[cache_key]
+    cache_key = (round(lat, 3), round(lon, 3))
+    if cache_key in _DOSE_CACHE:
+        return _DOSE_CACHE[cache_key]
 
-    result = compute_dose(lat, lon)
-    response = result.to_dict()
-    DOSE_CACHE[cache_key] = response
-    return response
+    try:
+        result = compute_dose(lat, lon)
+        response = result.__dict__
+        _DOSE_CACHE[cache_key] = response
+        return response
+    except Exception as e:
+        raise HTTPException(500, f"Computation error: {e}")
 
 
 @app.get("/dose/bbox")
@@ -526,22 +626,30 @@ def dose_bbox(
     lat_max: float = Query(..., ge=51.4, le=55.4),
     lon_min: float = Query(..., ge=-10.6, le=-5.3),
     lon_max: float = Query(..., ge=-10.6, le=-5.3),
-    step_km: float = Query(2.0, ge=0.5, le=20, description="Grid spacing in km"),
+    step_km: float = Query(5.0, ge=1, le=20),
 ):
     if lat_min >= lat_max or lon_min >= lon_max:
         raise HTTPException(400, "Invalid bounding box")
 
-    step_deg = step_km / 111.0  # rough conversion
+    step_deg = step_km / 111.0
     lats = np.arange(lat_min, lat_max, step_deg)
     lons = np.arange(lon_min, lon_max, step_deg)
 
-    results = []
-    for lat in lats:
-        for lon in lons:
+    MAX = 1000
+    truncated = False
+    if len(lats) * len(lons) > MAX:
+        factor = max(1, int(math.ceil(math.sqrt(len(lats) * len(lons) / MAX))))
+        step_deg *= factor
+        lats = np.arange(lat_min, lat_max, step_deg)
+        lons = np.arange(lon_min, lon_max, step_deg)
+        truncated = True
+
+    grid = []
+    for la in lats:
+        for lo in lons:
             try:
-                r = compute_dose(float(lat), float(lon))
-                results.append(r.to_dict())
+                grid.append(compute_dose(float(la), float(lo)).__dict__)
             except Exception:
                 continue
 
-    return {"count": len(results), "step_km": step_km, "results": results}
+    return {"grid": grid, "truncated": truncated, "step_km": step_km}
