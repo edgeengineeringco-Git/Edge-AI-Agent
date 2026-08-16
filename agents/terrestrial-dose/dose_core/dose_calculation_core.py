@@ -54,6 +54,18 @@ RISK = {
     "gamma": {"green": 59,   "amber": 1000},   # nGy/h (world avg → high)
     "raeq":  {"green": 370,  "amber": 740},    # Bq/kg (EU BSS exemption → 2×)
 }
+
+# ── Ireland-specific thresholds ──
+IRISH_RN_ACTION = 200         # Bq/m³ — Irish national reference (stricter than EU 300)
+RADON_IRISH_FACTOR = 6.7 / 200.0  # 200 Bq/m³ → ~6.7 mSv/yr
+
+RISK_IRISH = {
+    "dose":  {"green": 2.2,  "amber": 6.6},   # mSv/yr
+    "rn":    {"green": 100,  "amber": 200},    # Bq/m³ (Irish action level)
+    "gamma": {"green": 59,   "amber": 1000},   # nGy/h
+    "raeq":  {"green": 370,  "amber": 740},    # Bq/kg
+}
+
 WHO_RN_ACTION = 100           # Bq/m³
 UNSCEAR_GAMMA_MAX = 1500      # nGy/h absolute ceiling
 
@@ -373,6 +385,49 @@ def risk_class(E_total: float,
     return {"tier": tier, "reasons": reasons, "flags": flags}
 
 
+def radon_inhalation_dose_irish(C_Rn: float) -> float:
+    """Irish national reference: 200 Bq/m³ → 6.7 mSv/yr."""
+    return C_Rn * RADON_IRISH_FACTOR
+
+
+def risk_class_irish(E_mSv: float,
+                     C_Rn: Optional[float] = None,
+                     raeq: Optional[float] = None,
+                     gamma_rate: Optional[float] = None) -> Dict[str, Any]:
+    """Ireland uses 200 Bq/m³ radon action level (stricter than EU 300)."""
+    rationale: List[str] = []
+    flags: List[str] = []
+
+    if E_mSv <= 2.2:
+        tier = "GREEN"
+        rationale.append(f"{E_mSv:.2f} <= 2.2")
+    elif E_mSv <= 6.6:
+        tier = "AMBER"
+        rationale.append(f"{E_mSv:.2f} 1-3x avg")
+    else:
+        tier = "RED"
+        rationale.append(f"{E_mSv:.2f} > 3x avg")
+
+    if C_Rn is not None and C_Rn >= 200:  # IRISH action level
+        flags.append(f"RADON_ACTION: {C_Rn:.0f} >= Irish 200")
+        tier = "RED"
+    elif C_Rn is not None and C_Rn >= 100:
+        flags.append(f"RADON_ELEVATED: {C_Rn:.0f} >= WHO 100")
+        if tier == "GREEN":
+            tier = "AMBER"
+
+    if raeq is not None and raeq >= 370:
+        flags.append(f"RAEQ_HIGH: {raeq:.0f} >= 370")
+        if tier != "RED":
+            tier = "RED"
+
+    if gamma_rate is not None and gamma_rate >= 1000:
+        flags.append(f"GAMMA_HIGH: {gamma_rate:.0f} >= 1000")
+        tier = "RED"
+
+    return {"tier": tier, "rationale": rationale, "flags": flags}
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # POLYGON DOSE FINGERPRINT — the main entry point
 # ══════════════════════════════════════════════════════════════════════════════
@@ -517,6 +572,7 @@ def polygon_dose_fingerprint(
         "risk": risk,
         "provenance": provenance,
         "confidence": confidence,
+        "radon_Bq_m3_est": round(indoor_Rn, 1),
         "lithology": resolved,
         "lithology_label": label,
         "constants": {

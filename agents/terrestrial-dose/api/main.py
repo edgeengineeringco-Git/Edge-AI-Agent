@@ -1,5 +1,9 @@
 """
-Euro-Dose API v2.0 — Stage 2: per-point data reading + fixed dose logic
+Irish Terrestrial Dose Indicator API v3.0
+=========================================
+Ireland-only, measurement-grade dose estimation.
+Tellus K/U/Th used where available. EPA radon map as validation.
+Irish 200 Bq/m³ radon action level (stricter than EU 300).
 """
 
 from __future__ import annotations
@@ -19,17 +23,22 @@ from dose_core.dose_calculation_core import (
     RISK,
     WORLD_AVG_DOSE,
     WHO_RN_ACTION,
+    IRISH_RN_ACTION,
+    RADON_IRISH_FACTOR,
+    radon_inhalation_dose_irish,
+    risk_class_irish,
+    radium_equivalent,
 )
-from ingest.point_sampler import PointSampler
-from ingest.data_pipeline import DataIngestPipeline, ALL_DATASETS
+from models.analyze_point import analyze_point
+from ingest.ireland_data import IrelandDataLayers
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("eurodose.api")
+logger = logging.getLogger("irishdose.api")
 
 app = FastAPI(
-    title="European Terrestrial Dose Indicator API",
-    version="2.0.0",
-    description="Stage 1: downloads open datasets. Stage 2: reads cached data at point, feeds fixed dose logic.",
+    title="Irish Terrestrial Dose Indicator API",
+    version="3.0.0",
+    description="Ireland-only interactive terrestrial radiation dose estimation. Tellus measured K/U/Th + EPA radon validation.",
 )
 
 app.add_middleware(
@@ -39,26 +48,129 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_sampler: PointSampler | None = None
-
-def get_sampler() -> PointSampler:
-    global _sampler
-    if _sampler is None:
-        _sampler = PointSampler()
-    return _sampler
+_data_layers: IrelandDataLayers | None = None
 
 
-def generate_report(data: dict, fp: dict) -> dict:
-    arms = fp["arms_mSv_yr"]
-    total = fp["total_terrestrial_mSv_yr"]
-    acts = fp["activities_Bq_kg"]
-    idx = fp["indices"]
-    risk = fp["risk"]
-    conf = data.get("confidence", {})
-    lith = data.get("lithology", {})
-    geo = data.get("geochemistry", {})
-    val = data.get("validation", {})
-    sg = data.get("soilgrids", {})
+def get_data_layers() -> IrelandDataLayers:
+    global _data_layers
+    if _data_layers is None:
+        _data_layers = IrelandDataLayers()
+    return _data_layers
+
+
+IRELAND_BBOX = (-10.6, 51.4, -5.3, 55.4)
+
+
+def _in_ireland(lon: float, lat: float) -> bool:
+    w, s, e, n = IRELAND_BBOX
+    return s <= lat <= n and w <= lon <= e
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "version": "3.0.0",
+        "name": "Irish Terrestrial Dose Indicator",
+        "coverage": "Ireland only (51.4–55.4°N, 10.6–5.3°W)",
+        "radon_action_level_Bq_m3": IRISH_RN_ACTION,
+    }
+
+
+@app.get("/sample")
+def sample_point(
+    lat: float = Query(..., ge=51.4, le=55.4),
+    lon: float = Query(..., ge=-10.6, le=-5.3),
+):
+    """Return the raw Irish data table for a point."""
+    if not _in_ireland(lon, lat):
+        return JSONResponse({"error": "Point outside Ireland"}, status_code=400)
+    layers = get_data_layers()
+    raw = layers.sample(lon, lat)
+    return {"lat": lat, "lon": lon, "raw_table": raw}
+
+
+@app.get("/dose")
+def dose_endpoint(
+    lat: float = Query(..., ge=51.4, le=55.4),
+    lon: float = Query(..., ge=-10.6, le=-5.3),
+):
+    """Full dose analysis for an Irish point."""
+    if not _in_ireland(lon, lat):
+        return JSONResponse({"error": "Point outside Ireland"}, status_code=400)
+
+    layers = get_data_layers()
+    raw = layers.sample(lon, lat)
+
+    # Water/ice check
+    lith = raw.get("lithology_code", "Su")
+    if lith in ("water", "Wa", "ice", "Ice"):
+        return JSONResponse({
+            "lat": lat, "lon": lon, "glim": lith,
+            "arms_mSv_yr": {"radon": 0, "thoron": 0, "gamma": 0},
+            "total_terrestrial_mSv_yr": 0,
+            "risk": {"tier": "GREEN", "rationale": ["Water/ice — no terrestrial dose"], "flags": []},
+            "report_short": {"lines": ["Water/ice body — no terrestrial dose."]},
+            "confidence": {"level": "n/a", "reason": "n/a"},
+            "raw_table": raw,
+        })
+
+    # Run the smart analysis
+    result = analyze_point(raw)
+
+    # Build report
+    report_short = _generate_report(result)
+    why = _generate_why(result)
+    recs = _generate_recommendations(result)
+
+    return JSONResponse({
+        "lat": lat, "lon": lon,
+        "glim": lith,
+        "region": raw.get("lithology_description", "Unknown"),
+        "national_survey": "GSI IE_100k",
+        "arms_mSv_yr": result["arms_mSv_yr"],
+        "total_terrestrial_mSv_yr": result["total_terrestrial_mSv_yr"],
+        "gamma_rate_nGy_h": result["gamma_rate_nGy_h"],
+        "activities_Bq_kg": result["activities"],
+        "indices": {
+            "raeq": round(radium_equivalent(
+                result["activities"]["A_Ra226"],
+                result["activities"]["A_Th232"],
+                result["activities"]["A_K40"]
+            ), 1),
+            "I_gamma": round(
+                result["activities"]["A_Ra226"] / 370 +
+                result["activities"]["A_Th232"] / 259 +
+                result["activities"]["A_K40"] / 4810, 4
+            ),
+            "indoor_Rn": round(result["radon_Bq_m3_est"], 1),
+        },
+        "risk": result["risk"],
+        "analysis": {
+            "dominant": report_short["dominant"],
+            "share_pct": report_short["share_pct"],
+            "why": why,
+            "expected_or_anomaly": "expected" if result["total_terrestrial_mSv_yr"] <= 2.2 else ("elevated" if result["total_terrestrial_mSv_yr"] <= 5 else "anomaly"),
+            "vs_world_avg": report_short["vs_world_avg"],
+        },
+        "report_short": report_short,
+        "recommendations": recs,
+        "confidence": result["confidence"],
+        "provenance": result["provenance"],
+        "cell_m": result["cell_m"],
+        "map_scale": "1:100k",
+        "meets_target_resolution": True,
+        "factors": result["factors"],
+        "residuals": result.get("residuals", {}),
+        "raw_table": raw,
+    })
+
+
+def _generate_report(result: dict) -> dict:
+    arms = result["arms_mSv_yr"]
+    total = result["total_terrestrial_mSv_yr"]
+    acts = result["activities"]
+    risk = result["risk"]
 
     entries = [("radon", arms["radon"]), ("thoron", arms["thoron"]), ("gamma", arms["gamma"])]
     dominant = max(entries, key=lambda x: x[1])
@@ -72,60 +184,35 @@ def generate_report(data: dict, fp: dict) -> dict:
     else:
         lines.append(f"Thoron inhalation ({arms['thoron']:.2f} mSv/yr, {share_pct}% of total) dominates.")
 
-    lith_label = lith.get("region", "Unknown geology")
-    cell_m = lith.get("cell_m", 1000)
-    map_scale = lith.get("resolution", "1M")
-    lines.append(f"Geology: {lith_label}. Cell size: {cell_m}m (scale: 1:{map_scale}).")
+    lines.append(f"Geology: {result['raw_table'].get('lithology_description', 'Unknown')}. Cell size: 100m (scale: 1:100k).")
     lines.append(f"Activities: Ra-226={acts['A_Ra226']:.0f}, Th-232={acts['A_Th232']:.0f}, K-40={acts['A_K40']:.0f} Bq/kg.")
-    lines.append(f"Indoor Rn: {idx['indoor_Rn']:.0f} Bq/m³ (WHO: {WHO_RN_ACTION}, EU BSS: 300).")
-    lines.append(f"Gamma rate: {fp['gamma_rate_nGy_h']:.0f} nGy/h (world avg: 59).")
+    lines.append(f"Indoor Rn: {result['radon_Bq_m3_est']:.0f} Bq/m³ (WHO: {WHO_RN_ACTION}, Irish action: {IRISH_RN_ACTION}).")
+    lines.append(f"Gamma rate: {result['gamma_rate_nGy_h']:.0f} nGy/h (world avg: 59).")
     ratio = total / WORLD_AVG_DOSE
     lines.append(f"Total ({total:.2f} mSv/yr) is {ratio:.1f}× UNSCEAR avg ({WORLD_AVG_DOSE}) — {risk['tier']}.")
 
-    factors = []
-    if sg.get("status") == "available":
-        perm = sg.get("permeability_proxy")
-        if perm is not None:
-            factors.append(f"SoilGrids permeability={perm:.2f}")
-    if val.get("status") == "available":
-        measurements = val.get("measurements", [])
-        if measurements:
-            factors.append(f"REMdb validation within {measurements[0].get('distance_km', '?')}km")
-    if geo.get("status") == "available":
-        samples = geo.get("samples", [])
-        if samples:
-            factors.append(f"FOREGS/GEMAS geochemistry within {samples[0].get('distance_km', '?')}km")
-    if factors:
-        lines.append(f"Factors: {', '.join(factors)}.")
-
-    conf_score = conf.get("score", 0)
-    conf_level = conf.get("level", "low")
-    if conf_score >= 60:
-        lines.append(f"Confidence: {conf_score}% ({conf_level}) — measurement-backed.")
-    elif conf_score >= 30:
-        lines.append(f"Confidence: {conf_score}% ({conf_level}) — partial data.")
-    else:
-        lines.append(f"Confidence: {conf_score}% ({conf_level}) — geology-prior only.")
+    conf = result["confidence"]
+    conf_level = conf["level"]
+    conf_reason = conf["reason"]
+    lines.append(f"Confidence: {conf_level} — {conf_reason}.")
 
     return {
         "lines": lines,
         "dominant": dominant[0],
         "share_pct": share_pct,
         "vs_world_avg": round(ratio, 2),
-        "lithology_label": lith_label,
-        "cell_m": cell_m,
-        "map_scale": map_scale,
+        "lithology_label": result["raw_table"].get("lithology_description", "Unknown"),
+        "cell_m": 100,
+        "map_scale": "100k",
     }
 
 
-def generate_why(data: dict, fp: dict) -> list[str]:
-    arms = fp["arms_mSv_yr"]
-    total = fp["total_terrestrial_mSv_yr"]
-    acts = fp["activities_Bq_kg"]
-    idx = fp["indices"]
-    lith = data.get("lithology", {})
-    sg = data.get("soilgrids", {})
-    dem = data.get("dem", {})
+def _generate_why(result: dict) -> list[str]:
+    arms = result["arms_mSv_yr"]
+    total = result["total_terrestrial_mSv_yr"]
+    acts = result["activities"]
+    risk = result["risk"]
+    raw = result["raw_table"]
 
     why = []
     entries = [("radon", arms["radon"]), ("thoron", arms["thoron"]), ("gamma", arms["gamma"])]
@@ -133,29 +220,19 @@ def generate_why(data: dict, fp: dict) -> list[str]:
     share_pct = round((dominant[1] / total * 100)) if total > 0 else 0
 
     if dominant[0] == "gamma":
-        why.append(f"Gamma ({arms['gamma']:.2f} mSv/yr, {share_pct}%) dominates — natural radioactivity in {lith.get('region', 'substrate')}.")
+        why.append(f"Gamma ({arms['gamma']:.2f} mSv/yr, {share_pct}%) dominates — natural radioactivity in {raw.get('lithology_description', 'substrate')}.")
         if acts["A_K40"] > 800:
             why.append(f"High K-40 ({acts['A_K40']:.0f} Bq/kg) indicates K-feldspar-rich mineralogy.")
     elif dominant[0] == "radon":
-        why.append(f"Radon ({arms['radon']:.2f} mSv/yr, {share_pct}%) dominates — {lith.get('region', 'substrate')} with Ra-226={acts['A_Ra226']:.0f} Bq/kg.")
-        if idx["indoor_Rn"] > 300:
-            why.append(f"Indoor radon ({idx['indoor_Rn']:.0f} Bq/m³) exceeds EU BSS action level (300).")
-        elif idx["indoor_Rn"] > 100:
-            why.append(f"Indoor radon ({idx['indoor_Rn']:.0f} Bq/m³) exceeds WHO reference (100).")
+        why.append(f"Radon ({arms['radon']:.2f} mSv/yr, {share_pct}%) dominates — {raw.get('lithology_description', 'substrate')} with Ra-226={acts['A_Ra226']:.0f} Bq/kg.")
+        if result["radon_Bq_m3_est"] >= 200:
+            why.append(f"Indoor radon ({result['radon_Bq_m3_est']:.0f} Bq/m³) exceeds Irish action level (200).")
+        elif result["radon_Bq_m3_est"] >= 100:
+            why.append(f"Indoor radon ({result['radon_Bq_m3_est']:.0f} Bq/m³) exceeds WHO reference (100).")
     else:
         why.append(f"Thoron ({arms['thoron']:.2f} mSv/yr, {share_pct}%) dominates.")
         if acts["A_Th232"] > 50:
             why.append(f"High Th-232 ({acts['A_Th232']:.0f} Bq/kg) triggers non-linear thoron enhancement.")
-
-    if sg.get("status") == "available":
-        perm = sg.get("permeability_proxy")
-        if perm is not None and perm > 0.6:
-            why.append(f"High soil permeability ({perm:.2f}) enhances radon/thoron exhalation.")
-        elif perm is not None and perm < 0.3:
-            why.append(f"Low soil permeability ({perm:.2f}) suppresses radon transport.")
-
-    if dem.get("lineament_density", {}).get("value", 0) > 0.5:
-        why.append("High lineament density indicates fracture pathways for radon.")
 
     if total > 5:
         why.append(f"Total dose ({total:.2f} mSv/yr) is significantly above UNSCEAR average (2.2).")
@@ -165,148 +242,54 @@ def generate_why(data: dict, fp: dict) -> list[str]:
     return why
 
 
-def generate_recommendations(data: dict, fp: dict) -> list[dict]:
+def _generate_recommendations(result: dict) -> list[dict]:
     recs = []
-    total = fp["total_terrestrial_mSv_yr"]
-    tier = fp["risk"]["tier"]
-    conf = data.get("confidence", {})
-    acts = fp["activities_Bq_kg"]
-    idx = fp["indices"]
+    total = result["total_terrestrial_mSv_yr"]
+    tier = result["risk"]["tier"]
+    conf = result["confidence"]
+    acts = result["activities"]
 
     if tier == "RED":
-        recs.append({"priority": "URGENT", "text": "Radon mitigation (sub-slab depressurisation) if indoor Rn exceeds 300 Bq/m³."})
-    if conf.get("score", 0) < 30:
-        recs.append({"priority": "HIGH", "text": "Conduct airborne gamma-ray spectrometry survey to replace geology-prior estimates."})
-    if idx["indoor_Rn"] > 100:
-        recs.append({"priority": "HIGH", "text": f"Deploy indoor radon detectors to validate geogenic estimate of {idx['indoor_Rn']:.0f} Bq/m³."})
+        recs.append({"priority": "URGENT", "text": "Radon mitigation (sub-slab depressurisation) if indoor Rn exceeds Irish action level 200 Bq/m³."})
+    if conf["level"] in ("low", "medium"):
+        recs.append({"priority": "HIGH", "text": "Integrate Tellus airborne radiometric to replace geology-prior estimates where available."})
+    if result["radon_Bq_m3_est"] >= 100:
+        recs.append({"priority": "HIGH", "text": f"Deploy indoor radon detectors to validate geogenic estimate of {result['radon_Bq_m3_est']:.0f} Bq/m³."})
     if acts["A_Th232"] > 100:
-        recs.append({"priority": "MEDIUM", "text": "Thoron measurement with grab-sampling. Consider CeBr3 drone spectrometry for Th-232 mapping."})
-    if conf.get("score", 0) < 60:
-        recs.append({"priority": "MEDIUM", "text": "Integrate SoilGrids permeability and Copernicus DEM lineament density to refine GRP model."})
-    if tier == "GREEN" and conf.get("score", 0) >= 60:
+        recs.append({"priority": "MEDIUM", "text": "Thoron measurement with grab-sampling. Consider CeBr₃ drone spectrometry for Th-232 mapping."})
+    if tier == "GREEN" and conf["level"] == "high":
         recs.append({"priority": "LOW", "text": "No immediate action. Periodic monitoring every 5 years sufficient."})
 
     return recs
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "version": "2.0.0", "stage": "Stage 2: per-point data reading + fixed logic"}
-
-
-@app.get("/inventory")
-def inventory():
-    pipeline = DataIngestPipeline()
-    return pipeline.get_inventory()
-
-
-@app.get("/sample")
-def sample_point(
-    lat: float = Query(..., ge=-90, le=90),
-    lon: float = Query(..., ge=-180, le=180),
-    month: int = Query(None, ge=1, le=12),
-):
-    sampler = get_sampler()
-    return sampler.sample(lon, lat, month)
-
-
-@app.get("/dose")
-def dose_endpoint(
-    lat: float = Query(..., ge=-90, le=90),
-    lon: float = Query(..., ge=-180, le=180),
-    month: int = Query(None, ge=1, le=12),
-):
-    # Stage 2a: Read data
-    sampler = get_sampler()
-    point_data = sampler.sample(lon, lat, month)
-
-    lith = point_data["lithology"]
-    glim = lith.get("glim_code", "was")
-
-    if glim in ("water", "Wa", "ice", "Ice"):
-        return JSONResponse({
-            "lat": lat, "lon": lon, "glim": glim,
-            "arms_mSv_yr": {"radon": 0, "thoron": 0, "gamma": 0},
-            "total_terrestrial_mSv_yr": 0,
-            "risk": {"tier": "GREEN", "reasons": ["Water/ice — no terrestrial dose"], "flags": []},
-            "report_short": {"lines": ["Water/ice body — no terrestrial dose."]},
-            "confidence": {"score": 0, "level": "n/a", "reasons": []},
-            "point_data": point_data,
-        })
-
-    # Stage 2b: Fixed dose logic
-    dist_fault_m = 5000
-    lineament_density = point_data.get("dem", {}).get("lineament_density", {}).get("value", 0)
-    permeability = point_data.get("soilgrids", {}).get("permeability_proxy", 0.5) or 0.5
-
-    fp = polygon_dose_fingerprint(
-        lithology=glim,
-        dist_fault_m=dist_fault_m,
-        lineament_density=lineament_density,
-        permeability=permeability,
-    )
-
-    # Stage 2c: Templated report
-    report_short = generate_report(point_data, fp)
-    why = generate_why(point_data, fp)
-    recs = generate_recommendations(point_data, fp)
-
-    return JSONResponse({
-        "lat": lat, "lon": lon,
-        "glim": glim,
-        "region": lith.get("region", "Unknown"),
-        "national_survey": lith.get("source", "Built-in"),
-        "arms_mSv_yr": fp["arms_mSv_yr"],
-        "total_terrestrial_mSv_yr": fp["total_terrestrial_mSv_yr"],
-        "gamma_rate_nGy_h": fp["gamma_rate_nGy_h"],
-        "activities_Bq_kg": fp["activities_Bq_kg"],
-        "indices": fp["indices"],
-        "risk": fp["risk"],
-        "analysis": {
-            "dominant": report_short["dominant"],
-            "share_pct": report_short["share_pct"],
-            "why": why,
-            "expected_or_anomaly": "expected" if fp["total_terrestrial_mSv_yr"] <= 2.2 else ("elevated" if fp["total_terrestrial_mSv_yr"] <= 5 else "anomaly"),
-            "vs_world_avg": report_short["vs_world_avg"],
-        },
-        "report_short": report_short,
-        "recommendations": recs,
-        "confidence": point_data.get("confidence", {}),
-        "provenance": point_data.get("provenance", []),
-        "cell_m": lith.get("cell_m", 1000),
-        "map_scale": lith.get("resolution", "1M"),
-        "meets_target_resolution": lith.get("meets_target_resolution", False),
-        "point_data": point_data,
-    })
-
-
 @app.get("/dose/bbox")
 def dose_bbox(
-    south: float = Query(..., ge=-90, le=90),
-    west: float = Query(..., ge=-180, le=180),
-    north: float = Query(..., ge=-90, le=90),
-    east: float = Query(..., ge=-180, le=180),
-    step: float = Query(0.5, ge=0.1, le=5.0),
+    south: float = Query(..., ge=51.4, le=55.4),
+    west: float = Query(..., ge=-10.6, le=-5.3),
+    north: float = Query(..., ge=51.4, le=55.4),
+    east: float = Query(..., ge=-10.6, le=-5.3),
+    step: float = Query(0.1, ge=0.05, le=0.5),
 ):
+    """Grid sampling across an Irish bbox."""
     features = []
+    layers = get_data_layers()
     lat = south
-    sampler = get_sampler()
     while lat <= north:
         lng = west
         while lng <= east:
-            pd = sampler.sample(lng, lat)
-            lith = pd["lithology"]
-            glim = lith.get("glim_code", "was")
-            if glim not in ("water", "Wa", "ice", "Ice"):
-                fp = polygon_dose_fingerprint(lithology=glim, dist_fault_m=5000, lineament_density=0, permeability=0.5)
+            raw = layers.sample(lng, lat)
+            lith = raw.get("lithology_code", "Su")
+            if lith not in ("water", "Wa", "ice", "Ice"):
+                result = analyze_point(raw)
                 features.append({
                     "type": "Feature",
                     "geometry": {"type": "Point", "coordinates": [lng, lat]},
                     "properties": {
-                        "dose": fp["total_terrestrial_mSv_yr"],
-                        "tier": fp["risk"]["tier"],
-                        "lithology": glim,
-                        "region": lith.get("region", "Unknown"),
+                        "dose": result["total_terrestrial_mSv_yr"],
+                        "tier": result["risk"]["tier"],
+                        "lithology": lith,
+                        "region": raw.get("lithology_description", "Unknown"),
                     },
                 })
             lng += step

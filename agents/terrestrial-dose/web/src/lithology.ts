@@ -1,7 +1,7 @@
 /**
- * European Geology Grid — 120+ provinces from national surveys
- * Sources: GSI IE_100k, BGS DiGMapGB, BRGM BD Charm-50, GEODE 50k, etc.
- * Cell size follows map scale: 50m for 50k, 100m for 100k, 1000m for 1M
+ * Irish Geology Grid — GSI Bedrock 1:100k
+ * Sources: GSI IE_100k (ITM, EPSG:2157)
+ * Cell size: 100m for 100k
  */
 
 export interface LithEntry {
@@ -21,7 +21,7 @@ interface GeoRegion {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// IRELAND — GSI 1:100k
+// IRELAND — GSI 1:100k Bedrock Geology
 // ═══════════════════════════════════════════════════════════════
 const IRELAND: GeoRegion[] = [
   { name: "Leinster Granite (Caledonian)", glim: "Pa", map_scale: "100k", source: "GSI IE_100k", coords: [-6.8, 52.2, -6.0, 53.0] },
@@ -49,167 +49,6 @@ const IRELAND: GeoRegion[] = [
   { name: "Lough Gill Granites", glim: "Pa", map_scale: "100k", source: "GSI IE_100k", coords: [-8.6, 54.1, -8.1, 54.4] },
   { name: "Ox Mountains Inlier", glim: "Mt", map_scale: "100k", source: "GSI IE_100k", coords: [-9.2, 53.9, -8.5, 54.3] },
 ];
-
-// ═══════════════════════════════════════════════════════════════
-// UNITED KINGDOM — BGS DiGMapGB 1:50k
-// ═══════════════════════════════════════════════════════════════
-const UK: GeoRegion[] = [
-  { name: "Scottish Highlands Dalradian", glim: "Mt", map_scale: "50k", source: "BGS DiGMapGB", coords: [-6.0, 56.5, -2.0, 58.6] },
-  { name: "Midland Valley Coal Measures", glim: "Ss", map_scale: "50k", source: "BGS DiGMapGB", coords: [-5.0, 55.5, -2.5, 56.5] },
-  { name: "Southern Uplands Greywackes", glim: "Ss", map_scale: "50k", source: "BGS DiGMapGB", coords: [-5.0, 55.0, -2.5, 55.8] },
-  { name: "NW Highlands Torridonian", glim: "Ss", map_scale: "50k", source: "BGS DiGMapGB", coords: [-6.0, 57.0, -4.0, 58.6] },
-  { name: "Shetland Metamorphic", glim: "Mt", map_scale: "50k", source: "BGS DiGMapGB", coords: [-2.0, 59.5, -0.5, 61.0] },
-  { name: "Cornubian Granite (Cornwall)", glim: "Pa", map_scale: "50k", source: "BGS DiGMapGB", coords: [-6.0, 50.0, -4.0, 51.0] },
-  { name: "Dartmoor Granite", glim: "Pa", map_scale: "50k", source: "BGS DiGMapGB", coords: [-4.2, 50.4, -3.6, 50.8] },
-  { name: "Wessex Basin Chalk", glim: "Sc", map_scale: "50k", source: "BGS DiGMapGB", coords: [-2.5, 50.5, 1.5, 51.5] },
-  { name: "London Basin Clay", glim: "Sm", map_scale: "50k", source: "BGS DiGMapGB", coords: [-0.5, 51.2, 0.8, 51.8] },
-  { name: "Pennines Carboniferous Limestone", glim: "Sc", map_scale: "50k", source: "BGS DiGMapGB", coords: [-2.5, 53.5, -1.0, 55.0] },
-  { name: "Lake District Volcanics", glim: "Vi", map_scale: "50k", source: "BGS DiGMapGB", coords: [-3.5, 54.2, -2.5, 54.8] },
-  { name: "Yorkshire Jurassic", glim: "Ss", map_scale: "50k", source: "BGS DiGMapGB", coords: [-2.0, 53.5, -0.5, 54.5] },
-  { name: "East Anglia Cretaceous", glim: "Sc", map_scale: "50k", source: "BGS DiGMapGB", coords: [0.0, 52.0, 2.0, 53.0] },
-  { name: "Welsh Basin Ordovician", glim: "Ss", map_scale: "50k", source: "BGS DiGMapGB", coords: [-5.0, 51.5, -3.0, 53.5] },
-  { name: "Snowdonia Volcanics", glim: "Va", map_scale: "50k", source: "BGS DiGMapGB", coords: [-4.2, 52.8, -3.5, 53.2] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// FRANCE — BRGM BD Charm-50
-// ═══════════════════════════════════════════════════════════════
-const FRANCE: GeoRegion[] = [
-  { name: "Massif Central (Hercynian)", glim: "Pa", map_scale: "50k", source: "BRGM BD Charm-50", coords: [2.0, 44.0, 5.0, 46.5] },
-  { name: "Massif Central Volcanics", glim: "Va", map_scale: "50k", source: "BRGM BD Charm-50", coords: [2.5, 45.0, 4.0, 46.0] },
-  { name: "Armorican Massif", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [-5.0, 47.0, -1.0, 49.0] },
-  { name: "Paris Basin Limestone", glim: "Sc", map_scale: "50k", source: "BRGM BD Charm-50", coords: [0.0, 47.0, 4.0, 50.0] },
-  { name: "Aquitaine Basin", glim: "Ss", map_scale: "50k", source: "BRGM BD Charm-50", coords: [-1.5, 43.5, 2.0, 46.0] },
-  { name: "Pyrenees Metamorphic", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [-1.5, 42.5, 3.0, 43.0] },
-  { name: "Provence Limestone", glim: "Sc", map_scale: "50k", source: "BRGM BD Charm-50", coords: [4.0, 43.0, 7.5, 44.5] },
-  { name: "Vosges Mountains", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [6.5, 47.8, 8.0, 49.0] },
-  { name: "Jura Mountains", glim: "Sc", map_scale: "50k", source: "BRGM BD Charm-50", coords: [5.0, 46.0, 7.5, 48.0] },
-  { name: "Alps Crystalline (External)", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [5.5, 44.5, 7.5, 46.5] },
-  { name: "Corsica Hercynian", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [8.5, 41.5, 9.8, 43.0] },
-  { name: "Lorraine Iron Ore", glim: "Ss", map_scale: "50k", source: "BRGM BD Charm-50", coords: [5.5, 48.5, 7.0, 49.5] },
-  { name: "Brittany Migmatites", glim: "Mt", map_scale: "50k", source: "BRGM BD Charm-50", coords: [-4.5, 47.5, -1.5, 48.8] },
-  { name: "Camargue Alluvium", glim: "Su", map_scale: "50k", source: "BRGM BD Charm-50", coords: [4.0, 43.2, 5.0, 44.0] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// GERMANY — BGR GK100
-// ═══════════════════════════════════════════════════════════════
-const GERMANY: GeoRegion[] = [
-  { name: "Black Forest (Schwarzwald)", glim: "Pa", map_scale: "100k", source: "BGR GK100", coords: [7.5, 47.5, 9.5, 48.8] },
-  { name: "Harz Mountains", glim: "Mt", map_scale: "100k", source: "BGR GK100", coords: [10.0, 51.5, 11.5, 52.0] },
-  { name: "Rhenish Massif", glim: "Mt", map_scale: "100k", source: "BGR GK100", coords: [6.0, 50.0, 9.0, 51.5] },
-  { name: "Bavarian Alps", glim: "Sc", map_scale: "100k", source: "BGR GK100", coords: [10.0, 47.3, 13.5, 48.0] },
-  { name: "Bohemian Massif (German)", glim: "Mt", map_scale: "100k", source: "BGR GK100", coords: [11.0, 48.5, 15.0, 51.0] },
-  { name: "North German Plain", glim: "Su", map_scale: "1M", source: "BGR GK100", coords: [6.0, 52.0, 15.0, 55.0] },
-  { name: "Rhine Graben", glim: "Su", map_scale: "100k", source: "BGR GK100", coords: [7.5, 48.0, 9.0, 49.5] },
-  { name: "Eifel Volcanic Field", glim: "Vb", map_scale: "100k", source: "BGR GK100", coords: [6.5, 50.0, 7.5, 50.8] },
-  { name: "Swabian Jura", glim: "Sc", map_scale: "100k", source: "BGR GK100", coords: [8.5, 48.0, 10.5, 48.8] },
-  { name: "Thuringian Forest", glim: "Mt", map_scale: "100k", source: "BGR GK100", coords: [10.0, 50.3, 12.0, 51.0] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// SPAIN — GEODE 50k (IGME)
-// ═══════════════════════════════════════════════════════════════
-const SPAIN: GeoRegion[] = [
-  { name: "Iberian Meseta", glim: "Mt", map_scale: "50k", source: "GEODE 50k IGME", coords: [-5.0, 38.0, -1.0, 43.0] },
-  { name: "Galician Granite", glim: "Pa", map_scale: "50k", source: "GEODE 50k IGME", coords: [-9.5, 41.8, -7.0, 43.8] },
-  { name: "Cantabrian Mountains", glim: "Sc", map_scale: "50k", source: "GEODE 50k IGME", coords: [-8.0, 42.5, -2.0, 43.5] },
-  { name: "Sierra Nevada", glim: "Mt", map_scale: "50k", source: "GEODE 50k IGME", coords: [-4.0, 36.8, -2.0, 37.5] },
-  { name: "Betic Cordillera", glim: "Mt", map_scale: "50k", source: "GEODE 50k IGME", coords: [-6.0, 36.0, -1.0, 38.0] },
-  { name: "Ebro Basin", glim: "Su", map_scale: "50k", source: "GEODE 50k IGME", coords: [-2.0, 40.5, 1.5, 42.5] },
-  { name: "Catalan Coastal Ranges", glim: "Mt", map_scale: "50k", source: "GEODE 50k IGME", coords: [0.0, 40.5, 3.5, 42.5] },
-  { name: "Canary Islands Volcanic", glim: "Vb", map_scale: "50k", source: "GEODE 50k IGME", coords: [-18.5, 27.5, -13.0, 29.5] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// ITALY — ISPRA 100k
-// ═══════════════════════════════════════════════════════════════
-const ITALY: GeoRegion[] = [
-  { name: "Alps Crystalline (Austroalpine)", glim: "Mt", map_scale: "100k", source: "ISPRA 100k", coords: [6.0, 45.8, 14.0, 48.0] },
-  { name: "Po Basin Alluvium", glim: "Su", map_scale: "100k", source: "ISPRA 100k", coords: [7.0, 44.0, 13.0, 46.0] },
-  { name: "Apennines (Northern)", glim: "Sc", map_scale: "100k", source: "ISPRA 100k", coords: [9.5, 43.5, 14.0, 45.0] },
-  { name: "Apennines (Central)", glim: "Sc", map_scale: "100k", source: "ISPRA 100k", coords: [12.0, 41.5, 15.0, 44.0] },
-  { name: "Sardinia Hercynian", glim: "Mt", map_scale: "100k", source: "ISPRA 100k", coords: [8.0, 38.8, 10.0, 41.3] },
-  { name: "Sicily Carbonate", glim: "Sc", map_scale: "100k", source: "ISPRA 100k", coords: [12.5, 36.6, 15.8, 38.3] },
-  { name: "Calabria Crystalline", glim: "Mt", map_scale: "100k", source: "ISPRA 100k", coords: [15.5, 37.8, 17.5, 40.0] },
-  { name: "Campanian Volcanic", glim: "Py", map_scale: "100k", source: "ISPRA 100k", coords: [14.0, 40.3, 15.5, 41.5] },
-  { name: "Lazio Volcanic", glim: "Py", map_scale: "100k", source: "ISPRA 100k", coords: [11.5, 41.5, 13.5, 43.0] },
-  { name: "Tuscany Metamorphic", glim: "Mt", map_scale: "100k", source: "ISPRA 100k", coords: [9.5, 42.5, 12.0, 44.0] },
-  { name: "Dolomites", glim: "Sc", map_scale: "100k", source: "ISPRA 100k", coords: [11.0, 46.0, 13.0, 47.0] },
-  { name: "Etna Volcanic", glim: "Vb", map_scale: "100k", source: "ISPRA 100k", coords: [14.8, 37.5, 15.5, 38.2] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// SCANDINAVIA — SGU/NGU/GTK/GEUS
-// ═══════════════════════════════════════════════════════════════
-const SCANDINAVIA: GeoRegion[] = [
-  { name: "Swedish Svecofennian", glim: "Mt", map_scale: "50k", source: "SGU 50k", coords: [14.0, 58.0, 20.0, 65.0] },
-  { name: "Swedish Caledonides", glim: "Mt", map_scale: "50k", source: "SGU 50k", coords: [12.0, 59.0, 18.0, 69.0] },
-  { name: "Skåne Paleozoic", glim: "Ss", map_scale: "50k", source: "SGU 50k", coords: [12.5, 55.3, 14.5, 56.5] },
-  { name: "South Norway Caledonides", glim: "Mt", map_scale: "100k", source: "NGU 100k", coords: [5.0, 58.0, 12.0, 65.0] },
-  { name: "Oslo Rift (Permian)", glim: "Vb", map_scale: "100k", source: "NGU 100k", coords: [9.5, 59.0, 12.0, 60.5] },
-  { name: "Lofoten Islands", glim: "Mt", map_scale: "100k", source: "NGU 100k", coords: [13.0, 67.5, 17.0, 69.5] },
-  { name: "Finnish Karelian", glim: "Mt", map_scale: "100k", source: "GTK 100k", coords: [24.0, 60.0, 30.0, 66.0] },
-  { name: "Lapland Granulite", glim: "Mt", map_scale: "100k", source: "GTK 100k", coords: [24.0, 66.0, 30.0, 70.0] },
-  { name: "Denmark Quaternary", glim: "Su", map_scale: "250k", source: "GEUS 250k", coords: [8.0, 54.5, 15.5, 58.0] },
-  { name: "Iceland Volcanic", glim: "Vb", map_scale: "100k", source: "ISOR", coords: [-25.0, 63.0, -13.0, 67.0] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// EASTERN EUROPE — Various national surveys
-// ═══════════════════════════════════════════════════════════════
-const EASTERN_EUROPE: GeoRegion[] = [
-  { name: "Austrian Alps (Northern Calcareous)", glim: "Sc", map_scale: "100k", source: "GBA 100k", coords: [9.5, 46.8, 17.0, 48.5] },
-  { name: "Austrian Alps (Central Crystalline)", glim: "Mt", map_scale: "100k", source: "GBA 100k", coords: [10.0, 46.5, 14.0, 47.8] },
-  { name: "Vienna Basin", glim: "Su", map_scale: "100k", source: "GBA 100k", coords: [16.0, 47.8, 17.5, 48.5] },
-  { name: "Swiss Alps (Helvetic)", glim: "Mt", map_scale: "50k", source: "swisstopo 50k", coords: [6.0, 45.8, 10.5, 47.8] },
-  { name: "Swiss Molasse Basin", glim: "Su", map_scale: "50k", source: "swisstopo 50k", coords: [6.5, 46.5, 10.0, 47.8] },
-  { name: "Bohemian Massif (Czech)", glim: "Mt", map_scale: "100k", source: "CGS 100k", coords: [12.0, 48.5, 18.5, 51.0] },
-  { name: "Polish Sudetes", glim: "Mt", map_scale: "100k", source: "PGI 100k", coords: [14.5, 50.0, 17.5, 51.5] },
-  { name: "Holy Cross Mountains", glim: "Ss", map_scale: "100k", source: "PGI 100k", coords: [19.5, 50.5, 22.0, 51.5] },
-  { name: "Polish Lowlands", glim: "Su", map_scale: "1M", source: "PGI 1M", coords: [14.0, 51.5, 24.0, 55.0] },
-  { name: "Carpathians (Polish)", glim: "Mt", map_scale: "100k", source: "PGI 100k", coords: [18.5, 49.0, 22.5, 50.5] },
-  { name: "Tatra Mountains", glim: "Mt", map_scale: "100k", source: "SGUP 100k", coords: [19.0, 49.0, 20.5, 49.5] },
-  { name: "Pannonian Basin", glim: "Su", map_scale: "100k", source: "MBFSZ 100k", coords: [16.0, 45.5, 22.5, 48.5] },
-  { name: "Carpathians (Romanian)", glim: "Mt", map_scale: "100k", source: "RGS 100k", coords: [22.0, 44.5, 28.0, 48.5] },
-  { name: "Transylvanian Basin", glim: "Su", map_scale: "100k", source: "RGS 100k", coords: [22.0, 45.5, 27.0, 47.5] },
-  { name: "Rhodope Massif", glim: "Mt", map_scale: "100k", source: "NIGGG 100k", coords: [22.0, 41.0, 28.5, 43.0] },
-  { name: "Dinarides (Croatia)", glim: "Sc", map_scale: "100k", source: "HGI 100k", coords: [13.5, 42.5, 19.5, 46.5] },
-  { name: "Hellenides (mainland)", glim: "Mt", map_scale: "100k", source: "IGME 100k", coords: [20.0, 37.0, 26.5, 42.0] },
-  { name: "Aegean Volcanic Arc", glim: "Vb", map_scale: "100k", source: "IGME 100k", coords: [23.0, 36.5, 27.0, 39.0] },
-  { name: "Iberian Massif (Portuguese)", glim: "Mt", map_scale: "100k", source: "LNEG 100k", coords: [-10.0, 37.0, -6.0, 42.0] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// SPECIAL — High-radioactivity zones
-// ═══════════════════════════════════════════════════════════════
-const SPECIAL: GeoRegion[] = [
-  { name: "Kerala Monazite Beaches", glim: "monazite_bearing", map_scale: "50k", source: "GSI/GSI-AMD", coords: [76.0, 8.0, 78.0, 12.0] },
-  { name: "Ramsar Radiogenic", glim: "monazite_bearing", map_scale: "100k", source: "GSIR Iran", coords: [50.0, 36.0, 51.5, 37.5] },
-  { name: "Kola Alkaline Province", glim: "carbonatite", map_scale: "100k", source: "VSEGEI", coords: [32.0, 67.0, 40.0, 69.5] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// GLOBAL FALLBACKS — 1:1M only
-// ═══════════════════════════════════════════════════════════════
-const GLOBAL: GeoRegion[] = [
-  { name: "East European Craton", glim: "Mt", map_scale: "1M", source: "GEM/CGMW 1M", coords: [25.0, 50.0, 45.0, 65.0] },
-  { name: "Ural Mountains", glim: "Mt", map_scale: "1M", source: "GEM/CGMW 1M", coords: [55.0, 50.0, 65.0, 66.0] },
-  { name: "Scandinavian Shield", glim: "Mt", map_scale: "1M", source: "GEM/CGMW 1M", coords: [5.0, 55.0, 30.0, 71.0] },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// COMBINED ARRAY
-// ═══════════════════════════════════════════════════════════════
-
-const ALL_REGIONS: GeoRegion[] = [
-  ...IRELAND, ...UK, ...FRANCE, ...GERMANY, ...SPAIN, ...ITALY,
-  ...SCANDINAVIA, ...EASTERN_EUROPE, ...SPECIAL, ...GLOBAL,
-];
-
-// ═══════════════════════════════════════════════════════════════
-// LOOKUP FUNCTION
-// ═══════════════════════════════════════════════════════════════
 
 const SCALE_TO_CELL: Record<string, number> = {
   "50k": 50, "100k": 100, "250k": 250, "500k": 500, "1M": 1000,
@@ -266,7 +105,7 @@ export function getLithologyAt(lon: number, lat: number): LithEntry & { region: 
   let best: GeoRegion | null = null;
   let bestArea = Infinity;
 
-  for (const r of ALL_REGIONS) {
+  for (const r of IRELAND) {
     const [minLon, minLat, maxLon, maxLat] = r.coords;
     if (lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat) {
       const area = (maxLon - minLon) * (maxLat - minLat);
@@ -278,11 +117,11 @@ export function getLithologyAt(lon: number, lat: number): LithEntry & { region: 
   }
 
   if (!best) {
-    const absLat = Math.abs(lat);
-    if (absLat > 75 || lat < -65) return { glim: "Ice", label: "Ice", map_scale: "1M", cell_m: 1000, source: "Global", region: "Polar ice", meets_target: false };
-    if (absLat > 60) return { glim: "Mt", label: "Gneiss", map_scale: "1M", cell_m: 1000, source: "Global", region: "Shield/taiga", meets_target: false };
-    if (absLat < 15) return { glim: "Su", label: "Alluvium", map_scale: "1M", cell_m: 1000, source: "Global", region: "Tropical lowlands", meets_target: false };
-    return { glim: "world_average_soil", label: "World Average Soil", map_scale: "1M", cell_m: 1000, source: "Global", region: "World Average Soil", meets_target: false };
+    // Fallback for Ireland outside detailed regions
+    if (lat >= 51.4 && lat <= 55.4 && lon >= -10.6 && lon <= -5.3) {
+      return { glim: "world_average_soil", label: "Irish Soil (unmapped)", map_scale: "100k", cell_m: 100, source: "GSI IE_100k", region: "Ireland (unmapped detail)", meets_target: true };
+    }
+    return { glim: "world_average_soil", label: "World Average Soil", map_scale: "1M", cell_m: 1000, source: "Global", region: "Outside Ireland", meets_target: false };
   }
 
   const internal = resolveLith(best.glim);

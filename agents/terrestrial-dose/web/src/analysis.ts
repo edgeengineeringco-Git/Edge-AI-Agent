@@ -1,13 +1,13 @@
 /**
- * Analysis Text Generator — templated "Why this dose?" explanation
- * ================================================================
- * Generates human-readable analysis text from computed dose fingerprint fields.
- * NO free-form invented geology — all text is templated from computed values.
+ * Analysis Text Generator — Ireland Edition
+ * =========================================
+ * Generates human-readable analysis text from computed dose fingerprint.
+ * Irish radon action level: 200 Bq/m³ (stricter than EU 300).
  */
 
 import type { DoseFingerprint } from "./dose_core";
 import { getLithologyAt } from "./lithology";
-import { RISK } from "./dose_core";
+import { RISK, RISK_IRISH, IRISH_RN_ACTION, WHO_RN_ACTION } from "./dose_core";
 
 export interface AnalysisResult {
   dominant: "radon" | "thoron" | "gamma";
@@ -18,9 +18,6 @@ export interface AnalysisResult {
   resolutionNote: string;
 }
 
-/**
- * Generate the full analysis from a dose fingerprint.
- */
 export function analyze(data: DoseFingerprint, lon?: number, lat?: number): AnalysisResult {
   const arms = data.arms_mSv_yr;
   const total = data.total_terrestrial_mSv_yr;
@@ -29,7 +26,6 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
   const idx = data.indices;
   const risk = data.risk;
 
-  // ── Dominant arm ──
   const entries = [
     { name: "radon" as const, value: arms.radon },
     { name: "thoron" as const, value: arms.thoron },
@@ -40,7 +36,6 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
 
   const why: string[] = [];
 
-  // ── Dominant source sentence ──
   if (dominant.name === "gamma") {
     why.push(
       `The gamma dose (${arms.gamma.toFixed(2)} mSv/yr, ${sharePct}% of total) dominates, driven by natural radioactivity in the ${lithLabel.toLowerCase()} substrate.`
@@ -55,12 +50,12 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
     why.push(
       `Radon-222 inhalation (${arms.radon.toFixed(2)} mSv/yr, ${sharePct}% of total) is the primary dose pathway, reflecting the ${lithLabel.toLowerCase()} substrate with Ra-226 activity of ${acts.A_Ra226.toFixed(0)} Bq/kg.`
     );
-    if (idx.indoor_Rn > RISK.rn.amber) {
-      why.push(`Estimated indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) exceeds the EU BSS action level of ${RISK.rn.amber} Bq/m³ — enhanced radon transport through local geology.`);
-    } else if (idx.indoor_Rn > RISK.rn.green) {
-      why.push(`Indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) exceeds the WHO ${RISK.rn.green} Bq/m³ reference level — monitoring recommended.`);
+    if (idx.indoor_Rn >= IRISH_RN_ACTION) {
+      why.push(`Estimated indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) exceeds the Irish action level of ${IRISH_RN_ACTION} Bq/m³ — radon mitigation advised.`);
+    } else if (idx.indoor_Rn > WHO_RN_ACTION) {
+      why.push(`Indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) exceeds the WHO ${WHO_RN_ACTION} Bq/m³ reference level — monitoring recommended.`);
     } else {
-      why.push(`Indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) remains below the WHO ${RISK.rn.green} Bq/m³ reference level.`);
+      why.push(`Indoor radon (${idx.indoor_Rn.toFixed(0)} Bq/m³) remains below the WHO ${WHO_RN_ACTION} Bq/m³ reference level.`);
     }
   } else {
     why.push(
@@ -73,20 +68,17 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
     }
   }
 
-  // ── Lithology context ──
   why.push(
     `Geology: ${lithLabel}. Activity concentrations: Ra-226 = ${acts.A_Ra226.toFixed(0)}, Th-232 = ${acts.A_Th232.toFixed(0)}, K-40 = ${acts.A_K40.toFixed(0)} Bq/kg.`
   );
 
-  // ── Region info (if available) ──
   if (lon != null && lat != null) {
     const region = getLithologyAt(lon, lat);
     if (region && region.region) {
-      why.push(`Location: ${region.region} (GLiM: ${region.glim}, scale: 1:${region.map_scale}, cell: ${region.cell_m}m).`);
+      why.push(`Location: ${region.region} (GSI 1:100k, cell: ${region.cell_m}m).`);
     }
   }
 
-  // ── Anomaly assessment ──
   if (total > 5) {
     why.push(`Total dose (${total.toFixed(2)} mSv/yr) is significantly above the UNSCEAR global average of ${RISK.dose.green} mSv/yr — flagged as ${risk.tier}.`);
   } else if (total > RISK.dose.green) {
@@ -95,24 +87,23 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
     why.push(`Total dose (${total.toFixed(2)} mSv/yr) is at or below the UNSCEAR global average (${RISK.dose.green} mSv/yr) — classified as ${risk.tier}.`);
   }
 
-  // ── Confidence ──
   if (data.confidence < 30) {
-    why.push(`This estimate is based on geology-prior modelling (GLiM ~1.5 km resolution). No direct measurements at this exact location. Ground-truth survey data would significantly improve confidence.`);
+    why.push(`This estimate is based on geology-prior modelling (GSI ~100m resolution). No direct measurements at this exact location. Tellus airborne data would significantly improve confidence.`);
   } else if (data.confidence < 60) {
     why.push(`Partial measurement data available. Some parameters measured, others estimated from geology prior.`);
+  } else {
+    why.push(`Measurement-grade estimate: Tellus airborne radiometric K/U/Th data used.`);
   }
 
-  // ── Expected vs anomaly ──
   let expectedOrAnomaly: "expected" | "elevated" | "anomaly" = "expected";
   if (total > 5) expectedOrAnomaly = "anomaly";
   else if (total > RISK.dose.green) expectedOrAnomaly = "elevated";
 
-  // ── Resolution note ──
   const resolutionNote = data.confidence >= 60
-    ? "Direct measurement data available for this location."
+    ? "Direct measurement data available for this location (Tellus)."
     : data.confidence >= 30
     ? "Partial data — some measured, some estimated from geology prior."
-    : "Limited by GLiM lithology resolution (~1.5 km). No direct measurements at this location.";
+    : "Limited by geology prior (~100m GSI). No direct measurements at this location.";
 
   return {
     dominant: dominant.name,
@@ -124,9 +115,6 @@ export function analyze(data: DoseFingerprint, lon?: number, lat?: number): Anal
   };
 }
 
-/**
- * Generate recommendations from the analysis.
- */
 export interface Recommendation {
   priority: "URGENT" | "HIGH" | "MEDIUM" | "LOW";
   text: string;
@@ -140,18 +128,18 @@ export function generateRecommendations(data: DoseFingerprint): Recommendation[]
   if (tier === "RED") {
     recs.push({
       priority: "URGENT",
-      text: `Radon mitigation systems (sub-slab depressurisation) recommended if indoor Rn exceeds ${RISK.rn.amber} Bq/m³. Building code consultation advised.`,
+      text: `Radon mitigation systems (sub-slab depressurisation) recommended if indoor Rn exceeds Irish action level ${IRISH_RN_ACTION} Bq/m³. Building code consultation advised.`,
     });
   }
 
   if (data.confidence < 30) {
     recs.push({
       priority: "HIGH",
-      text: "Conduct airborne gamma-ray spectrometry survey (eU, eTh, K%) to replace geology-prior estimates with measured radiometric data.",
+      text: "Integrate Tellus airborne radiometric survey data (K, U, Th) to replace geology-prior estimates with measured radiometric data.",
     });
   }
 
-  if (data.indices.indoor_Rn > RISK.rn.green) {
+  if (data.indices.indoor_Rn >= WHO_RN_ACTION) {
     recs.push({
       priority: "HIGH",
       text: `Deploy indoor radon detectors (CR-39 track-etch or electret) in local dwellings to validate the geogenic estimate of ${data.indices.indoor_Rn.toFixed(0)} Bq/m³.`,
@@ -168,7 +156,7 @@ export function generateRecommendations(data: DoseFingerprint): Recommendation[]
   if (data.confidence < 60) {
     recs.push({
       priority: "MEDIUM",
-      text: "Integrate SoilGrids permeability data and Copernicus DEM lineament density to refine the geogenic radon potential model.",
+      text: "Integrate Teagasc soil permeability and GSI fault lineament data to refine the geogenic radon potential model.",
     });
   }
 

@@ -1,6 +1,6 @@
 /**
- * App.tsx — Main layout
- * Left: satellite map with floating triangle
+ * App.tsx — Irish Terrestrial Dose Indicator
+ * Left: satellite map of Ireland with floating triangle
  * Right: report panel (pinned on click)
  */
 
@@ -11,21 +11,15 @@ import type { DoseFingerprint } from "./dose_core";
 
 const PRESETS = [
   { name: "Dublin", lat: 53.3498, lon: -6.2603 },
-  { name: "London", lat: 51.5074, lon: -0.1278 },
-  { name: "Paris", lat: 48.8566, lon: 2.3522 },
-  { name: "Berlin", lat: 52.5200, lon: 13.4050 },
-  { name: "Rome", lat: 41.9028, lon: 12.4964 },
-  { name: "Madrid", lat: 40.4168, lon: -3.7038 },
-  { name: "Vienna", lat: 48.2082, lon: 16.3738 },
-  { name: "Stockholm", lat: 59.3293, lon: 18.0686 },
-  { name: "Oslo", lat: 59.9139, lon: 10.7522 },
-  { name: "Helsinki", lat: 60.1699, lon: 24.9384 },
-  { name: "Prague", lat: 50.0755, lon: 14.4378 },
-  { name: "Warsaw", lat: 52.2297, lon: 21.0122 },
-  { name: "Athens", lat: 37.9838, lon: 23.7275 },
-  { name: "Lisbon", lat: 38.7223, lon: -9.1393 },
-  { name: "Munich", lat: 48.1351, lon: 11.5820 },
-  { name: "Zurich", lat: 47.3769, lon: 8.5417 },
+  { name: "Cork", lat: 51.8985, lon: -8.4756 },
+  { name: "Galway", lat: 53.2707, lon: -9.0568 },
+  { name: "Limerick", lat: 52.6638, lon: -8.6267 },
+  { name: "Belfast", lat: 54.5973, lon: -5.9301 },
+  { name: "Wicklow Granite", lat: 52.98, lon: -6.35 },
+  { name: "Burren Limestone", lat: 53.05, lon: -9.15 },
+  { name: "Connemara", lat: 53.35, lon: -9.55 },
+  { name: "Donegal Granite", lat: 54.95, lon: -8.0 },
+  { name: "Kerry", lat: 52.06, lon: -9.55 },
 ];
 
 export default function App() {
@@ -45,7 +39,6 @@ export default function App() {
 
   const handlePreset = (p: typeof PRESETS[0]) => {
     setFlyTo({ lat: p.lat, lon: p.lon, name: p.name });
-    // Compute dose
     import("./dose_core").then(({ polygonDoseFingerprint }) => {
       import("./lithology").then(({ getLithologyAt }) => {
         const lith = getLithologyAt(p.lon, p.lat);
@@ -60,12 +53,16 @@ export default function App() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     try {
-      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ", Ireland")}&limit=1`);
       const data = await resp.json();
       if (data?.[0]) {
         const lat = parseFloat(data[0].lat);
         const lon = parseFloat(data[0].lon);
-        setFlyTo({ lat, lon, name: data[0].display_name.split(",")[0] });
+        if (lat >= 51.4 && lat <= 55.4 && lon >= -10.6 && lon <= -5.3) {
+          setFlyTo({ lat, lon, name: data[0].display_name.split(",")[0] });
+        } else {
+          alert("Location outside Ireland. Please search within Ireland.");
+        }
       }
     } catch (e) {
       console.error("Search failed:", e);
@@ -77,14 +74,14 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-brand">
           <span className="topbar-logo">◈</span>
-          <h1 className="topbar-title">Euro-Dose</h1>
-          <span className="topbar-subtitle">European Terrestrial Dose Indicator</span>
+          <h1 className="topbar-title">Irish-Dose</h1>
+          <span className="topbar-subtitle">Irish Terrestrial Dose Indicator</span>
         </div>
         <div className="topbar-controls">
           <div className="search-box">
             <input
               type="text"
-              placeholder="Search location…"
+              placeholder="Search Ireland…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -99,7 +96,7 @@ export default function App() {
             const p = PRESETS.find((x) => x.name === e.target.value);
             if (p) handlePreset(p);
           }} value="">
-            <option value="" disabled>Jump to city…</option>
+            <option value="" disabled>Jump to location…</option>
             {PRESETS.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select>
         </div>

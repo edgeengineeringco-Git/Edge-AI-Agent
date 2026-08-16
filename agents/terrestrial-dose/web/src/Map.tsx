@@ -1,5 +1,5 @@
 /**
- * Map.tsx — VisQuill-style satellite map with floating dose triangle
+ * Map.tsx — VisQuill-style satellite map of Ireland with floating dose triangle
  * Triangle follows cursor on hover, updates live.
  * Click pins the report.
  */
@@ -18,6 +18,12 @@ interface MapProps {
 
 const RISK_COLORS: Record<string, string> = { GREEN: "#22c55e", AMBER: "#f59e0b", RED: "#ef4444" };
 const RISK_BG: Record<string, string> = { GREEN: "rgba(34,197,94,0.15)", AMBER: "rgba(245,158,11,0.15)", RED: "rgba(239,68,68,0.15)" };
+
+// Ireland bounds
+const IRELAND_BOUNDS: [[number, number], [number, number]] = [
+  [-10.7, 51.3], // SW
+  [-5.2, 55.5],  // NE
+];
 
 export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -45,6 +51,11 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
 
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
+      // Only sample within Ireland
+      if (lat < 51.4 || lat > 55.4 || lng < -10.6 || lng > -5.3) {
+        setHoverData(null);
+        return;
+      }
       const lith = getLithologyAt(lng, lat);
       if (lith.glim === "water" || lith.glim === "Wa" || lith.glim === "Ice") {
         setHoverData(null);
@@ -61,10 +72,11 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
 
     const map = new maplibregl.Map({
       container: mapRef.current,
-      center: [-6.26, 53.35],
-      zoom: 10,
+      center: [-8.5, 53.3], // centre of Ireland
+      zoom: 7,
       maxZoom: 18,
-      minZoom: 3,
+      minZoom: 5,
+      maxBounds: IRELAND_BOUNDS,
       style: {
         version: 8,
         sources: {
@@ -95,6 +107,7 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
     map.on("mousemove", handleMove);
     map.on("click", (e) => {
       const { lng, lat } = e.lngLat;
+      if (lat < 51.4 || lat > 55.4 || lng < -10.6 || lng > -5.3) return;
       const lith = getLithologyAt(lng, lat);
       if (lith.glim === "water" || lith.glim === "Wa" || lith.glim === "Ice") return;
       const fp = polygonDoseFingerprint({ lithology: lith.glim, lat, lon: lng });

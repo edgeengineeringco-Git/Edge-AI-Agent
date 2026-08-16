@@ -1,10 +1,8 @@
 /**
- * Terrestrial Dose Calculation Core — TypeScript port
- * ================================================
- * Faithful port of dose_calculation_core.py
- * Standards: UNSCEAR 2024, ICRP 137, EU BSS 2013/59/Euratom, WHO 100 Bq/m³.
- *
- * DO NOT modify the dose formulas.
+ * Terrestrial Dose Calculation Core — TypeScript port (Ireland Edition)
+ * =====================================================================
+ * Faithful port of dose_calculation_core.py with Irish radon action level.
+ * Irish national reference: 200 Bq/m³ → ~6.7 mSv/yr.
  */
 
 // ── Constants ──
@@ -22,6 +20,10 @@ export const GAMMA_COEFF_RA = 0.462;
 export const GAMMA_COEFF_TH = 0.604;
 export const GAMMA_COEFF_K = 0.041;
 
+// Irish radon factor: 200 Bq/m³ → 6.7 mSv/yr
+export const IRISH_RN_ACTION = 200;
+export const RADON_IRISH_FACTOR = 6.7 / 200.0;
+
 export const RADON_METHODS: Record<string, number> = {
   eubss: 10.0 / 300.0,
   icrp137: 10.0 / 300.0,
@@ -38,6 +40,15 @@ export const RISK = {
   gamma: { green: 59, amber: 1000 },
   raeq: { green: 370, amber: 740 },
 };
+
+// Ireland-specific thresholds
+export const RISK_IRISH = {
+  dose: { green: 2.2, amber: 6.6 },
+  rn: { green: 100, amber: 200 }, // Irish action level
+  gamma: { green: 59, amber: 1000 },
+  raeq: { green: 370, amber: 740 },
+};
+
 export const WHO_RN_ACTION = 100;
 export const UNSCEAR_GAMMA_MAX = 1500;
 
@@ -165,6 +176,10 @@ export function radonInhalationDose(c: number, method = "eubss"): number {
   return c * dcf;
 }
 
+export function radonInhalationDoseIrish(c: number): number {
+  return c * RADON_IRISH_FACTOR;
+}
+
 export function geogenicThoronPotential(a: number, lith = "world_average_soil", perm?: number | null): number {
   const lf = lithologyFactor(lith);
   const emanation = 0.1 + lf * 0.25;
@@ -226,6 +241,36 @@ export function riskClass(e: number, cRn?: number | null, raeq?: number | null, 
   return { tier, reasons, flags };
 }
 
+export function riskClassIrish(e: number, cRn?: number | null, raeq?: number | null, gammaRate?: number | null) {
+  const rationale: string[] = [];
+  const flags: string[] = [];
+
+  let tier: string;
+  if (e <= 2.2) { tier = "GREEN"; rationale.push(`${e.toFixed(2)} <= 2.2`); }
+  else if (e <= 6.6) { tier = "AMBER"; rationale.push(`${e.toFixed(2)} 1-3x avg`); }
+  else { tier = "RED"; rationale.push(`${e.toFixed(2)} > 3x avg`); }
+
+  if (cRn != null && cRn >= 200) {
+    flags.push(`RADON_ACTION: ${cRn.toFixed(0)} >= Irish 200`);
+    tier = "RED";
+  } else if (cRn != null && cRn >= 100) {
+    flags.push(`RADON_ELEVATED: ${cRn.toFixed(0)} >= WHO 100`);
+    if (tier === "GREEN") tier = "AMBER";
+  }
+
+  if (raeq != null && raeq >= 370) {
+    flags.push(`RAEQ_HIGH: ${raeq.toFixed(0)} >= 370`);
+    if (tier !== "RED") tier = "RED";
+  }
+
+  if (gammaRate != null && gammaRate >= 1000) {
+    flags.push(`GAMMA_HIGH: ${gammaRate.toFixed(0)} >= 1000`);
+    tier = "RED";
+  }
+
+  return { tier, rationale, flags };
+}
+
 // ── Main entry: polygon dose fingerprint ──
 export interface DoseFingerprint {
   arms_mSv_yr: { radon: number; thoron: number; gamma: number };
@@ -238,6 +283,7 @@ export interface DoseFingerprint {
   confidence: number;
   lithology: string;
   lithology_label: string;
+  radon_Bq_m3_est: number;
   lat?: number;
   lon?: number;
 }
@@ -272,38 +318,43 @@ export function polygonDoseFingerprint(opts: {
   } = opts;
 
   const act = lithologyToActivities(lithology);
-  let A_Ra = act.A_Ra226, A_Th = act.A_Th232, A_K = act.A_K40;
+  let A_Ra226 = act.A_Ra226;
+  let A_Th232 = act.A_Th232;
+  let A_K40 = act.A_K40;
+
   const provenance: string[] = [];
   const resolved = _resolveLithology(lithology);
 
   if (eU_ppm != null) {
-    A_Ra = eU_ppm * EU_TO_RA226;
-    provenance.push(`A_Ra226: measured (eU=${eU_ppm} ppm × ${EU_TO_RA226} = ${A_Ra.toFixed(1)} Bq/kg)`);
+    A_Ra226 = eU_ppm * EU_TO_RA226;
+    provenance.push(`A_Ra226: measured (eU=${eU_ppm} ppm × ${EU_TO_RA226} = ${A_Ra226.toFixed(1)} Bq/kg)`);
   } else {
-    provenance.push(`A_Ra226: GLiM geology prior (lithology=${resolved})`);
-  }
-  if (eTh_ppm != null) {
-    A_Th = eTh_ppm * ETH_TO_TH232;
-    provenance.push(`A_Th232: measured (eTh=${eTh_ppm} ppm × ${ETH_TO_TH232} = ${A_Th.toFixed(1)} Bq/kg)`);
-  } else {
-    provenance.push(`A_Th232: GLiM geology prior (lithology=${resolved})`);
-  }
-  if (K_pct != null) {
-    A_K = K_pct * K_PCT_TO_K40;
-    provenance.push(`A_K40: measured (K=${K_pct}% × ${K_PCT_TO_K40} = ${A_K.toFixed(1)} Bq/kg)`);
-  } else {
-    provenance.push(`A_K40: GLiM geology prior (lithology=${resolved})`);
+    provenance.push(`A_Ra226: geology prior (lithology=${resolved})`);
   }
 
-  const gammaRate = externalGammaDoseRate(A_Ra, A_Th, A_K);
-  const E_gamma = annualExternalDose(A_Ra, A_Th, A_K);
+  if (eTh_ppm != null) {
+    A_Th232 = eTh_ppm * ETH_TO_TH232;
+    provenance.push(`A_Th232: measured (eTh=${eTh_ppm} ppm × ${ETH_TO_TH232} = ${A_Th232.toFixed(1)} Bq/kg)`);
+  } else {
+    provenance.push(`A_Th232: geology prior (lithology=${resolved})`);
+  }
+
+  if (K_pct != null) {
+    A_K40 = K_pct * K_PCT_TO_K40;
+    provenance.push(`A_K40: measured (K=${K_pct}% × ${K_PCT_TO_K40} = ${A_K40.toFixed(1)} Bq/kg)`);
+  } else {
+    provenance.push(`A_K40: geology prior (lithology=${resolved})`);
+  }
+
+  const gammaRate = externalGammaDoseRate(A_Ra226, A_Th232, A_K40);
+  const E_gamma = annualExternalDose(A_Ra226, A_Th232, A_K40);
 
   let indoorRn: number;
   if (C_Rn != null) {
     indoorRn = C_Rn;
     provenance.push(`C_Rn: measured (${C_Rn} Bq/m³)`);
   } else {
-    indoorRn = indoorRadonFromGeogenic(A_Ra, lithology, dist_fault_m, lineament_density, permeability);
+    indoorRn = indoorRadonFromGeogenic(A_Ra226, lithology, dist_fault_m, lineament_density, permeability);
     provenance.push(`C_Rn: geogenic estimate (GRP model, ${indoorRn.toFixed(1)} Bq/m³)`);
   }
   const E_radon = radonInhalationDose(indoorRn, radon_method);
@@ -313,13 +364,13 @@ export function polygonDoseFingerprint(opts: {
     indoorTn = C_Tn;
     provenance.push(`C_Tn: measured (${C_Tn} Bq/m³)`);
   } else {
-    indoorTn = geogenicThoronPotential(A_Th, lithology, permeability) * 1.0;
+    indoorTn = geogenicThoronPotential(A_Th232, lithology, permeability) * 1.0;
     provenance.push(`C_Tn: geogenic estimate (GTP model, ${indoorTn.toFixed(2)} Bq/m³)`);
   }
-  const E_thoron = thoronInhalationDose(A_Th, lithology, C_Tn, permeability);
+  const E_thoron = thoronInhalationDose(A_Th232, lithology, C_Tn, permeability);
 
-  const raeq = radiumEquivalent(A_Ra, A_Th, A_K);
-  const I_gamma = gammaActivityIndex(A_Ra, A_Th, A_K);
+  const raeq = radiumEquivalent(A_Ra226, A_Th232, A_K40);
+  const I_gamma = gammaActivityIndex(A_Ra226, A_Th232, A_K40);
   const E_total = E_gamma + E_radon + E_thoron;
   const ELCR = excessLifetimeCancerRisk(E_total);
   const risk = riskClass(E_total, indoorRn, raeq, gammaRate);
@@ -337,9 +388,9 @@ export function polygonDoseFingerprint(opts: {
     total_terrestrial_mSv_yr: +E_total.toFixed(4),
     gamma_rate_nGy_h: +gammaRate.toFixed(1),
     activities_Bq_kg: {
-      A_Ra226: +A_Ra.toFixed(1),
-      A_Th232: +A_Th.toFixed(1),
-      A_K40: +A_K.toFixed(1),
+      A_Ra226: +A_Ra226.toFixed(1),
+      A_Th232: +A_Th232.toFixed(1),
+      A_K40: +A_K40.toFixed(1),
     },
     indices: {
       raeq: +raeq.toFixed(1),
@@ -353,6 +404,7 @@ export function polygonDoseFingerprint(opts: {
     confidence,
     lithology: resolved,
     lithology_label: LITHOLOGY_ACTIVITIES[resolved].label,
+    radon_Bq_m3_est: +indoorRn.toFixed(1),
     lat,
     lon,
   };

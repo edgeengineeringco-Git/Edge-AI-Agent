@@ -73,7 +73,7 @@ agents/
 | Agent | Purpose | Directory |
 |-------|---------|----------|
 | `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
-| `terrestrial-dose` | Terrestrial radiation dose GIS (FastAPI + React) | `agents/terrestrial-dose/` |
+| `terrestrial-dose` | Irish Terrestrial Dose Indicator — Ireland-only, measurement-grade (FastAPI + React) | `agents/terrestrial-dose/` |
 | `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
@@ -139,12 +139,21 @@ agents/edge-kuth-portal/
 
 ### terrestrial-dose
 
-**Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
+**Irish Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any Irish land point. Ireland-only, measurement-grade. FastAPI backend + React/MapLibre frontend.
 
 - **Scope:** `agents/terrestrial-dose`
 - **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
 - **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
 - **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+
+**Key features:**
+- Tellus airborne radiometric (K, U, Th) used where available — measurement-grade, overrides lithology prior
+- EPA radon risk map used as validation — 1 km grid predicted indoor radon
+- Irish 200 Bq/m³ radon action level (stricter than EU 300)
+- GSI Bedrock 1:100k lithology backbone — 100m resolution
+- Teagasc soil properties for permeability
+- Satellite basemap centered on Ireland `[-8.5, 53.3]` zoom 7
+- Self-contained standalone HTML: `irish-dose-standalone.html`
 
 ```
 agents/terrestrial-dose/
@@ -153,14 +162,16 @@ agents/terrestrial-dose/
 ├── dose_core/
 │   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
 ├── api/
-│   └── main.py                    # FastAPI backend
-├── ingest/                        # Data ingest (GLiM, SoilGrids, faults, S2)
+│   └── main.py                    # FastAPI backend — Ireland only
 ├── models/
-│   ├── european_geology_mosaic.py # ~120 European geological provinces
-│   └── assemble_factors.py        # Multi-factor dose driver assembly
+│   └── analyze_point.py           # Smart analysis on raw Irish data table
+├── ingest/
+│   ├── ireland_data.py            # Irish open data layer fetchers
+│   └── point_sampler.py           # Point sampling (legacy)
 ├── web/                           # React + MapLibre frontend (source only)
 ├── tests/
-│   └── test_dose_core.py          # 6 validation tests
+│   └── test_dose_core.py          # 14 validation tests (6 + 8 Irish-specific)
+├── irish-dose-standalone.html     # Self-contained HTML for public repo
 ├── data/cache/                    # Runtime cache (not committed)
 ├── skills/
 │   └── agent-job-dm → ../../../skills-library/agent-job-dm

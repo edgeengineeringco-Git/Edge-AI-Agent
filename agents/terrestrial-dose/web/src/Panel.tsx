@@ -1,8 +1,9 @@
 /**
- * Panel.tsx — Dose report panel (right side, pinned on click)
+ * Panel.tsx — Irish Dose report panel (right side, pinned on click)
  */
 
 import type { DoseFingerprint } from "./dose_core";
+import { IRISH_RN_ACTION, WHO_RN_ACTION } from "./dose_core";
 
 interface PanelProps {
   data: DoseFingerprint | null;
@@ -52,7 +53,7 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
       <div className="panel-header">
         <div>
           <h2 className="panel-title">{name}</h2>
-          <span className="panel-subtitle">Terrestrial Dose Estimate</span>
+          <span className="panel-subtitle">Irish Terrestrial Dose Estimate</span>
         </div>
         <button className="panel-close" onClick={onClose} aria-label="Close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -103,13 +104,13 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
         <h3 className="panel-section-title">Comparison</h3>
         <CompBar label="This location" value={total} max={8} color={tc.text} />
         <CompBar label="UNSCEAR avg" value={2.2} max={8} color="#64748b" />
-        <CompBar label="EU BSS limit" value={6.6} max={8} color="#64748b" />
+        <CompBar label="Irish action" value={6.6} max={8} color="#64748b" />
       </div>
 
       <div className="panel-section">
         <h3 className="panel-section-title">Indices</h3>
         <div className="index-grid">
-          <IndexRow label="Indoor Rn" value={idx.indoor_Rn} unit="Bq/m³" warn={idx.indoor_Rn > 300} />
+          <IndexRow label="Indoor Rn" value={idx.indoor_Rn} unit="Bq/m³" warn={idx.indoor_Rn >= IRISH_RN_ACTION} />
           <IndexRow label="Ra-eq" value={idx.raeq} unit="Bq/kg" warn={idx.raeq > 740} />
           <IndexRow label="Iγ" value={idx.I_gamma} unit="" warn={idx.I_gamma > 1.0} />
           <IndexRow label="Gamma rate" value={data.gamma_rate_nGy_h} unit="nGy/h" warn={data.gamma_rate_nGy_h > 1000} />
@@ -121,7 +122,7 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
         <ConfMeter score={data.confidence} />
         <p className="confidence-note">
           {data.confidence >= 60
-            ? "Direct measurement data available."
+            ? "Direct measurement data available (Tellus / EPA)."
             : data.confidence >= 30
             ? "Partial data — some measured, some estimated."
             : "Geology-prior estimate only."}
@@ -131,7 +132,10 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
       <div className="panel-section panel-standards">
         <div className="std-row"><span className="std-dot green" /><span>Green: ≤ 2.2 mSv/yr</span></div>
         <div className="std-row"><span className="std-dot amber" /><span>Amber: 2.2–6.6 mSv/yr</span></div>
-        <div className="std-row"><span className="std-dot red" /><span>Red: &gt; 6.6 mSv/yr</span></div>
+        <div className="std-row"><span className="std-dot red" /><span>Red: &gt; 6.6 mSv/yr or Rn ≥ {IRISH_RN_ACTION}</span></div>
+        <div className="std-row" style={{ marginTop: 8, fontSize: 11, opacity: 0.7 }}>
+          Irish action level: {IRISH_RN_ACTION} Bq/m³ (stricter than EU 300)
+        </div>
       </div>
     </div>
   );
