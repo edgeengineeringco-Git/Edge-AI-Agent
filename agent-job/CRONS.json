@@ -63,6 +63,14 @@
     "enabled": false
   },
   {
+    "name": "terrestrial-dose-health",
+    "schedule": "0 */6 * * *",
+    "type": "agent",
+    "scope": "agents/terrestrial-dose",
+    "job": "Run dose core validation: python3 -m pytest tests/test_dose_core.py -v. Report any failures via Telegram. Do not ask for input — execute autonomously.",
+    "enabled": false
+  },
+  {
     "name": "edge-smart-video-generate",
     "schedule": "0 10 * * 3",
     "type": "agent",
