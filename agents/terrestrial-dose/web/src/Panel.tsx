@@ -35,7 +35,6 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
   const arms = data.arms_mSv_yr;
   const total = data.total_terrestrial_mSv_yr;
   const acts = data.activities_Bq_kg;
-  const idx = data.indices;
   const risk = data.risk;
   const tier = risk.tier;
   const tc = TIER_COLORS[tier] || TIER_COLORS.GREEN;
@@ -84,7 +83,7 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
       <div className="panel-section">
         <h3 className="panel-section-title">Why this dose?</h3>
         <div className="why-list">
-          {risk.reasons.map((reason, i) => (
+          {risk.rationale.map((reason, i) => (
             <div key={i} className="why-item">
               <span className="why-bullet" style={{ background: tc.text }} />
               <span>{reason}</span>
@@ -93,7 +92,7 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
           <div className="why-item">
             <span className="why-bullet" style={{ background: "#5ad1c5" }} />
             <span>
-              Geology: {data.lithology_label}. Activities: Ra-226={acts.A_Ra226.toFixed(0)}, Th-232={acts.A_Th232.toFixed(0)}, K-40={acts.A_K40.toFixed(0)} Bq/kg.
+              Geology: {data.lithology_name}. Activities: Ra-226={acts.A_Ra226.toFixed(0)}, Th-232={acts.A_Th232.toFixed(0)}, K-40={acts.A_K40.toFixed(0)} Bq/kg.
             </span>
           </div>
         </div>
@@ -109,22 +108,17 @@ export default function Panel({ data, name, visible, onClose }: PanelProps) {
       <div className="panel-section">
         <h3 className="panel-section-title">Indices</h3>
         <div className="index-grid">
-          <IndexRow label="Indoor Rn" value={idx.indoor_Rn} unit="Bq/m³" warn={idx.indoor_Rn > 300} />
-          <IndexRow label="Ra-eq" value={idx.raeq} unit="Bq/kg" warn={idx.raeq > 740} />
-          <IndexRow label="Iγ" value={idx.I_gamma} unit="" warn={idx.I_gamma > 1.0} />
+          <IndexRow label="Indoor Rn" value={data.radon_Bq_m3_est} unit="Bq/m³" warn={data.radon_Bq_m3_est > 300} />
+          <IndexRow label="Ra-eq" value={data.raeq_Bq_kg} unit="Bq/kg" warn={data.raeq_Bq_kg > 740} />
+          <IndexRow label="Iγ" value={data.i_gamma} unit="" warn={data.i_gamma > 1.0} />
           <IndexRow label="Gamma rate" value={data.gamma_rate_nGy_h} unit="nGy/h" warn={data.gamma_rate_nGy_h > 1000} />
         </div>
       </div>
 
       <div className="panel-section">
         <h3 className="panel-section-title">Confidence</h3>
-        <ConfMeter score={data.confidence} />
         <p className="confidence-note">
-          {data.confidence >= 60
-            ? "Direct measurement data available."
-            : data.confidence >= 30
-            ? "Partial data — some measured, some estimated."
-            : "Geology-prior estimate only."}
+          Geology-prior estimate only. Direct measurement data would improve confidence.
         </p>
       </div>
 
@@ -152,20 +146,6 @@ function IndexRow({ label, value, unit, warn }: { label: string; value: number; 
     <div className={`index-row ${warn ? "warning" : ""}`}>
       <span className="index-label">{label}</span>
       <span className={`index-value ${warn ? "warning-text" : ""}`}>{value.toFixed(value < 10 ? 2 : 0)} {unit}</span>
-    </div>
-  );
-}
-
-function ConfMeter({ score }: { score: number }) {
-  const color = score >= 60 ? "#22c55e" : score >= 30 ? "#f59e0b" : "#ef4444";
-  return (
-    <div className="confidence-meter">
-      <div className="confidence-track"><div className="confidence-fill" style={{ width: `${score}%`, background: color }} /></div>
-      <div className="confidence-labels">
-        <span>Low</span>
-        <span className="confidence-score" style={{ color }}>{score}%</span>
-        <span>High</span>
-      </div>
     </div>
   );
 }

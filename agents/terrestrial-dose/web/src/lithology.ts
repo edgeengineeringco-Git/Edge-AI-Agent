@@ -215,38 +215,61 @@ const SCALE_TO_CELL: Record<string, number> = {
   "50k": 50, "100k": 100, "250k": 250, "500k": 500, "1M": 1000,
 };
 
+// Activity values matching dose_calculation_core.py v2.1
 const ACT: Record<string, { ra: number; th: number; k: number; label: string }> = {
-  granite:              { ra: 59,  th: 64,  k: 1070, label: "Granite" },
-  granodiorite:         { ra: 40,  th: 50,  k: 900,  label: "Granodiorite" },
-  diorite:              { ra: 25,  th: 30,  k: 550,  label: "Diorite" },
-  gabbro:               { ra: 12,  th: 15,  k: 250,  label: "Gabbro" },
-  peridotite:           { ra: 3,   th: 5,   k: 80,   label: "Peridotite" },
-  pegmatite:            { ra: 65,  th: 80,  k: 1200, label: "Pegmatite" },
-  syenite:              { ra: 45,  th: 70,  k: 1100, label: "Syenite" },
-  rhyolite:             { ra: 55,  th: 60,  k: 1000, label: "Rhyolite" },
-  andesite:             { ra: 30,  th: 40,  k: 700,  label: "Andesite" },
-  basalt:               { ra: 15,  th: 18,  k: 300,  label: "Basalt" },
-  tuff:                 { ra: 30,  th: 35,  k: 600,  label: "Tuff" },
-  gneiss:               { ra: 38,  th: 45,  k: 850,  label: "Gneiss" },
-  schist:               { ra: 35,  th: 42,  k: 750,  label: "Schist" },
-  slate:                { ra: 22,  th: 28,  k: 480,  label: "Slate" },
-  quartzite:            { ra: 10,  th: 8,   k: 150,  label: "Quartzite" },
-  marble:               { ra: 8,   th: 5,   k: 80,   label: "Marble" },
-  limestone:            { ra: 12,  th: 6,   k: 100,  label: "Limestone" },
-  dolomite:             { ra: 10,  th: 5,   k: 80,   label: "Dolomite" },
-  sandstone:            { ra: 18,  th: 22,  k: 350,  label: "Sandstone" },
-  shale:                { ra: 30,  th: 35,  k: 580,  label: "Shale" },
-  mudstone:             { ra: 28,  th: 32,  k: 520,  label: "Mudstone" },
-  siltstone:            { ra: 25,  th: 30,  k: 480,  label: "Siltstone" },
-  marl:                 { ra: 15,  th: 10,  k: 200,  label: "Marl" },
-  chalk:                { ra: 8,   th: 4,   k: 60,   label: "Chalk" },
-  alluvium:             { ra: 20,  th: 25,  k: 400,  label: "Alluvium" },
-  glacial_till:         { ra: 18,  th: 22,  k: 380,  label: "Glacial Till" },
-  monazite_bearing:     { ra: 80,  th: 350, k: 400,  label: "Monazite-bearing" },
-  carbonatite:          { ra: 120, th: 150, k: 200,  label: "Carbonatite" },
-  world_average_soil:   { ra: 30,  th: 30,  k: 400,  label: "World Average Soil" },
-  water:                { ra: 0,   th: 0,   k: 0,    label: "Water" },
-  ice:                  { ra: 0,   th: 0,   k: 0,    label: "Ice" },
+  Su: { ra: 30, th: 35, k: 450, label: "Unconsolidated sediments" },
+  Ss: { ra: 35, th: 35, k: 400, label: "Siliciclastic sedimentary" },
+  Sm: { ra: 35, th: 40, k: 500, label: "Mixed sedimentary" },
+  Sc: { ra: 20, th: 12, k: 90, label: "Carbonate sedimentary" },
+  Sb: { ra: 25, th: 30, k: 600, label: "Basic pyroclastic" },
+  Ev: { ra: 12, th: 8, k: 120, label: "Evaporite" },
+  Pa: { ra: 60, th: 80, k: 1200, label: "Acid plutonic (granite)" },
+  Pi: { ra: 30, th: 40, k: 800, label: "Intermediate plutonic" },
+  Pb: { ra: 12, th: 18, k: 300, label: "Basic plutonic" },
+  Va: { ra: 50, th: 70, k: 1100, label: "Acid volcanic" },
+  Vi: { ra: 25, th: 35, k: 700, label: "Intermediate volcanic" },
+  Vb: { ra: 15, th: 20, k: 350, label: "Basic volcanic" },
+  Mt: { ra: 45, th: 55, k: 850, label: "Metamorphic" },
+  Py: { ra: 40, th: 45, k: 700, label: "Pyroclastic" },
+  Wa: { ra: 0, th: 0, k: 0, label: "Water" },
+  Ice: { ra: 0, th: 0, k: 0, label: "Ice" },
+  granite: { ra: 60, th: 80, k: 1200, label: "Granite" },
+  monzogranite: { ra: 29, th: 34, k: 883, label: "Monzogranite" },
+  syenogranite: { ra: 31, th: 35, k: 890, label: "Syenogranite" },
+  rhyolite: { ra: 50, th: 70, k: 1100, label: "Rhyolite" },
+  pegmatite: { ra: 80, th: 100, k: 1400, label: "Pegmatite" },
+  diorite: { ra: 30, th: 40, k: 800, label: "Diorite" },
+  andesite: { ra: 25, th: 35, k: 700, label: "Andesite" },
+  syenite: { ra: 40, th: 60, k: 900, label: "Syenite" },
+  basalt: { ra: 15, th: 20, k: 350, label: "Basalt" },
+  gabbro: { ra: 12, th: 18, k: 300, label: "Gabbro" },
+  dolerite: { ra: 15, th: 22, k: 380, label: "Dolerite" },
+  peridotite: { ra: 8, th: 10, k: 100, label: "Peridotite" },
+  serpentinite: { ra: 10, th: 12, k: 120, label: "Serpentinite" },
+  sandstone: { ra: 35, th: 35, k: 400, label: "Sandstone" },
+  arkose: { ra: 40, th: 45, k: 600, label: "Arkose" },
+  shale: { ra: 40, th: 50, k: 700, label: "Shale" },
+  mudstone: { ra: 35, th: 45, k: 650, label: "Mudstone" },
+  siltstone: { ra: 30, th: 38, k: 500, label: "Siltstone" },
+  limestone: { ra: 20, th: 12, k: 90, label: "Limestone" },
+  dolomite: { ra: 18, th: 10, k: 80, label: "Dolomite" },
+  chalk: { ra: 15, th: 8, k: 70, label: "Chalk" },
+  gypsum: { ra: 12, th: 8, k: 120, label: "Gypsum" },
+  halite: { ra: 5, th: 3, k: 40, label: "Halite" },
+  phosphate: { ra: 1000, th: 50, k: 100, label: "Phosphate" },
+  schist: { ra: 40, th: 45, k: 700, label: "Schist" },
+  gneiss: { ra: 45, th: 55, k: 850, label: "Gneiss" },
+  quartzite: { ra: 25, th: 28, k: 350, label: "Quartzite" },
+  marble: { ra: 15, th: 10, k: 90, label: "Marble" },
+  slate: { ra: 40, th: 48, k: 680, label: "Slate" },
+  phyllite: { ra: 35, th: 42, k: 600, label: "Phyllite" },
+  monazite_bearing: { ra: 100, th: 800, k: 300, label: "Monazite-bearing" },
+  carbonatite: { ra: 500, th: 400, k: 800, label: "Carbonatite" },
+  uranium_mineralised: { ra: 5000, th: 80, k: 800, label: "Uranium mineralised" },
+  coal_bearing: { ra: 60, th: 35, k: 200, label: "Coal-bearing" },
+  black_shale: { ra: 150, th: 25, k: 600, label: "Black shale" },
+  alluvium: { ra: 30, th: 35, k: 450, label: "Alluvium" },
+  world_average_soil: { ra: 35, th: 30, k: 420, label: "World Average Soil" },
 };
 
 const GLIM_TO_INTERNAL: Record<string, string> = {
@@ -262,7 +285,6 @@ export function resolveLith(glim: string): string {
 }
 
 export function getLithologyAt(lon: number, lat: number): LithEntry & { region: string; meets_target: boolean } {
-  // Find smallest-area matching region
   let best: GeoRegion | null = null;
   let bestArea = Infinity;
 
@@ -280,13 +302,12 @@ export function getLithologyAt(lon: number, lat: number): LithEntry & { region: 
   if (!best) {
     const absLat = Math.abs(lat);
     if (absLat > 75 || lat < -65) return { glim: "Ice", label: "Ice", map_scale: "1M", cell_m: 1000, source: "Global", region: "Polar ice", meets_target: false };
-    if (absLat > 60) return { glim: "Mt", label: "Gneiss", map_scale: "1M", cell_m: 1000, source: "Global", region: "Shield/taiga", meets_target: false };
-    if (absLat < 15) return { glim: "Su", label: "Alluvium", map_scale: "1M", cell_m: 1000, source: "Global", region: "Tropical lowlands", meets_target: false };
+    if (absLat > 60) return { glim: "Mt", label: "Metamorphic", map_scale: "1M", cell_m: 1000, source: "Global", region: "Shield/taiga", meets_target: false };
+    if (absLat < 15) return { glim: "Su", label: "Unconsolidated sediments", map_scale: "1M", cell_m: 1000, source: "Global", region: "Tropical lowlands", meets_target: false };
     return { glim: "world_average_soil", label: "World Average Soil", map_scale: "1M", cell_m: 1000, source: "Global", region: "World Average Soil", meets_target: false };
   }
 
-  const internal = resolveLith(best.glim);
-  const act = ACT[internal] || ACT.world_average_soil;
+  const act = ACT[best.glim] || ACT.world_average_soil;
   const cell_m = SCALE_TO_CELL[best.map_scale] || 1000;
   const meets = best.map_scale === "50k" || best.map_scale === "100k";
 

@@ -1,7 +1,6 @@
 /**
  * Terrestrial Dose Calculation Core — TypeScript port
- * ================================================
- * Faithful port of dose_calculation_core.py
+ * Faithful port of dose_calculation_core.py (build-prompt version)
  * Standards: UNSCEAR 2024, ICRP 137, EU BSS 2013/59/Euratom, WHO 100 Bq/m³.
  *
  * DO NOT modify the dose formulas.
@@ -9,351 +8,363 @@
 
 // ── Constants ──
 export const WORLD_AVG_DOSE = 2.2;
-export const OUTDOOR_FRACTION = 0.20;
-export const HOURS_PER_YEAR = 8760;
-export const INDOOR_HOURS = 7000;
-export const SV_PER_NGY = 1e-6;
+export const GAMMA_RATE_WORLD_AVG = 59.0;
 
-export const EU_TO_RA226 = 12.22;
-export const ETH_TO_TH232 = 4.06;
-export const K_PCT_TO_K40 = 313.0;
+export const BQ_PER_PPM_U = 12.22;
+export const BQ_PER_PPM_TH = 4.06;
+export const BQ_PER_PCT_K = 313.0;
 
-export const GAMMA_COEFF_RA = 0.462;
-export const GAMMA_COEFF_TH = 0.604;
-export const GAMMA_COEFF_K = 0.041;
+export const DCC_RA = 0.462;
+export const DCC_TH = 0.604;
+export const DCC_K = 0.041;
+export const HOURS_PER_YEAR = 8760.0;
+export const CC_SV_PER_GY = 0.7;
 
-export const RADON_METHODS: Record<string, number> = {
-  eubss: 10.0 / 300.0,
-  icrp137: 10.0 / 300.0,
-  unscear: 0.00678,
-  icrp65: 0.00865,
-};
+export const RADON_EUBSS_FACTOR = 10.0 / 300.0;
+export const PAEC_PER_BQ_EEC = 5.57e-6;
+export const ICRP137_COEFF = 3.0;
+export const DCF_ICRP137 = PAEC_PER_BQ_EEC * ICRP137_COEFF * 1e6;
+export const DCF_UNSCEAR = 9.0;
+export const DCF_ICRP65_RES = 6.1;
+export const F_INDOOR = 0.4;
+export const F_OUTDOOR = 0.6;
+export const T_INDOOR = 7000.0;
+export const T_OUTDOOR = 1760.0;
 
-export const Tn_EEC_RATIO = 0.02;
-export const Tn_DCF = 40e-6 * INDOOR_HOURS;
+export const THORON_EMANATION_DEFAULT = 0.3;
+export const THORON_TRANSFER_COEFF = 2.0;
+export const F_THORON = 0.02;
+export const DCF_THORON = 40.0;
 
-export const RISK = {
-  dose: { green: 2.2, amber: 6.6 },
-  rn: { green: 100, amber: 300 },
-  gamma: { green: 59, amber: 1000 },
-  raeq: { green: 370, amber: 740 },
-};
-export const WHO_RN_ACTION = 100;
-export const UNSCEAR_GAMMA_MAX = 1500;
+export const RADON_ACTION_LEVEL = 300.0;
+export const RADON_WHO_LEVEL = 100.0;
+export const RAEQ_THRESHOLD = 370.0;
+export const GAMMA_RATE_ICRP_SAFE = 1000.0;
 
-// ── GLiM code → internal lithology key ──
-export const GLIM_MAP: Record<string, string> = {
-  Su: "alluvium", Ss: "sandstone", Sm: "siltstone", Sc: "limestone",
-  Sb: "marl", Ev: "dolomite", Pa: "granite", Pi: "granodiorite",
-  Pb: "gabbro", Va: "rhyolite", Vi: "andesite", Vb: "basalt",
-  Mt: "gneiss", Py: "tuff", Wa: "water", Ice: "ice",
-  monazite_bearing: "monazite_bearing", carbonatite: "carbonatite",
-  ion_adsorption_clay: "ion_adsorption_clay", world_average_soil: "world_average_soil",
-  shale: "shale", slate: "slate", schist: "schist", quartzite: "quartzite",
-  marble: "marble", amphibolite: "amphibolite", pegmatite: "pegmatite",
-  syenite: "syenite", diorite: "diorite", peridotite: "peridotite",
-  dunite: "dunite", pumice: "pumice", obsidian: "obsidian",
-  coal: "coal", arkose: "arkose", mudstone: "mudstone",
-  chalk: "chalk", glacial_till: "glacial_till",
+// ── GLiM code → description ──
+export const GLIM_CODE_NAMES: Record<string, string> = {
+  Su: "unconsolidated sediments",
+  Ss: "siliciclastic sedimentary",
+  Sm: "mixed sedimentary",
+  Sc: "carbonate sedimentary",
+  Sb: "basic pyroclastic",
+  Ev: "evaporite",
+  Pa: "acid plutonic (granite)",
+  Pi: "intermediate plutonic",
+  Pb: "basic plutonic",
+  Va: "acid volcanic",
+  Vi: "intermediate volcanic",
+  Vb: "basic volcanic",
+  Mt: "metamorphic",
+  Py: "pyroclastic",
+  Wa: "water",
+  Ice: "ice",
 };
 
 // ── Lithology activities (Bq/kg) ──
-export const LITHOLOGY_ACTIVITIES: Record<string, { A_Ra226: number; A_Th232: number; A_K40: number; label: string }> = {
-  granite:             { A_Ra226: 59,  A_Th232: 64,  A_K40: 1070, label: "Granite (acid plutonic)" },
-  granodiorite:        { A_Ra226: 40,  A_Th232: 50,  A_K40: 900,  label: "Granodiorite" },
-  diorite:             { A_Ra226: 25,  A_Th232: 30,  A_K40: 550,  label: "Diorite" },
-  gabbro:              { A_Ra226: 12,  A_Th232: 15,  A_K40: 250,  label: "Gabbro" },
-  peridotite:          { A_Ra226: 3,   A_Th232: 5,   A_K40: 80,   label: "Peridotite" },
-  dunite:              { A_Ra226: 2,   A_Th232: 3,   A_K40: 40,   label: "Dunite" },
-  pegmatite:           { A_Ra226: 65,  A_Th232: 80,  A_K40: 1200, label: "Pegmatite" },
-  syenite:             { A_Ra226: 45,  A_Th232: 70,  A_K40: 1100, label: "Syenite" },
-  rhyolite:            { A_Ra226: 55,  A_Th232: 60,  A_K40: 1000, label: "Rhyolite (acid volcanic)" },
-  andesite:            { A_Ra226: 30,  A_Th232: 40,  A_K40: 700,  label: "Andesite" },
-  basalt:              { A_Ra226: 15,  A_Th232: 18,  A_K40: 300,  label: "Basalt (basic volcanic)" },
-  tuff:                { A_Ra226: 30,  A_Th232: 35,  A_K40: 600,  label: "Tuff (pyroclastic)" },
-  pumice:              { A_Ra226: 25,  A_Th232: 30,  A_K40: 500,  label: "Pumice" },
-  obsidian:            { A_Ra226: 40,  A_Th232: 50,  A_K40: 800,  label: "Obsidian" },
-  gneiss:              { A_Ra226: 38,  A_Th232: 45,  A_K40: 850,  label: "Gneiss (metamorphic)" },
-  schist:              { A_Ra226: 35,  A_Th232: 42,  A_K40: 750,  label: "Schist" },
-  slate:               { A_Ra226: 22,  A_Th232: 28,  A_K40: 480,  label: "Slate" },
-  quartzite:           { A_Ra226: 10,  A_Th232: 8,   A_K40: 150,  label: "Quartzite" },
-  marble:              { A_Ra226: 8,   A_Th232: 5,   A_K40: 80,   label: "Marble" },
-  amphibolite:         { A_Ra226: 15,  A_Th232: 12,  A_K40: 300,  label: "Amphibolite" },
-  limestone:           { A_Ra226: 12,  A_Th232: 6,   A_K40: 100,  label: "Limestone (carbonate)" },
-  dolomite:            { A_Ra226: 10,  A_Th232: 5,   A_K40: 80,   label: "Dolomite (evaporite)" },
-  sandstone:           { A_Ra226: 18,  A_Th232: 22,  A_K40: 350,  label: "Sandstone" },
-  arkose:              { A_Ra226: 22,  A_Th232: 28,  A_K40: 400,  label: "Arkose" },
-  shale:               { A_Ra226: 30,  A_Th232: 35,  A_K40: 580,  label: "Shale" },
-  mudstone:            { A_Ra226: 28,  A_Th232: 32,  A_K40: 520,  label: "Mudstone" },
-  siltstone:           { A_Ra226: 25,  A_Th232: 30,  A_K40: 480,  label: "Siltstone" },
-  marl:                { A_Ra226: 15,  A_Th232: 10,  A_K40: 200,  label: "Marl (basic sedimentary)" },
-  chalk:               { A_Ra226: 8,   A_Th232: 4,   A_K40: 60,   label: "Chalk" },
-  coal:                { A_Ra226: 20,  A_Th232: 12,  A_K40: 100,  label: "Coal" },
-  alluvium:            { A_Ra226: 20,  A_Th232: 25,  A_K40: 400,  label: "Alluvium (unconsolidated)" },
-  glacial_till:        { A_Ra226: 18,  A_Th232: 22,  A_K40: 380,  label: "Glacial till" },
-  monazite_bearing:    { A_Ra226: 80,  A_Th232: 350, A_K40: 400,  label: "Monazite-bearing (REE)" },
-  carbonatite:         { A_Ra226: 120, A_Th232: 150, A_K40: 200,  label: "Carbonatite" },
-  ion_adsorption_clay:  { A_Ra226: 50,  A_Th232: 100, A_K40: 500,  label: "Ion-adsorption clay" },
-  world_average_soil:  { A_Ra226: 30,  A_Th232: 30,  A_K40: 400,  label: "World Average Soil" },
-  water:               { A_Ra226: 0,   A_Th232: 0,   A_K40: 0,    label: "Water body" },
-  ice:                 { A_Ra226: 0,   A_Th232: 0,   A_K40: 0,    label: "Ice" },
+export const LITHOLOGY_ACTIVITIES: Record<string, [number, number, number]> = {
+  Su: [30, 35, 450],
+  Ss: [35, 35, 400],
+  Sm: [35, 40, 500],
+  Sc: [20, 12, 90],
+  Sb: [25, 30, 600],
+  Ev: [12, 8, 120],
+  Pa: [60, 80, 1200],
+  Pi: [30, 40, 800],
+  Pb: [12, 18, 300],
+  Va: [50, 70, 1100],
+  Vi: [25, 35, 700],
+  Vb: [15, 20, 350],
+  Mt: [45, 55, 850],
+  Py: [40, 45, 700],
+  Wa: [0, 0, 0],
+  Ice: [0, 0, 0],
+  granite: [60, 80, 1200],
+  monzogranite: [29, 34, 883],
+  syenogranite: [31, 35, 890],
+  rhyolite: [50, 70, 1100],
+  pegmatite: [80, 100, 1400],
+  diorite: [30, 40, 800],
+  andesite: [25, 35, 700],
+  syenite: [40, 60, 900],
+  basalt: [15, 20, 350],
+  gabbro: [12, 18, 300],
+  dolerite: [15, 22, 380],
+  peridotite: [8, 10, 100],
+  serpentinite: [10, 12, 120],
+  sandstone: [35, 35, 400],
+  arkose: [40, 45, 600],
+  shale: [40, 50, 700],
+  mudstone: [35, 45, 650],
+  siltstone: [30, 38, 500],
+  limestone: [20, 12, 90],
+  dolomite: [18, 10, 80],
+  chalk: [15, 8, 70],
+  gypsum: [12, 8, 120],
+  halite: [5, 3, 40],
+  phosphate: [1000, 50, 100],
+  schist: [40, 45, 700],
+  gneiss: [45, 55, 850],
+  quartzite: [25, 28, 350],
+  marble: [15, 10, 90],
+  slate: [40, 48, 680],
+  phyllite: [35, 42, 600],
+  monazite_bearing: [100, 800, 300],
+  carbonatite: [500, 400, 800],
+  uranium_mineralised: [5000, 80, 800],
+  coal_bearing: [60, 35, 200],
+  black_shale: [150, 25, 600],
+  alluvium: [30, 35, 450],
+  world_average_soil: [35, 30, 420],
 };
 
 export const LITHOLOGY_FACTOR: Record<string, number> = {
-  granite: 0.35, granodiorite: 0.30, diorite: 0.20, gabbro: 0.10,
-  peridotite: 0.05, dunite: 0.05, pegmatite: 0.45, syenite: 0.30,
-  rhyolite: 0.25, andesite: 0.20, basalt: 0.15, tuff: 0.50,
-  pumice: 0.60, obsidian: 0.15, gneiss: 0.25, schist: 0.25,
-  slate: 0.15, quartzite: 0.10, marble: 0.20, amphibolite: 0.15,
-  limestone: 0.40, dolomite: 0.45, sandstone: 0.70, arkose: 0.65,
-  shale: 0.20, mudstone: 0.18, siltstone: 0.30, marl: 0.35,
-  chalk: 0.50, coal: 0.55, alluvium: 0.75, glacial_till: 0.60,
-  monazite_bearing: 0.40, carbonatite: 0.50, ion_adsorption_clay: 0.55,
-  world_average_soil: 0.50, water: 0.0, ice: 0.0,
+  Su: 1.5, Ss: 1.4, Sm: 1.2, Sc: 0.7, Sb: 1.0, Ev: 0.4, Pa: 1.3, Pi: 1.0,
+  Pb: 0.6, Va: 1.2, Vi: 0.9, Vb: 0.7, Mt: 1.2, Py: 1.1, Wa: 0.0, Ice: 0.0,
+  granite: 1.3, monzogranite: 1.2, rhyolite: 1.2, pegmatite: 1.5, syenite: 1.3,
+  diorite: 1.0, andesite: 0.9, basalt: 0.7, gabbro: 0.6, dolerite: 0.7,
+  peridotite: 0.5, serpentinite: 0.6, sandstone: 1.4, arkose: 1.3, shale: 0.8,
+  mudstone: 0.8, siltstone: 1.0, limestone: 0.7, dolomite: 0.7, chalk: 0.6,
+  gypsum: 0.6, halite: 0.4, phosphate: 1.2, schist: 1.1, gneiss: 1.2,
+  quartzite: 1.0, marble: 0.6, slate: 0.8, phyllite: 0.9,
+  monazite_bearing: 2.0, carbonatite: 1.8, uranium_mineralised: 2.5,
+  coal_bearing: 1.0, black_shale: 1.3, alluvium: 1.5, world_average_soil: 1.0,
 };
 
-// ── Resolve lithology from GLiM code or name ──
-function _resolveLithology(lithology: string): string {
-  if (lithology in LITHOLOGY_ACTIVITIES) return lithology;
-  const key = GLIM_MAP[lithology];
-  if (key && key in LITHOLOGY_ACTIVITIES) return key;
-  const norm = lithology.toLowerCase().replace(/[\s-]+/g, "_");
-  if (norm in LITHOLOGY_ACTIVITIES) return norm;
-  const key2 = GLIM_MAP[norm];
-  if (key2 && key2 in LITHOLOGY_ACTIVITIES) return key2;
-  return "world_average_soil";
+export function glimName(code: string): string {
+  return GLIM_CODE_NAMES[code] || code;
 }
 
 export function lithologyToActivities(lithology: string) {
-  const key = _resolveLithology(lithology);
-  const e = LITHOLOGY_ACTIVITIES[key];
-  return { A_Ra226: e.A_Ra226, A_Th232: e.A_Th232, A_K40: e.A_K40 };
+  const entry = LITHOLOGY_ACTIVITIES[lithology];
+  if (!entry) return null;
+  return { A_Ra226: entry[0], A_Th232: entry[1], A_K40: entry[2] };
 }
 
-export function lithologyFactor(lithology: string): number {
-  const key = _resolveLithology(lithology);
-  return LITHOLOGY_FACTOR[key] ?? 0.50;
+export function lithologyFactor(lithology: string, defaultVal = 1.0): number {
+  return LITHOLOGY_FACTOR[lithology] ?? defaultVal;
 }
 
-export function ppmToBqkg(eU: number, eTh: number, K: number) {
-  return { A_Ra226: eU * EU_TO_RA226, A_Th232: eTh * ETH_TO_TH232, A_K40: K * K_PCT_TO_K40 };
+export function ppmToBqkg(eU?: number | null, eTh?: number | null, K?: number | null) {
+  const out: Record<string, number> = {};
+  if (eU != null) out.A_Ra226 = eU * BQ_PER_PPM_U;
+  if (eTh != null) out.A_Th232 = eTh * BQ_PER_PPM_TH;
+  if (K != null) out.A_K40 = K * BQ_PER_PCT_K;
+  return out;
 }
 
 export function externalGammaDoseRate(a: number, b: number, c: number): number {
-  return GAMMA_COEFF_RA * a + GAMMA_COEFF_TH * b + GAMMA_COEFF_K * c;
+  return DCC_RA * a + DCC_TH * b + DCC_K * c;
 }
 
-export function annualExternalDose(a: number, b: number, c: number, of = OUTDOOR_FRACTION): number {
-  const rate = externalGammaDoseRate(a, b, c);
-  return rate * HOURS_PER_YEAR * (1 - of) * 0.7 * SV_PER_NGY;
+export function annualExternalDose(a: number, b: number, c: number, occupancy = 0.2, indoor = false): number {
+  const dAir = externalGammaDoseRate(a, b, c);
+  const of = indoor ? 0.8 : occupancy;
+  return dAir * HOURS_PER_YEAR * of * CC_SV_PER_GY * 1e-6;
 }
 
-export function geogenicRadonPotential(a: number, lith = "world_average_soil", dist = 5000, line = 0, perm?: number | null): number {
-  const lf = lithologyFactor(lith);
-  const ff = Math.max(0.1, Math.exp(-dist / 3000));
-  const li = 1 + Math.min(line, 1.0) * 0.5;
-  const pf = perm != null ? 0.5 + Math.min(Math.max(perm, 0), 1) * 1.0 : 1.0;
-  return (a / 30) * lf * ff * li * pf;
+export function radonInhalationDose(C_Rn: number, method = "eubss", F = F_INDOOR, T = T_INDOOR): number {
+  if (method === "eubss") return C_Rn * RADON_EUBSS_FACTOR;
+  const dcfMap: Record<string, number> = { icrp137: DCF_ICRP137, unscear: DCF_UNSCEAR, icrp65: DCF_ICRP65_RES };
+  const dcf = dcfMap[method] ?? DCF_ICRP137;
+  return C_Rn * F * dcf * T * 1e-6;
 }
 
-export function radonFromGrp(grp: number): number {
-  return grp * 60.0;
+export function geogenicRadonPotential(A_Ra226: number, permeability = 1e-13, distFaultM = 1000.0, lineamentDensity = 0.5, lf = 1.0): number {
+  const permTerm = (permeability / 1e-13) ** 0.5;
+  const faultTerm = Math.max(0.0, 1.0 - distFaultM / 2000.0);
+  const lineTerm = Math.min(1.0, lineamentDensity / 2.0);
+  return (A_Ra226 / 50.0) * permTerm * (1 + 0.3 * faultTerm) * (1 + 0.2 * lineTerm) * lf;
 }
 
-export function radonInhalationDose(c: number, method = "eubss"): number {
-  const dcf = RADON_METHODS[method] ?? RADON_METHODS.eubss;
-  return c * dcf;
+export function geogenicThoronPotential(A_Th232: number, emanation = THORON_EMANATION_DEFAULT, transferCoeff = THORON_TRANSFER_COEFF, lf = 1.0): number {
+  return A_Th232 * emanation * transferCoeff * lf;
 }
 
-export function geogenicThoronPotential(a: number, lith = "world_average_soil", perm?: number | null): number {
-  const lf = lithologyFactor(lith);
-  const emanation = 0.1 + lf * 0.25;
-  const pf = perm != null ? 0.5 + Math.min(Math.max(perm, 0), 1) * 1.0 : 1.0;
-  return (a / 30) * emanation / 0.630 * pf;
-}
-
-export function thoronInhalationDose(a: number, lith = "world_average_soil", c?: number | null, perm?: number | null): number {
-  if (c != null && c > 0) return c * Tn_EEC_RATIO * Tn_DCF;
-  const gtp = geogenicThoronPotential(a, lith, perm);
-  let dose = gtp * 1.0 * Tn_DCF;
-  if (a > 50) {
-    const enhancement = 1.0 + Math.pow((a - 50) / 50, 0.8);
-    dose *= enhancement;
+export function thoronInhalationDose(C_Tn_gas?: number | null, A_Th232?: number | null, emanation = THORON_EMANATION_DEFAULT, transferCoeff = THORON_TRANSFER_COEFF, lf = 1.0, F_Tn = F_THORON, DCF = DCF_THORON, T = T_INDOOR): number {
+  let C_Tn: number;
+  if (C_Tn_gas != null) {
+    C_Tn = C_Tn_gas;
+  } else {
+    if (A_Th232 == null) throw new Error("Provide C_Tn_gas or A_Th232.");
+    C_Tn = geogenicThoronPotential(A_Th232, emanation, transferCoeff, lf);
   }
-  return dose;
-}
-
-export function indoorRadonFromGeogenic(a: number, lith = "world_average_soil", dist = 5000, line = 0, perm?: number | null): number {
-  const grp = geogenicRadonPotential(a, lith, dist, line, perm);
-  return radonFromGrp(grp);
+  return C_Tn * F_Tn * DCF * T * 1e-6;
 }
 
 export function radiumEquivalent(a: number, b: number, c: number): number {
-  return a + (b * 10 / 7) + (c * 10 / 130);
+  return a + 1.43 * b + 0.077 * c;
 }
 
 export function gammaActivityIndex(a: number, b: number, c: number): number {
-  return a / 370 + b / 259 + c / 4810;
+  return a / 300.0 + b / 200.0 + c / 3000.0;
 }
 
-export function excessLifetimeCancerRisk(e: number, y = 70, rf = 0.005): number {
-  return e * y * rf / 1000;
+export function excessLifetimeCancerRisk(E_annual_mSv: number, lifeExpectancy = 70.0, riskFactor = 0.05): number {
+  return E_annual_mSv * 1e-3 * lifeExpectancy * riskFactor;
 }
 
-export function riskClass(e: number, cRn?: number | null, raeq?: number | null, gammaRate?: number | null) {
-  let tier = "GREEN";
-  const reasons: string[] = [];
+export function riskClass(E_terrestrial_mSv: number, C_Rn?: number | null, raeq?: number | null, gammaRate?: number | null) {
+  const rationale: string[] = [];
   const flags: string[] = [];
+  let tier: string;
 
-  if (e > RISK.dose.amber) { tier = "RED"; reasons.push(`Annual dose ${e.toFixed(2)} mSv/yr > ${RISK.dose.amber}`); }
-  else if (e > RISK.dose.green) { if (tier !== "RED") tier = "AMBER"; reasons.push(`Annual dose ${e.toFixed(2)} mSv/yr > ${RISK.dose.green}`); }
-
-  if (cRn != null) {
-    if (cRn >= RISK.rn.amber) { tier = "RED"; reasons.push(`Radon ${cRn.toFixed(0)} Bq/m³ ≥ ${RISK.rn.amber}`); }
-    else if (cRn >= RISK.rn.green) { if (tier === "GREEN") tier = "AMBER"; reasons.push(`Radon ${cRn.toFixed(0)} Bq/m³ ≥ ${RISK.rn.green}`); }
+  if (E_terrestrial_mSv <= WORLD_AVG_DOSE) {
+    tier = "GREEN";
+    rationale.push(`${E_terrestrial_mSv.toFixed(2)} <= ${WORLD_AVG_DOSE}`);
+  } else if (E_terrestrial_mSv <= 3 * WORLD_AVG_DOSE) {
+    tier = "AMBER";
+    rationale.push(`${E_terrestrial_mSv.toFixed(2)} 1-3x avg`);
+  } else {
+    tier = "RED";
+    rationale.push(`${E_terrestrial_mSv.toFixed(2)} > 3x avg`);
   }
 
-  if (gammaRate != null) {
-    if (gammaRate >= RISK.gamma.amber) { tier = "RED"; reasons.push(`Gamma rate ${gammaRate.toFixed(0)} nGy/h ≥ ${RISK.gamma.amber}`); }
-    else if (gammaRate >= RISK.gamma.green) { if (tier === "GREEN") tier = "AMBER"; reasons.push(`Gamma rate ${gammaRate.toFixed(0)} nGy/h ≥ ${RISK.gamma.green}`); }
+  if (C_Rn != null && C_Rn >= RADON_ACTION_LEVEL) {
+    flags.push(`RADON_ACTION ${C_Rn.toFixed(0)}>=300`);
+    tier = "RED";
+  } else if (C_Rn != null && C_Rn >= RADON_WHO_LEVEL) {
+    flags.push(`RADON_ELEVATED ${C_Rn.toFixed(0)}>=100`);
+    if (tier === "GREEN") tier = "AMBER";
   }
 
-  if (raeq != null) {
-    if (raeq >= RISK.raeq.amber) { tier = "RED"; reasons.push(`Ra-eq ${raeq.toFixed(0)} Bq/kg ≥ ${RISK.raeq.amber}`); }
-    else if (raeq >= RISK.raeq.green) { if (tier === "GREEN") tier = "AMBER"; reasons.push(`Ra-eq ${raeq.toFixed(0)} Bq/kg ≥ ${RISK.raeq.green}`); }
+  if (raeq != null && raeq >= RAEQ_THRESHOLD) {
+    flags.push(`RAEQ_HIGH ${raeq.toFixed(0)}>=370`);
+    if (tier !== "RED") tier = "RED";
   }
 
-  return { tier, reasons, flags };
+  if (gammaRate != null && gammaRate >= GAMMA_RATE_ICRP_SAFE) {
+    flags.push(`GAMMA_HIGH ${gammaRate.toFixed(0)}>=1000`);
+    tier = "RED";
+  }
+
+  return { tier, rationale, flags };
 }
 
 // ── Main entry: polygon dose fingerprint ──
 export interface DoseFingerprint {
-  arms_mSv_yr: { radon: number; thoron: number; gamma: number };
-  total_terrestrial_mSv_yr: number;
-  gamma_rate_nGy_h: number;
-  activities_Bq_kg: { A_Ra226: number; A_Th232: number; A_K40: number };
-  indices: { raeq: number; I_gamma: number; indoor_Rn: number; indoor_Tn: number; ELCR: number };
-  risk: { tier: string; reasons: string[]; flags: string[] };
-  provenance: string[];
-  confidence: number;
   lithology: string;
-  lithology_label: string;
-  lat?: number;
-  lon?: number;
+  lithology_name: string;
+  arms_mSv_yr: { radon: number; thoron: number; gamma: number };
+  activities_Bq_kg: { A_Ra226: number; A_Th232: number; A_K40: number };
+  gamma_rate_nGy_h: number;
+  radon_Bq_m3_est: number;
+  thoron_gas_Bq_m3_est: number;
+  grp: number | null;
+  gtp_thoron_gas: number | null;
+  raeq_Bq_kg: number;
+  i_gamma: number;
+  total_terrestrial_mSv_yr: number;
+  elcr: number;
+  risk: { tier: string; rationale: string[]; flags: string[] };
+  provenance: string[];
 }
 
 export function polygonDoseFingerprint(opts: {
   lithology?: string;
-  dist_fault_m?: number;
-  lineament_density?: number;
   eU_ppm?: number | null;
   eTh_ppm?: number | null;
   K_pct?: number | null;
   C_Rn?: number | null;
   C_Tn?: number | null;
-  permeability?: number | null;
+  occupancy?: number;
+  permeability?: number;
+  dist_fault_m?: number;
+  lineament_density?: number;
   radon_method?: string;
-  lat?: number;
-  lon?: number;
+  thoron_emanation?: number;
 } = {}): DoseFingerprint {
   const {
-    lithology = "world_average_soil",
-    dist_fault_m = 5000,
-    lineament_density = 0,
+    lithology = "Su",
     eU_ppm = null,
     eTh_ppm = null,
     K_pct = null,
     C_Rn = null,
     C_Tn = null,
-    permeability = null,
+    occupancy = 0.2,
+    permeability = 1e-13,
+    dist_fault_m = 1000.0,
+    lineament_density = 0.5,
     radon_method = "eubss",
-    lat,
-    lon,
+    thoron_emanation = THORON_EMANATION_DEFAULT,
   } = opts;
 
-  const act = lithologyToActivities(lithology);
-  let A_Ra = act.A_Ra226, A_Th = act.A_Th232, A_K = act.A_K40;
-  const provenance: string[] = [];
-  const resolved = _resolveLithology(lithology);
+  const prior = lithologyToActivities(lithology) || {};
+  const lf = lithologyFactor(lithology);
+  const sourceNote: string[] = [];
+  const meas = ppmToBqkg(eU_ppm, eTh_ppm, K_pct);
+  const acts: Record<string, number> = { ...prior };
 
-  if (eU_ppm != null) {
-    A_Ra = eU_ppm * EU_TO_RA226;
-    provenance.push(`A_Ra226: measured (eU=${eU_ppm} ppm × ${EU_TO_RA226} = ${A_Ra.toFixed(1)} Bq/kg)`);
-  } else {
-    provenance.push(`A_Ra226: GLiM geology prior (lithology=${resolved})`);
-  }
-  if (eTh_ppm != null) {
-    A_Th = eTh_ppm * ETH_TO_TH232;
-    provenance.push(`A_Th232: measured (eTh=${eTh_ppm} ppm × ${ETH_TO_TH232} = ${A_Th.toFixed(1)} Bq/kg)`);
-  } else {
-    provenance.push(`A_Th232: GLiM geology prior (lithology=${resolved})`);
-  }
-  if (K_pct != null) {
-    A_K = K_pct * K_PCT_TO_K40;
-    provenance.push(`A_K40: measured (K=${K_pct}% × ${K_PCT_TO_K40} = ${A_K.toFixed(1)} Bq/kg)`);
-  } else {
-    provenance.push(`A_K40: GLiM geology prior (lithology=${resolved})`);
+  for (const k of ["A_Ra226", "A_Th232", "A_K40"] as const) {
+    if (meas[k] != null) {
+      acts[k] = meas[k];
+      sourceNote.push(`${k}: measured`);
+    } else if (prior[k] != null) {
+      const src = lithology in GLIM_CODE_NAMES ? `GLiM ${glimName(lithology)}` : lithology;
+      sourceNote.push(`${k}: geology prior (${src})`);
+    }
   }
 
+  const A_Ra = acts.A_Ra226 ?? 35.0;
+  const A_Th = acts.A_Th232 ?? 30.0;
+  const A_K = acts.A_K40 ?? 420.0;
+
+  const eExt = annualExternalDose(A_Ra, A_Th, A_K, occupancy);
   const gammaRate = externalGammaDoseRate(A_Ra, A_Th, A_K);
-  const E_gamma = annualExternalDose(A_Ra, A_Th, A_K);
 
-  let indoorRn: number;
+  let C_Rn_est: number;
+  let grp: number | null = null;
   if (C_Rn != null) {
-    indoorRn = C_Rn;
-    provenance.push(`C_Rn: measured (${C_Rn} Bq/m³)`);
+    C_Rn_est = C_Rn;
+    sourceNote.push("radon: measured");
   } else {
-    indoorRn = indoorRadonFromGeogenic(A_Ra, lithology, dist_fault_m, lineament_density, permeability);
-    provenance.push(`C_Rn: geogenic estimate (GRP model, ${indoorRn.toFixed(1)} Bq/m³)`);
+    grp = geogenicRadonPotential(A_Ra, permeability, dist_fault_m, lineament_density, lf);
+    C_Rn_est = grp * 50.0;
+    sourceNote.push("radon: geogenic GRP");
   }
-  const E_radon = radonInhalationDose(indoorRn, radon_method);
+  const eRn = radonInhalationDose(C_Rn_est, radon_method);
 
-  let indoorTn: number;
+  let C_Tn_gas_est: number;
+  let gtp: number | null = null;
   if (C_Tn != null) {
-    indoorTn = C_Tn;
-    provenance.push(`C_Tn: measured (${C_Tn} Bq/m³)`);
+    C_Tn_gas_est = C_Tn;
+    sourceNote.push("thoron: measured");
   } else {
-    indoorTn = geogenicThoronPotential(A_Th, lithology, permeability) * 1.0;
-    provenance.push(`C_Tn: geogenic estimate (GTP model, ${indoorTn.toFixed(2)} Bq/m³)`);
+    C_Tn_gas_est = geogenicThoronPotential(A_Th, thoron_emanation, THORON_TRANSFER_COEFF, lf);
+    gtp = C_Tn_gas_est;
+    sourceNote.push("thoron: geogenic GTP");
   }
-  const E_thoron = thoronInhalationDose(A_Th, lithology, C_Tn, permeability);
+  const eTn = thoronInhalationDose(C_Tn_gas_est, A_Th, thoron_emanation, THORON_TRANSFER_COEFF, lf);
 
   const raeq = radiumEquivalent(A_Ra, A_Th, A_K);
-  const I_gamma = gammaActivityIndex(A_Ra, A_Th, A_K);
-  const E_total = E_gamma + E_radon + E_thoron;
-  const ELCR = excessLifetimeCancerRisk(E_total);
-  const risk = riskClass(E_total, indoorRn, raeq, gammaRate);
-
-  const totalParams = 4;
-  const measuredParams = [eU_ppm, eTh_ppm, K_pct, C_Rn].filter(p => p != null).length;
-  const confidence = measuredParams > 0 ? Math.round((measuredParams / totalParams) * 100) : 20;
+  const iGamma = gammaActivityIndex(A_Ra, A_Th, A_K);
+  const eTotal = eExt + eRn + eTn;
+  const elcr = excessLifetimeCancerRisk(eTotal);
+  const risk = riskClass(eTotal, C_Rn_est, raeq, gammaRate);
 
   return {
+    lithology,
+    lithology_name: lithology in GLIM_CODE_NAMES ? glimName(lithology) : lithology,
     arms_mSv_yr: {
-      radon: +E_radon.toFixed(4),
-      thoron: +E_thoron.toFixed(4),
-      gamma: +E_gamma.toFixed(4),
+      radon: +eRn.toFixed(4),
+      thoron: +eTn.toFixed(4),
+      gamma: +eExt.toFixed(4),
     },
-    total_terrestrial_mSv_yr: +E_total.toFixed(4),
-    gamma_rate_nGy_h: +gammaRate.toFixed(1),
     activities_Bq_kg: {
       A_Ra226: +A_Ra.toFixed(1),
       A_Th232: +A_Th.toFixed(1),
       A_K40: +A_K.toFixed(1),
     },
-    indices: {
-      raeq: +raeq.toFixed(1),
-      I_gamma: +I_gamma.toFixed(4),
-      indoor_Rn: +indoorRn.toFixed(1),
-      indoor_Tn: +indoorTn.toFixed(2),
-      ELCR: +ELCR.toFixed(6),
-    },
+    gamma_rate_nGy_h: +gammaRate.toFixed(1),
+    radon_Bq_m3_est: +C_Rn_est.toFixed(1),
+    thoron_gas_Bq_m3_est: +C_Tn_gas_est.toFixed(2),
+    grp,
+    gtp_thoron_gas: gtp,
+    raeq_Bq_kg: +raeq.toFixed(1),
+    i_gamma: +iGamma.toFixed(4),
+    total_terrestrial_mSv_yr: +eTotal.toFixed(4),
+    elcr: +elcr.toFixed(6),
     risk,
-    provenance,
-    confidence,
-    lithology: resolved,
-    lithology_label: LITHOLOGY_ACTIVITIES[resolved].label,
-    lat,
-    lon,
+    provenance: sourceNote,
   };
 }

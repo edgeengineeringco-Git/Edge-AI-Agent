@@ -1,4 +1,4 @@
-# Terrestrial Dose Indicator
+# European Terrestrial Dose Indicator
 
 Interactive web GIS for Europe that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at every land point.
 
@@ -7,30 +7,39 @@ Interactive web GIS for Europe that estimates terrestrial radiation dose (radon-
 ```
 terrestrial-dose/
 ├── dose_core/
-│   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
+│   └── dose_calculation_core.py    # SINGLE SOURCE OF TRUTH for dose math
 ├── tests/
-│   └── test_dose_core.py          # 6 validation tests
+│   └── test_dose_core.py           # 6 validation tests (must pass)
+├── ingest/                         # Data ingest fetchers
+│   ├── point_sampler.py            # Sample all layers at lat/lon
+│   ├── data_pipeline.py            # Inventory + provenance
+│   ├── cache.py                    # GeoPackage cache
+│   ├── glim.py                     # GLiM geology fetcher
+│   ├── soilgrids.py                # SoilGrids 250m fetcher
+│   ├── faults.py                   # GEM active faults
+│   └── ...
+├── models/
+│   ├── point_table.py              # Fixed RAW data table schema (45 params)
+│   ├── sample_point.py             # Smart agent analysis (Steps A–H)
+│   ├── european_geology_mosaic.py  # ~120 European geological provinces
+│   └── assemble_factors.py         # Multi-factor dose driver assembly
+├── analysis/
+│   └── short_report.py             # Templated ≤8-line report
 ├── api/
-│   └── main.py                    # FastAPI backend
-├── ingest/                        # Data ingest modules
-│   ├── glim.py                    # GLiM geology
-│   ├── soilgrids.py               # SoilGrids permeability
-│   ├── faults.py                  # GEM faults
-│   ├── sentinel2.py               # Sentinel-2 EO
-│   └── cache.py                   # Cache management
-├── web/
+│   └── main.py                     # FastAPI /dose + /dose/bbox endpoints
+├── web/                            # React + MapLibre frontend
 │   ├── src/
-│   │   ├── dose_core.ts           # TypeScript port of dose formulas
-│   │   ├── lithology.ts           # European geological provinces (~120 regions)
-│   │   ├── analysis.ts            # Templated "Why this dose?" generator
-│   │   ├── Map.tsx                 # MapLibre GL JS satellite map with hover
-│   │   ├── Panel.tsx              # Full analysis card
-│   │   ├── Triangle.tsx           # D3 three-arm dose triangle
-│   │   ├── App.tsx                # Main layout
-│   │   └── styles.css             # Dark theme
+│   │   ├── App.tsx                 # Main layout
+│   │   ├── Map.tsx                 # Satellite map + floating triangle
+│   │   ├── Triangle.tsx            # D3 three-arm dose triangle
+│   │   ├── Panel.tsx               # Right panel: report + bars + indices
+│   │   ├── dose_core.ts            # TypeScript port of dose math
+│   │   ├── lithology.ts            # European geology grid
+│   │   ├── analysis.ts             # Templated why/recommendations
+│   │   ├── api.ts                  # API client (fallback to client-side)
+│   │   └── styles.css              # Dark theme
 │   ├── package.json
 │   └── vite.config.ts
-├── app/                           # Built output (GitHub Pages)
 └── README.md
 ```
 
@@ -51,10 +60,10 @@ terrestrial-dose/
 
 | Layer | Source | Resolution | Role |
 |-------|--------|-----------|------|
-| Lithology | GLiM (Hartmann & Moosdorf 2012) | ~1.5 km | Primary predictor |
-| Soil | SoilGrids 2.0 | 250 m | Permeability, depth |
+| Lithology | GLiM + national surveys (GSI, BGS, BRGM, etc.) | 50–100 m / 1M fallback | Primary predictor |
+| Soil | SoilGrids 2.0 (ISRIC) | 250 m | Permeability, texture |
 | Faults | GEM Global Active Faults | vector | Fault proximity |
-| DEM | EU-DEM / GLO-30 | 25–30 m | Lineament density |
+| DEM | EU-DEM / Copernicus GLO-30 | 25–30 m | Lineament density |
 | Land cover | Corine + Copernicus HRL | 100 m | Shielding factor |
 | Moisture | ESA CCI / SMAP | 1–10 km | Emanation modulation |
 | Climate | ERA5 | ~9–31 km | Seasonal radon factor |
@@ -89,8 +98,8 @@ uvicorn api.main:app --reload --port 8000
 ```
 
 Endpoints:
-- `GET /dose?lat=53.35&lon=-6.26` — full dose fingerprint
-- `GET /dose/bbox?south=48&west=5&north=55&east=15&step=1` — grid for map tiles
+- `GET /dose?lat=53.35&lon=-6.26` — full dose fingerprint + raw table + report
+- `GET /dose/bbox?south=48&west=5&north=55&east=15&step=1` — GeoJSON grid for map tiles
 - `GET /health` — health check
 
 ## Running the Frontend

@@ -9,10 +9,11 @@ import maplibregl from "maplibre-gl";
 import type { DoseFingerprint } from "./dose_core";
 import { polygonDoseFingerprint } from "./dose_core";
 import { getLithologyAt } from "./lithology";
+import { analyzeClient, type ClientAnalyzedData } from "./analysis";
 
 interface MapProps {
-  onHover: (data: DoseFingerprint, name: string) => void;
-  onClick: (data: DoseFingerprint, name: string) => void;
+  onHover: (data: ClientAnalyzedData, name: string) => void;
+  onClick: (data: ClientAnalyzedData, name: string) => void;
   flyTo: { lat: number; lon: number; name: string } | null;
 }
 
@@ -24,7 +25,7 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-  const [hoverData, setHoverData] = useState<{ fp: DoseFingerprint; name: string } | null>(null);
+  const [hoverData, setHoverData] = useState<{ data: ClientAnalyzedData; name: string } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildTrianglePath = (radon: number, thoron: number, gamma: number) => {
@@ -38,6 +39,16 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
     return `M 0 ${rY} L ${tX} ${tY} L ${gX} ${gY} Z`;
   };
 
+  const computeDose = useCallback((lng: number, lat: number) => {
+    const lith = getLithologyAt(lng, lat);
+    if (lith.glim === "water" || lith.glim === "Wa" || lith.glim === "Ice") {
+      return null;
+    }
+    const fp = polygonDoseFingerprint({ lithology: lith.glim, lat, lon: lng });
+    const analyzed = analyzeClient(fp, lat, lng);
+    return { data: analyzed, name: lith.region };
+  }, []);
+
   const handleMove = useCallback((e: maplibregl.MapMouseEvent) => {
     const { lng, lat } = e.lngLat;
     const pixel = e.point;
@@ -45,16 +56,15 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
 
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
-      const lith = getLithologyAt(lng, lat);
-      if (lith.glim === "water" || lith.glim === "Wa" || lith.glim === "Ice") {
+      const result = computeDose(lng, lat);
+      if (!result) {
         setHoverData(null);
         return;
       }
-      const fp = polygonDoseFingerprint({ lithology: lith.glim, lat, lon: lng });
-      setHoverData({ fp, name: lith.region });
-      onHover(fp, lith.region);
+      setHoverData(result);
+      onHover(result.data, result.name);
     }, 80);
-  }, [onHover]);
+  }, [onHover, computeDose]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -95,24 +105,23 @@ export default function MapComponent({ onHover, onClick, flyTo }: MapProps) {
     map.on("mousemove", handleMove);
     map.on("click", (e) => {
       const { lng, lat } = e.lngLat;
-      const lith = getLithologyAt(lng, lat);
-      if (lith.glim === "water" || lith.glim === "Wa" || lith.glim === "Ice") return;
-      const fp = polygonDoseFingerprint({ lithology: lith.glim, lat, lon: lng });
-      onClick(fp, lith.region);
+      const result = computeDose(lng, lat);
+      if (!result) return;
+      onClick(result.data, result.name);
     });
 
     mapInstance.current = map;
     return () => { map.remove(); mapInstance.current = null; };
-  }, [handleMove, onClick]);
+  }, [handleMove, onClick, computeDose]);
 
   useEffect(() => {
     if (!flyTo || !mapInstance.current) return;
     mapInstance.current.flyTo({ center: [flyTo.lon, flyTo.lat], zoom: 14, essential: true });
   }, [flyTo]);
 
-  const arms = hoverData?.fp.arms_mSv_yr;
-  const total = hoverData?.fp.total_terrestrial_mSv_yr || 0;
-  const tier = hoverData?.fp.risk.tier || "GREEN";
+  const arms = hoverData?.data.arms_mSv_yr;
+  const total = hoverData?.data.total_terrestrial_mSv_yr || 0;
+  const tier = hoverData?.data.risk.tier || "GREEN";
   const color = RISK_COLORS[tier] || "#22c55e";
 
   return (

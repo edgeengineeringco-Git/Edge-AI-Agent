@@ -23,9 +23,14 @@ from models.european_geology_mosaic import get_full_lookup, get_cell_m
 from dose_core.dose_calculation_core import (
     lithology_to_activities,
     lithology_factor,
-    _resolve_lithology,
+    glim_name,
+    GLIM_CODE_NAMES,
     LITHOLOGY_ACTIVITIES,
-    RISK,
+    WORLD_AVG_DOSE,
+    RADON_ACTION_LEVEL,
+    RADON_WHO_LEVEL,
+    RAEQ_THRESHOLD,
+    GAMMA_RATE_ICRP_SAFE,
 )
 
 
@@ -393,10 +398,10 @@ def assemble_factors(lon: float, lat: float, month: Optional[int] = None) -> Dic
     # ── 1. LITHOLOGY ──
     geo = get_full_lookup(lon, lat)
     glim = geo["glim"]
-    resolved = _resolve_lithology(glim)
+    resolved = glim if glim in LITHOLOGY_ACTIVITIES else "world_average_soil"
     activities = lithology_to_activities(glim)
     lf = lithology_factor(glim)
-    lith_label = LITHOLOGY_ACTIVITIES[resolved]["label"]
+    lith_label = glim_name(resolved) if resolved in GLIM_CODE_NAMES else resolved
 
     factors.append({
         "id": "lithology",

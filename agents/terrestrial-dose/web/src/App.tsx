@@ -7,7 +7,10 @@
 import { useState, useCallback } from "react";
 import MapComponent from "./Map";
 import Panel from "./Panel";
-import type { DoseFingerprint } from "./dose_core";
+import type { ClientAnalyzedData } from "./analysis";
+import { analyzeClient } from "./analysis";
+import { polygonDoseFingerprint } from "./dose_core";
+import { getLithologyAt } from "./lithology";
 
 const PRESETS = [
   { name: "Dublin", lat: 53.3498, lon: -6.2603 },
@@ -29,7 +32,7 @@ const PRESETS = [
 ];
 
 export default function App() {
-  const [pinnedData, setPinnedData] = useState<DoseFingerprint | null>(null);
+  const [pinnedData, setPinnedData] = useState<ClientAnalyzedData | null>(null);
   const [pinnedName, setPinnedName] = useState("");
   const [panelVisible, setPanelVisible] = useState(false);
   const [flyTo, setFlyTo] = useState<{ lat: number; lon: number; name: string } | null>(null);
@@ -37,7 +40,7 @@ export default function App() {
 
   const handleHover = useCallback(() => {}, []);
 
-  const handleClick = useCallback((data: DoseFingerprint, name: string) => {
+  const handleClick = useCallback((data: ClientAnalyzedData, name: string) => {
     setPinnedData(data);
     setPinnedName(name);
     setPanelVisible(true);
@@ -45,16 +48,12 @@ export default function App() {
 
   const handlePreset = (p: typeof PRESETS[0]) => {
     setFlyTo({ lat: p.lat, lon: p.lon, name: p.name });
-    // Compute dose
-    import("./dose_core").then(({ polygonDoseFingerprint }) => {
-      import("./lithology").then(({ getLithologyAt }) => {
-        const lith = getLithologyAt(p.lon, p.lat);
-        const fp = polygonDoseFingerprint({ lithology: lith.glim, lat: p.lat, lon: p.lon });
-        setPinnedData(fp);
-        setPinnedName(p.name);
-        setPanelVisible(true);
-      });
-    });
+    const lith = getLithologyAt(p.lon, p.lat);
+    const fp = polygonDoseFingerprint({ lithology: lith.glim, lat: p.lat, lon: p.lon });
+    const analyzed = analyzeClient(fp, p.lat, p.lon);
+    setPinnedData(analyzed);
+    setPinnedName(p.name);
+    setPanelVisible(true);
   };
 
   const handleSearch = async () => {

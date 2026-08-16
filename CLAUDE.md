@@ -152,15 +152,18 @@ agents/terrestrial-dose/
 ├── CLAUDE.md
 ├── dose_core/
 │   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
+├── tests/
+│   └── test_dose_core.py          # 6 validation tests
+├── models/
+│   ├── point_table.py             # Fixed raw-data table schema
+│   └── sample_point.py            # sample_raw_data + analyze_point
+├── analysis/
+│   └── short_report.py            # Templated ≤8-line report
 ├── api/
 │   └── main.py                    # FastAPI backend
 ├── ingest/                        # Data ingest (GLiM, SoilGrids, faults, S2)
-├── models/
-│   ├── european_geology_mosaic.py # ~120 European geological provinces
-│   └── assemble_factors.py        # Multi-factor dose driver assembly
 ├── web/                           # React + MapLibre frontend (source only)
-├── tests/
-│   └── test_dose_core.py          # 6 validation tests
+├── app/                           # Built output → public repo
 ├── data/cache/                    # Runtime cache (not committed)
 ├── skills/
 │   └── agent-job-dm → ../../../skills-library/agent-job-dm
