@@ -64,6 +64,16 @@ For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.m
 ### edge-kuth-portal
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
 
+### terrestrial-dose
+Terrestrial Dose Indicator — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
+
+- **Scope:** `agents/terrestrial-dose`
+- **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
+- **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
+- **Skills:** `agent-job-dm` for Telegram notifications
+- **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
+- **Run:** `python3 -m pytest tests/test_dose_core.py -v` or `uvicorn api.main:app --reload --port 8000`
+
 ### edge-smart-video
 EDGE Smart Video Content Agent — produces LinkedIn-ready video content from a topic queue. Generates posts via LLM, produces professional text-first HTML video slideshow with structured slide content, and optionally generates Veo 3.1 AI video clips. Runs Wednesdays at 10:00 AM. Scope: `agents/edge-smart-video`.
 
