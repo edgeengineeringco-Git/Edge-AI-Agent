@@ -1,29 +1,65 @@
-# EDGE K/U/Th Portal Agent
+# Terrestrial Dose Agent
 
-This agent processes gamma-ray spectral analysis jobs (K/U/Th estimation from .spc files).
+Interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point.
 
-## Directory Structure
+## Architecture
 
-- `SYSTEM.md` — Agent identity and instructions
-- `jobs/` — Job task prompts
+```
+terrestrial-dose/
+├── dose_core/
+│   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
+├── tests/
+│   └── test_dose_core.py          # 6 validation tests
+├── api/
+│   └── main.py                    # FastAPI backend
+├── ingest/                        # Data ingest modules
+│   ├── glim.py                    # GLiM geology
+│   ├── soilgrids.py               # SoilGrids permeability
+│   ├── faults.py                  # GEM faults
+│   ├── sentinel2.py               # Sentinel-2 EO
+│   └── cache.py                   # Cache management
+├── models/
+│   ├── european_geology_mosaic.py # ~120 European geological provinces
+│   └── assemble_factors.py        # Multi-factor dose driver assembly
+├── web/
+│   ├── src/
+│   │   ├── dose_core.ts           # TypeScript port of dose formulas
+│   │   ├── lithology.ts           # European geological provinces
+│   │   ├── analysis.ts            # Templated "Why this dose?" generator
+│   │   ├── Map.tsx                # MapLibre GL JS satellite map
+│   │   ├── Panel.tsx              # Full analysis card
+│   │   ├── Triangle.tsx           # D3 three-arm dose triangle
+│   │   └── App.tsx                # Main layout
+│   └── package.json
+├── data/cache/                    # Runtime cache (not committed)
+└── README.md
+```
 
-## Related Files
+## Running
 
-- `edge-kuth-portal/estimate_k_u_th_matrix.py` — Core estimation Python script
-- `edge-kuth-portal/upload-server.mjs` — Node.js multipart upload receiver (Docker container, zero npm deps)
-- `edge-kuth-portal/handle-upload.sh` — Upload handler orchestrator
-- `edge-kuth-portal/workflow-config.json` — Workflow configuration document detailing CLI args, energy calibration, reference lines, ROI integration, PAD specs, composition matrix, spectral unmixing, and processing pipeline steps
-- `docker-compose.custom.yml` — Upload-server service definition (node:22-alpine, port 3001, Traefik at `/edge-kuth/upload-page`)
+```bash
+# Tests
+python3 -m pytest tests/test_dose_core.py -v
 
-## Pipeline Flow
+# API
+pip install fastapi uvicorn
+uvicorn api.main:app --reload --port 8000
 
-1. Client submits form at `https://senanaghdam-ai.github.io/Kuth-tools/` (GitHub Pages)
-2. Form POSTs multipart data to thepopebot's upload server at `/edge-kuth/upload-page`
-3. Upload server saves .spc files and metadata to `edge-kuth-portal/jobs/{job_id}/`
-4. Upload server forwards job metadata to event-handler at `/edge-kuth/upload`
-5. TRIGGERS.json fires the `agents/edge-kuth-portal` agent
-6. Agent runs estimation, sends results via Telegram (agent-job-dm skill)
+# Frontend
+cd web && npm install && npm run dev
+```
 
-## Dependencies
+## API Endpoints
 
-The Python engine requires numpy (`python3 -m pip install numpy`).
+- `GET /dose?lat=53.35&lon=-6.26` — full dose fingerprint
+- `GET /dose/bbox?south=48&west=5&north=55&east=15&step=1` — grid for map tiles
+- `GET /health` — health check
+
+## Dose Standards
+
+| Metric | GREEN | AMBER | RED |
+|--------|-------|-------|-----|
+| Total dose (mSv/yr) | ≤ 2.2 | 2.2–6.6 | > 6.6 |
+| Radon (Bq/m³) | ≤ 100 | 100–300 | ≥ 300 |
+| Gamma rate (nGy/h) | ≤ 59 | 59–1000 | ≥ 1000 |
+| Ra-eq (Bq/kg) | ≤ 370 | 370–740 | ≥ 740 |
