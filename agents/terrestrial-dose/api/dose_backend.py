@@ -381,19 +381,19 @@ def compute_dose(lat: float, lon: float) -> DoseResult:
     A_Ra = A_Th = A_K = None
 
     if eU_ppm is not None:
-        A_Ra = eU_ppm * 12.22
-        # 1 ppm eU = 12.22 Bq/kg Ra-226: UNSCEAR 2000 Annex B Table 2
-        derivation["Ra226_Bq_kg"] = f"eU({eU_ppm:.1f})*12.22 = {A_Ra:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
+        A_Ra = eU_ppm * EQUIVALENT_URANIUM_TO_RA226
+        # 1 ppm eU = {EQUIVALENT_URANIUM_TO_RA226} Bq/kg Ra-226: UNSCEAR 2000 Annex B Table 1
+        derivation["Ra226_Bq_kg"] = f"eU({eU_ppm:.1f})*{EQUIVALENT_URANIUM_TO_RA226} = {A_Ra:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 1]"
 
     if eTh_ppm is not None:
-        A_Th = eTh_ppm * 4.06
-        # 1 ppm eTh = 4.06 Bq/kg Th-232: UNSCEAR 2000 Annex B Table 2
-        derivation["Th232_Bq_kg"] = f"eTh({eTh_ppm:.1f})*4.06 = {A_Th:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
+        A_Th = eTh_ppm * EQUIVALENT_THORIUM_TO_TH232
+        # 1 ppm eTh = {EQUIVALENT_THORIUM_TO_TH232} Bq/kg Th-232: UNSCEAR 2000 Annex B Table 1
+        derivation["Th232_Bq_kg"] = f"eTh({eTh_ppm:.1f})*{EQUIVALENT_THORIUM_TO_TH232} = {A_Th:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 1]"
 
     if k_pct is not None:
-        A_K = k_pct * 313
-        # 1% K = 313 Bq/kg K-40: UNSCEAR 2000 Annex B Table 2
-        derivation["K40_Bq_kg"] = f"K({k_pct:.2f})*313 = {A_K:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 2]"
+        A_K = k_pct * POTASSIUM_PCT_TO_K40
+        # 1% K = {POTASSIUM_PCT_TO_K40} Bq/kg K-40: UNSCEAR 2000 Annex B Table 1
+        derivation["K40_Bq_kg"] = f"K({k_pct:.2f})*{POTASSIUM_PCT_TO_K40} = {A_K:.1f} Bq/kg [UNSCEAR 2000 Annex B Table 1]"
 
     # ── 3. Gamma dose rate ──────────────────────────────────────────────────
 
@@ -405,7 +405,9 @@ def compute_dose(lat: float, lon: float) -> DoseResult:
                        DCC_GAMMA_NGY_H_PER_BQ_KG["Th232"] * A_Th +
                        DCC_GAMMA_NGY_H_PER_BQ_KG["K40"] * A_K)
         derivation["gamma_rate_nGy_h"] = (
-            f"A_Ra({A_Ra:.1f})*0.462 + A_Th({A_Th:.1f})*0.604 + A_K({A_K:.1f})*0.0417 = "
+            f"A_Ra({A_Ra:.1f})*{DCC_GAMMA_NGY_H_PER_BQ_KG['Ra226']} + "
+            f"A_Th({A_Th:.1f})*{DCC_GAMMA_NGY_H_PER_BQ_KG['Th232']} + "
+            f"A_K({A_K:.1f})*{DCC_GAMMA_NGY_H_PER_BQ_KG['K40']} = "
             f"{gamma_nGy_h:.1f} nGy/h [UNSCEAR 2000 Annex B Table 13]"
         )
         gamma_mSv_yr = gamma_nGy_h * GAMMA_NGY_H_TO_MSV_YR
@@ -422,7 +424,7 @@ def compute_dose(lat: float, lon: float) -> DoseResult:
     if radon_raw is not None:
         radon_mSv_yr = radon_raw * RADON_DCC_MSV_PER_BQ_M3_YR
         derivation["radon_mSv_yr"] = (
-            f"radon({radon_raw:.0f})*0.009 = "
+            f"radon({radon_raw:.0f} Bq/m3) * DCC({RADON_DCC_MSV_PER_BQ_M3_YR}) = "
             f"{radon_mSv_yr:.4f} mSv/yr [UNSCEAR 2006 Annex E]"
         )
 
@@ -432,8 +434,8 @@ def compute_dose(lat: float, lon: float) -> DoseResult:
     if radon_mSv_yr is not None:
         thoron_mSv_yr = radon_mSv_yr * THORON_FRACTION_OF_RADON
         derivation["thoron_mSv_yr"] = (
-            f"radon_dose({radon_mSv_yr:.4f})*0.10 = "
-            f"{thoron_mSv_yr:.4f} mSv/yr [UNSCEAR 2006 Annex E, Tn=10% of Rn]"
+            f"radon_dose({radon_mSv_yr:.4f}) * Tn_Rn_ratio({THORON_FRACTION_OF_RADON}) = "
+            f"{thoron_mSv_yr:.4f} mSv/yr [UNSCEAR 2006 Annex E, Tn={THORON_FRACTION_OF_RADON*100:.0f}% of Rn]"
         )
 
     # ── 6. Total dose ───────────────────────────────────────────────────────
@@ -457,9 +459,9 @@ def compute_dose(lat: float, lon: float) -> DoseResult:
 
     raeq = None
     if A_Ra is not None and A_Th is not None and A_K is not None:
-        raeq = A_Ra + 1.43 * A_Th + 0.077 * A_K
+        raeq = A_Ra + RAEQ_COEFF_TH * A_Th + RAEQ_COEFF_K * A_K
         derivation["raeq_Bq_kg"] = (
-            f"Ra({A_Ra:.1f}) + 1.43*Th({A_Th:.1f}) + 0.077*K({A_K:.1f}) = "
+            f"Ra({A_Ra:.1f}) + {RAEQ_COEFF_TH}*Th({A_Th:.1f}) + {RAEQ_COEFF_K}*K({A_K:.1f}) = "
             f"{raeq:.0f} Bq/kg [UNSCEAR 2000 Annex B Eq.3]"
         )
 
@@ -604,8 +606,8 @@ def dose_endpoint(
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
 ):
-    if not (51.4 <= lat <= 55.4 and -10.6 <= lon <= -5.3):
-        raise HTTPException(400, "Coordinates outside Ireland (51.4-55.4N, 10.6-5.3W)")
+    if not (IRELAND_LAT_MIN <= lat <= IRELAND_LAT_MAX and IRELAND_LON_MIN <= lon <= IRELAND_LON_MAX):
+        raise HTTPException(400, f"Coordinates outside Ireland ({IRELAND_LAT_MIN}–{IRELAND_LAT_MAX}°N, {IRELAND_LON_MIN}–{IRELAND_LON_MAX}°W)")
 
     cache_key = (round(lat, 3), round(lon, 3))
     if cache_key in _DOSE_CACHE:
@@ -622,10 +624,10 @@ def dose_endpoint(
 
 @app.get("/dose/bbox")
 def dose_bbox(
-    lat_min: float = Query(..., ge=51.4, le=55.4),
-    lat_max: float = Query(..., ge=51.4, le=55.4),
-    lon_min: float = Query(..., ge=-10.6, le=-5.3),
-    lon_max: float = Query(..., ge=-10.6, le=-5.3),
+    lat_min: float = Query(..., ge=IRELAND_LAT_MIN, le=IRELAND_LAT_MAX),
+    lat_max: float = Query(..., ge=IRELAND_LAT_MIN, le=IRELAND_LAT_MAX),
+    lon_min: float = Query(..., ge=IRELAND_LON_MIN, le=IRELAND_LON_MAX),
+    lon_max: float = Query(..., ge=IRELAND_LON_MIN, le=IRELAND_LON_MAX),
     step_km: float = Query(5.0, ge=1, le=20),
 ):
     if lat_min >= lat_max or lon_min >= lon_max:

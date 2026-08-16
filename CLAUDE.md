@@ -139,7 +139,7 @@ agents/edge-kuth-portal/
 
 ### terrestrial-dose
 
-**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant. v4.0 — backend API with real raster data.
+**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant. v5.0 — complete rebuild per spec.
 
 - **Scope:** `agents/terrestrial-dose`
 - **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
@@ -147,17 +147,21 @@ agents/edge-kuth-portal/
 - **Live:** https://edgeengineeringco-git.github.io/edge-ai-agent-site/irish-dose.html
 
 **Architecture:**
-- **Backend** (`api/dose_backend.py`): FastAPI with real GeoTIFF raster loading
+- **Backend** (`api/dose_backend.py`, 657 lines): FastAPI with real GeoTIFF raster loading
   - RasterLayer class for sampling bedrock, Tellus K/U/Th, EPA radon, Teagasc soils
-  - Falls back to lithology priors when rasters missing
-  - UNSCEAR 2024 dose conversion coefficients
-  - TTLCache for computed results
-- **Frontend** (`irish-dose-standalone.html`): MapLibre + backend API
-  - WMS overlays for map display (7 layers, toggleable)
-  - Bottom panel: data sources + dose summary
-  - Confidence meter with provenance trail
+  - Named constants for all physical values (UNSCEAR/ICRP cited)
+  - Derivation strings for every computed number
+  - TTLCache for computed responses
+  - Honest missing-data handling (null, not guesses)
+- **Frontend** (`irish-dose-standalone.html`, 635 lines): Two-pane layout
+  - MapLibre satellite basemap + Bing/Streets toggle
+  - Cursor triangle (SVG) with proportional arms
+  - Hover interaction (100ms debounce) → real API calls
+  - Click-to-pin, risk choropleth overlay, search bar
+  - Report: fingerprint triangle, factors table, confidence meter
+  - Data source badges, provenance footer, derivation panel
 
-**Data sources (real rasters):**
+**Data sources (real rasters, all optional):**
 - GSI Bedrock 1:100k → lithology backbone
 - Tellus radiometric K/U/Th → measured activities
 - EPA Radon Risk → radon zone validation
