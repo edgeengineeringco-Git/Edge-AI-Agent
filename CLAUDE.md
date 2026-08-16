@@ -73,7 +73,7 @@ agents/
 | Agent | Purpose | Directory |
 |-------|---------|----------|
 | `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
-| `terrestrial-dose` | Irish Terrestrial Dose Indicator — Ireland-only, measurement-grade (FastAPI + React) | `agents/terrestrial-dose/` |
+| `terrestrial-dose` | Irish Terrestrial Dose Indicator — Ireland-only, real WMS data sources (FastAPI + React) | `agents/terrestrial-dose/` |
 | `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
@@ -139,7 +139,7 @@ agents/edge-kuth-portal/
 
 ### terrestrial-dose
 
-**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant.
+**Irish Terrestrial Dose Indicator** — commercial-grade interactive web application estimating terrestrial radiation dose (radon, thoron, gamma) for every point in Ireland at 100m resolution. Built for MDPI Air journal special issue "Radon in the Environment". EU BSS 2013/59/Euratom compliant. v3.0 — real WMS data sources.
 
 - **Scope:** `agents/terrestrial-dose`
 - **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
@@ -148,17 +148,23 @@ agents/edge-kuth-portal/
 - **Live:** https://edgeengineeringco-git.github.io/edge-ai-agent-site/irish-dose.html
 
 **Key features:**
-- Two-pane layout: satellite map (60%) + report panel (40%)
-- Floating SVG dose triangle (Rn/Tn/γ at 120°) follows cursor
-- Hover 100ms debounce → live dose computation
-- Tellus airborne radiometric (K/U/Th) where available — measurement grade
-- EPA radon risk map validation (1km grid)
-- GSI Bedrock 1:100k lithology backbone (100m)
-- Teagasc soil properties for permeability
+- Real WMS GetFeatureInfo queries (not hardcoded data)
+- 21 data sources listed with status (WMS connected / unavailable / download only)
+- Layer toggle panel for WMS overlays
+- Bottom panel: data source table (left) + dose summary (right)
+- Dose calculated from actual GSI/EPA/Teagasc WMS responses
 - Irish 200 Bq/m³ radon action level (stricter than EU 300)
 - Risk classification: GREEN/AMBER/RED per EU BSS
-- Confidence meter with provenance trail
-- Templated ≤8-line report (no LLM free text)
+- Short report (8 templated lines with actual data provenance)
+
+**WMS Data Sources (7 active):**
+1. GSI Bedrock 1:100k → lithology backbone
+2. GSI Quaternary → cover deposits
+3. GSI Groundwater → aquifer overlay
+4. GSI Geochemistry (Tellus) → trace elements
+5. GSI Faults → geological lines
+6. EPA Radon Risk → radon zone validation
+7. Teagasc Soils → soil type, drainage
 
 ```
 agents/terrestrial-dose/

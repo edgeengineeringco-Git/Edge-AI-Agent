@@ -25,7 +25,7 @@ agents/terrestrial-dose/
 │   └── App.tsx                    # Two-pane layout
 ├── tests/
 │   └── test_dose_core.py          # 6 validation tests
-├── irish-dose-standalone.html     # Self-contained HTML for public repo
+├── irish-dose-standalone.html     # Self-contained HTML (deployed)
 ├── Dockerfile
 ├── requirements.txt
 ├── .env.example
@@ -49,14 +49,35 @@ agents/terrestrial-dose/
 - AMBER: 2.2–6.6 mSv/yr (1–3× average)
 - RED: > 6.6 mSv/yr OR radon ≥ 200 Bq/m³ OR Ra-eq ≥ 370 OR gamma ≥ 1000 nGy/h
 
-## Data Layers
-| Layer | Source | Resolution | Role |
-|-------|--------|-----------|------|
-| Bedrock geology | GSI Bedrock 1:100k ITM | 100m | Lithology backbone |
-| Tellus radiometric | GSI Tellus (K/U/Th) | ~200m | Measured activities |
-| EPA radon risk map | EPA Ireland | 1km grid | Predicted radon validation |
-| Teagasc soil system | Teagasc Irish SIS | mapped | Soil class, permeability |
-| GSI faults | GSI structural | vector | Radon migration pathways |
+## Data Sources (21 total)
+
+### WMS Connected (6 active)
+| # | Source | WMS Endpoint | Role |
+|---|--------|--------------|------|
+| 1 | GSI Bedrock 1:100k | gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer | Lithology backbone |
+| 2 | GSI Quaternary | gsi.geodata.gov.ie/server/services/Quaternary/.../WMSServer | Cover deposits |
+| 3 | GSI Groundwater | gsi.geodata.gov.ie/server/services/Groundwater/.../WMSServer | Aquifer overlay |
+| 4 | GSI Geochemistry | gsi.geodata.gov.ie/server/services/Geochemistry/.../WMSServer | Stream sediment trace elements |
+| 6 | GSI Faults | gsi.geodata.gov.ie/server/services/Bedrock/.../WMSServer | Geological lines overlay |
+| 7 | EPA Radon Risk | gis.epa.ie/geoserver/EPA/wms | Radon risk zone |
+| 9 | Teagasc Soils | gis.epa.ie/geoserver/EPA/wms | Soil type, drainage |
+
+### WMS Unavailable (3)
+| # | Source | Reason |
+|---|--------|--------|
+| 5 | GSI Geophysics (Tellus K/U/Th) | Service returning 499 |
+| 8 | EPA Radiation Monitoring | No public WMS endpoint |
+| 10-15 | Copernicus/NOAA/ISRIC | Need instance IDs or proxy |
+
+### Download Only (6)
+| # | Source | Format |
+|---|--------|--------|
+| 16 | ERA5 | NetCDF/GRIB (cdsapi) |
+| 17 | ESA CCI Soil Moisture | NetCDF |
+| 18 | WGM Gravity (BGI) | GeoTIFF |
+| 19 | Eurostat GEOSTAT | CSV/GeoTIFF |
+| 20 | GEM Active Faults | Shapefile/GeoJSON |
+| 21 | Copernicus GLO-30 DEM | GeoTIFF |
 
 ## Standalone HTML
 The file `irish-dose-standalone.html` is deployed to:
