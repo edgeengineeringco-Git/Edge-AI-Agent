@@ -73,7 +73,6 @@ agents/
 | Agent | Purpose | Directory |
 |-------|---------|----------|
 | `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
-| `terrestrial-dose` | Terrestrial radiation dose GIS (FastAPI + React) | `agents/terrestrial-dose/` |
 | `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
@@ -81,8 +80,7 @@ agents/
 
 ### What NOT to Do
 
-- ❌ Add terrestrial-dose code to edge-kuth-portal
-- ❌ Add edge-kuth-portal code to terrestrial-dose
+- ❌ Add unrelated agent code to another agent's directory
 - ❌ Mix unrelated agent code in the same directory
 - ❌ Create agents without their own SYSTEM.md and CLAUDE.md
 
@@ -135,37 +133,6 @@ agents/edge-kuth-portal/
 │   └── edge-kuth-analysis → ../../../skills-library/edge-kuth-analysis
 └── jobs/
     └── process-spectra.md
-```
-
-### terrestrial-dose
-
-**Terrestrial Dose Indicator** — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
-
-- **Scope:** `agents/terrestrial-dose`
-- **System prompt:** `agents/terrestrial-dose/SYSTEM.md`
-- **Jobs:** `agents/terrestrial-dose/jobs/process-dose.md`
-- **Source:** https://github.com/edgeengineeringco-Git/edge-ai-agent-site/tree/main/terrestrial-dose
-
-```
-agents/terrestrial-dose/
-├── SYSTEM.md
-├── CLAUDE.md
-├── dose_core/
-│   └── dose_calculation_core.py   # Core dose formulas (DO NOT MODIFY)
-├── api/
-│   └── main.py                    # FastAPI backend
-├── ingest/                        # Data ingest (GLiM, SoilGrids, faults, S2)
-├── models/
-│   ├── european_geology_mosaic.py # ~120 European geological provinces
-│   └── assemble_factors.py        # Multi-factor dose driver assembly
-├── web/                           # React + MapLibre frontend (source only)
-├── tests/
-│   └── test_dose_core.py          # 6 validation tests
-├── data/cache/                    # Runtime cache (not committed)
-├── skills/
-│   └── agent-job-dm → ../../../skills-library/agent-job-dm
-└── jobs/
-    └── process-dose.md
 ```
 
 ### edge-smart-video
