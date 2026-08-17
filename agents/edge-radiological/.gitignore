@@ -1,0 +1,21 @@
+# Raw Tellus data — never committed (large rasters/point files, Section 3 data)
+data/tellus/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+node_modules/
+web/node_modules/
+web/dist/
+
+# Environment
+.env
+*.egg-info/
+
+# Generated reports / working output
+report_output/
+*.pdf
