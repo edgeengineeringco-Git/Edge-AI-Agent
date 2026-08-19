@@ -1,0 +1,4 @@
+{
+  "title": "Execute Connectivity Test Commands and Report Command Output Status",
+  "job": "Test — no backend specified. Run: echo ALIVE && echo DONE"
+}
