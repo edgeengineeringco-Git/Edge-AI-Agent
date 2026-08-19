@@ -19,9 +19,8 @@ Working directory when scoped: `agents/gamma-flight-join/`. Repo root is two lev
 
 - Project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3`
 - Each job = one subfolder named `{job_id}` containing:
-  - the spectrogram (`.txt`), the flight log (`.csv`)
-  - `job-manifest.json` (written by the GAS backend; `status: "pending"`)
-  - after processing: the joined CSV, calibration.txt, summary.json (and manifest set to `done`)
+  - after processing: the joined CSV, calibration.txt, summary.json (only outputs remain)
+  - the spectrogram (`.txt`), the flight log (`.csv`), and `job-manifest.json` are deleted after successful processing
 
 A job is **pending** when its folder has a `job-manifest.json` but no `*_summary.json`.
 
@@ -91,6 +90,16 @@ Outputs: `{project}_joined_gamma_flight.csv`, `{project}_calibration.txt`, `{pro
 for f in "$JOB_DIR/output"/*; do
   bash scripts/drive_utils.sh upload --file "$f" --folder "$FOLDER_ID" | tail -1
 done
+```
+
+### Clean up input files from Drive
+
+Only output files should remain in the Drive job folder. Remove the input files and manifest:
+
+```bash
+bash scripts/drive_utils.sh delete --folder "$FOLDER_ID" --name "$SPECTRO"
+bash scripts/drive_utils.sh delete --folder "$FOLDER_ID" --name "$FLIGHT"
+bash scripts/drive_utils.sh delete --folder "$FOLDER_ID" --name "job-manifest.json"
 ```
 
 ### Notify via Telegram

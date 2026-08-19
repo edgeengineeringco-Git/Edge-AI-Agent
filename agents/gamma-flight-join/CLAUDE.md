@@ -32,6 +32,8 @@ Google's infrastructure (Apps Script + Drive) plus this scheduled agent. `docker
 
 ## Outputs (per job, written into the job's Drive folder)
 
+After processing, **only output files remain** in the Drive job folder. Input files (spectrogram, flight log) and the manifest are deleted after successful processing.
+
 - `{project}_joined_gamma_flight.csv` — one row per spectrum, all channels + SI flight parameters
 - `{project}_calibration.txt` — factory (Cs-check) + best-fit survey calibration
 - `{project}_summary.json` — spectra/flight counts, match rate, calibration coefficients

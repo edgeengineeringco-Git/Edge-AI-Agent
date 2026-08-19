@@ -12,7 +12,7 @@ The portal is **serverless** — no Docker, no long-running server.
 
 1. **Public web form** (`web/index.html`, hosted on GitHub Pages) posts a JSON+base64 payload directly to a **Google Apps Script Web App** (`web/gas-backend.js`).
 2. The Apps Script backend creates a per-job subfolder in the project Drive folder, saves the spectrogram + flight log + a `job-manifest.json` (status `pending`), and notifies Telegram.
-3. This agent runs on a schedule (or manually), scans the Drive folder for pending jobs, downloads each, runs the join, and uploads the results back into the same job folder.
+3. This agent runs on a schedule (or manually), scans the Drive folder for pending jobs, downloads each, runs the join, and uploads the results back into the same job folder. After successful processing, the input files and manifest are deleted from Drive — only output files remain.
 
 When triggered, read `jobs/process-join.md` and execute every step autonomously.
 

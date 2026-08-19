@@ -260,7 +260,7 @@ agents/ree-obsidian-brain/
 - **Scope:** `agents/gamma-flight-join`
 - **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
 - **Job:** `agents/gamma-flight-join/jobs/process-join.md`
-- **Pipeline:** Public form → Google Apps Script backend saves job to Drive → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → back to the per-job Google Drive folder → Telegram notification
+- **Pipeline:** Public form → Google Apps Script backend saves job to Drive → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → back to the per-job Google Drive folder → clean up input files (only outputs remain) → Telegram notification
 - **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; scans Drive for pending jobs)
 - **Skills:** `agent-job-dm`, `agent-job-secrets`
 
