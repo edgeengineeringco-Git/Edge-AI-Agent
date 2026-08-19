@@ -248,54 +248,119 @@ const server = http.createServer(async (req, res) => {
 
   const contentType = req.headers["content-type"] || "";
 
-  // ── JSON POST handler for gamma-join webhook ─────────────────────────
+  // ── Gamma-join multipart form handler (saves to disk, triggers agent) ──
   const urlPath = decodeURIComponent((req.url || "").split("?")[0]);
-  if (urlPath === "/api/gamma-join" && contentType.includes("application/json")) {
+  if (urlPath === "/api/gamma-join/upload") {
+    const boundaryMatch = contentType.match(/boundary=([^;]+)/);
+    if (!boundaryMatch) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "Expected multipart/form-data" }));
+      return;
+    }
     try {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
-      const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+      const buffer = Buffer.concat(chunks);
+      const parts = parseMultipart(buffer, boundaryMatch[1]);
 
-      // Build the agent job description from the webhook payload
-      const jobDesc = `A client submitted a gamma/flight-log join job via the web form. Process IMMEDIATELY.
+      const fields = {};
+      let spectro = null, flight = null;
+      for (const part of parts) {
+        if (part.filename) {
+          const fn = part.filename.toLowerCase();
+          if (fn.match(/\.(txt|spe|dat)$/)) spectro = { filename: part.filename, data: part.body };
+          else if (fn.match(/\.csv$/)) flight = { filename: part.filename, data: part.body };
+        } else if (part.name) {
+          fields[part.name] = part.body.toString("utf-8").trim();
+        }
+      }
 
-Read agents/gamma-flight-join/jobs/process-join.md and execute all steps:
+      // Validate password
+      if (fields.password !== UPLOAD_PASSWORD) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "Invalid access password" }));
+        return;
+      }
+      if (!spectro) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "Missing spectrogram file (.txt)" })); return; }
+      if (!flight) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "Missing flight log (.csv)" })); return; }
 
-job_id=${data.job_id}
-project_name=${data.project_name}
-client_name=${data.client_name || ""}
-email=${data.email || ""}
-time_tolerance=${data.time_tolerance || 1}
-factory_a0=${data.factory_a0 || 0}
-factory_a1=${data.factory_a1 || 0.739863}
-factory_a2=${data.factory_a2 || 0}
-factory_a3=${data.factory_a3 || 0}
-spectrogram_file=${data.spectrogram_file || ""}
-flightlog_file=${data.flightlog_file || ""}
-pending_folder_id=${data.pending_folder_id}
+      // Save to disk (NOT Drive)
+      const ts = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 15);
+      const projectSafe = (fields.project_name || "project").replace(/[^a-zA-Z0-9 _-]/g, "").substring(0, 40).trim().replace(/\s+/g, "_") || "project";
+      const jobId = `${projectSafe}_${ts}`;
+      const jobDir = path.join(JOBS_DIR, jobId);
+      const inputDir = path.join(jobDir, "input");
+      fs.mkdirSync(inputDir, { recursive: true });
 
-The input files are in a temporary _pending Drive folder (pending_folder_id). Download them, run the join, upload ONLY output files to a new job folder, then delete the _pending folder. Do not ask for input.`;
+      fs.writeFileSync(path.join(inputDir, spectro.filename), spectro.data);
+      fs.writeFileSync(path.join(inputDir, flight.filename), flight.data);
 
+      const manifest = {
+        job_id: jobId,
+        project_name: fields.project_name || "project",
+        client_name: fields.client_name || "",
+        email: fields.email || "",
+        time_tolerance: parseFloat(fields.time_tolerance) || 1.0,
+        factory_a0: parseFloat(fields.factory_a0) || 0.0,
+        factory_a1: parseFloat(fields.factory_a1) || 0.739863,
+        factory_a2: parseFloat(fields.factory_a2) || 0.0,
+        factory_a3: parseFloat(fields.factory_a3) || 0.0,
+        spectrogram_file: spectro.filename,
+        flightlog_file: flight.filename,
+        input_dir: inputDir,
+        submitted_utc: new Date().toISOString(),
+        status: "pending",
+      };
+      fs.writeFileSync(path.join(jobDir, "job-manifest.json"), JSON.stringify(manifest, null, 2));
+
+      console.log(`[gamma-join] Job ${jobId}: saved ${spectro.filename} + ${flight.filename} to disk`);
+
+      // Respond to client immediately
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        ok: true,
+        job_id: jobId,
+        message: `Job ${jobId} received. Processing started — you will be notified when ready.`,
+      }));
+
+      // Trigger agent via create-agent-job API
       const createJobUrl = process.env.CREATE_AGENT_JOB_URL
         || `http://${process.env.APP_HOSTNAME || "event-handler"}/api/create-agent-job`;
       const apiKey = process.env.UPLOAD_API_KEY || "";
-      const headers = { "Content-Type": "application/json" };
-      if (apiKey) headers["x-api-key"] = apiKey;
 
-      const response = await fetch(createJobUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          agent_job: jobDesc,
-          scope: "agents/gamma-flight-join",
-        }),
-      });
+      const jobDesc = `A gamma/flight-log join job was submitted. Files are saved to disk — do NOT upload inputs to Drive.
 
-      const result = await response.json().catch(() => ({}));
-      console.log(`[gamma-join] Agent job created: ${response.status} — ${data.job_id}`);
+Read agents/gamma-flight-join/jobs/process-join.md and execute all steps:
 
-      res.writeHead(response.ok ? 200 : 502, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: response.ok, ...result }));
+job_id=${jobId}
+project_name=${manifest.project_name}
+client_name=${manifest.client_name}
+email=${manifest.email}
+time_tolerance=${manifest.time_tolerance}
+factory_a0=${manifest.factory_a0}
+factory_a1=${manifest.factory_a1}
+factory_a2=${manifest.factory_a2}
+factory_a3=${manifest.factory_a3}
+spectrogram_file=${manifest.spectrogram_file}
+flightlog_file=${manifest.flightlog_file}
+input_dir=${inputDir}
+
+Input files are on disk at input_dir. Process them, then upload ONLY the output files (joined CSV, calibration.txt, summary.json) to a new Google Drive folder. NEVER upload the input files to Drive. Do not ask for input.`;
+
+      try {
+        const h = { "Content-Type": "application/json" };
+        if (apiKey) h["x-api-key"] = apiKey;
+        const resp = await fetch(createJobUrl, {
+          method: "POST",
+          headers: h,
+          body: JSON.stringify({ agent_job: jobDesc, scope: "agents/gamma-flight-join" }),
+        });
+        const r = await resp.json().catch(() => ({}));
+        console.log(`[gamma-join] Agent job: ${resp.status} — ${r.agent_job_id || "ok"}`);
+      } catch (err) {
+        console.error(`[gamma-join] Agent trigger failed: ${err.message}`);
+      }
+
     } catch (err) {
       console.error(`[gamma-join] Error: ${err.message}`);
       res.writeHead(500, { "Content-Type": "application/json" });
