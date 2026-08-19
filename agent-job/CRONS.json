@@ -84,6 +84,6 @@
     "type": "agent",
     "scope": "agents/gamma-flight-join",
     "job": "Scan Google Drive for pending gamma/flight-log join jobs and process them. Read jobs/process-join.md and execute all steps: list pending job folders, download each, run the join, upload results back to the same Drive folder, notify Telegram. Do not ask for input \u2014 execute autonomously.",
-    "enabled": false
+    "enabled": true
   }
 ]
