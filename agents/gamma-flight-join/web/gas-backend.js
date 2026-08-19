@@ -29,7 +29,7 @@ var CONFIG = {
   // thepopebot webhook URL for immediate processing.
   // Set this to your thepopebot server's public URL + /gamma-join/upload
   // e.g. https://bot.edgeengineers.net/gamma-join/upload
-  WEBHOOK_URL: 'https://pbot.edgeengineers.net/gamma-join/upload',
+  WEBHOOK_URL: 'https://pbot.edgeengineers.net/api/gamma-join',
 
   // Shared access password required on the form (change for production).
   ACCESS_PASSWORD: 'Edge12345',

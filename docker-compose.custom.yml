@@ -90,7 +90,7 @@ services:
       - FROM_EMAIL=${FROM_EMAIL:-noreply@edgeengineers.net}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.upload-server.rule=Host(`${APP_HOSTNAME}`) && Path(`/edge-kuth/upload-page`)
+      - traefik.http.routers.upload-server.rule=Host(`${APP_HOSTNAME}`) && (Path(`/edge-kuth/upload-page`) || PathPrefix(`/api/gamma-join`))
       - traefik.http.routers.upload-server.entrypoints=websecure
       - traefik.http.routers.upload-server.tls.certresolver=letsencrypt
       - traefik.http.routers.upload-server.tls.domains[0].main=${SSL_DOMAIN}
