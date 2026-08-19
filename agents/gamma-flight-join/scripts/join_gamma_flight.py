@@ -211,10 +211,17 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
 
     while idx + per_record_header + n_channels <= len(tokens):
         try:
-            ts_ms = int(tokens[idx]); idx += 1
+            ts_ms = int(float(tokens[idx])); idx += 1
             lat = float(tokens[idx]); idx += 1
             lon = float(tokens[idx]); idx += 1
             duration = float(tokens[idx]); idx += 1
+
+            # FORMAT 3 variant: some exporters put the absolute timestamp
+            # in the 4th field (labelled 'duration') and leave ts_ms=0.
+            # If ts_ms is 0 but 'duration' looks like a Unix epoch, swap.
+            if ts_ms == 0 and duration > 1e11:
+                ts_ms = int(duration)
+                duration = 5.0  # default per-record integration (s)
         except (ValueError, IndexError) as exc:
             print(f"[WARN] Stopping delta-spectrum parse at token {idx}: {exc}")
             break
