@@ -30,8 +30,8 @@ var CONFIG = {
   // thepopebot API endpoint for creating agent jobs (same as edge-kuth-portal uses)
   API_URL: 'https://pbot.edgeengineers.net/api/create-agent-job',
 
-  // API key for authentication (must match UPLOAD_API_KEY in .env)
-  API_KEY: 'Edge12345',
+  // API key for authentication (AGENT_JOB_TOKEN from .env)
+  API_KEY: 'tpb_3cb2a23a075a917f69b344f7d9aa34cb2879e05716cdfec027ea06036270961b',
 
   // Shared access password required on the form (change for production).
   ACCESS_PASSWORD: 'Edge12345',
