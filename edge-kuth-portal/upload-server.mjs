@@ -247,6 +247,64 @@ const server = http.createServer(async (req, res) => {
   }
 
   const contentType = req.headers["content-type"] || "";
+
+  // ── JSON POST handler for gamma-join webhook ─────────────────────────
+  const urlPath = decodeURIComponent((req.url || "").split("?")[0]);
+  if (urlPath === "/api/gamma-join" && contentType.includes("application/json")) {
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const data = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+
+      // Build the agent job description from the webhook payload
+      const jobDesc = `A client submitted a gamma/flight-log join job via the web form. Process IMMEDIATELY.
+
+Read agents/gamma-flight-join/jobs/process-join.md and execute all steps:
+
+job_id=${data.job_id}
+project_name=${data.project_name}
+client_name=${data.client_name || ""}
+email=${data.email || ""}
+time_tolerance=${data.time_tolerance || 1}
+factory_a0=${data.factory_a0 || 0}
+factory_a1=${data.factory_a1 || 0.739863}
+factory_a2=${data.factory_a2 || 0}
+factory_a3=${data.factory_a3 || 0}
+spectrogram_file=${data.spectrogram_file || ""}
+flightlog_file=${data.flightlog_file || ""}
+pending_folder_id=${data.pending_folder_id}
+
+The input files are in a temporary _pending Drive folder (pending_folder_id). Download them, run the join, upload ONLY output files to a new job folder, then delete the _pending folder. Do not ask for input.`;
+
+      const createJobUrl = process.env.CREATE_AGENT_JOB_URL
+        || `http://${process.env.APP_HOSTNAME || "event-handler"}/api/create-agent-job`;
+      const apiKey = process.env.UPLOAD_API_KEY || "";
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) headers["x-api-key"] = apiKey;
+
+      const response = await fetch(createJobUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          agent_job: jobDesc,
+          scope: "agents/gamma-flight-join",
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      console.log(`[gamma-join] Agent job created: ${response.status} — ${data.job_id}`);
+
+      res.writeHead(response.ok ? 200 : 502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: response.ok, ...result }));
+    } catch (err) {
+      console.error(`[gamma-join] Error: ${err.message}`);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    }
+    return;
+  }
+
+  // ── Multipart form handler (edge-kuth-portal) ─────────────────────────
   const boundaryMatch = contentType.match(/boundary=([^;]+)/);
   if (!boundaryMatch) {
     res.writeHead(400, { "Content-Type": "application/json" });

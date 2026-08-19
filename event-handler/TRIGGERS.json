@@ -3,7 +3,10 @@
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [
-      { "type": "command", "command": "echo 'github webhook fired'" }
+      {
+        "type": "command",
+        "command": "echo 'github webhook fired'"
+      }
     ],
     "enabled": false
   },
@@ -11,7 +14,10 @@
     "name": "on-webhook-log",
     "watch_path": "/webhook",
     "actions": [
-      { "type": "command", "command": "echo 'webhook received: {{body}}'" }
+      {
+        "type": "command",
+        "command": "echo 'webhook received: {{body}}'"
+      }
     ],
     "enabled": false
   },
@@ -19,7 +25,10 @@
     "name": "review-github-event",
     "watch_path": "/github/webhook",
     "actions": [
-      { "type": "agent", "job": "A GitHub event occurred. Review the payload and summarize what happened:\n{{body}}" }
+      {
+        "type": "agent",
+        "job": "A GitHub event occurred. Review the payload and summarize what happened:\n{{body}}"
+      }
     ],
     "enabled": false
   },
@@ -27,7 +36,10 @@
     "name": "react-to-webhook",
     "watch_path": "/webhook",
     "actions": [
-      { "type": "agent", "job": "A webhook was received. Analyze the payload and decide if any action is needed:\n{{body}}" }
+      {
+        "type": "agent",
+        "job": "A webhook was received. Analyze the payload and decide if any action is needed:\n{{body}}"
+      }
     ],
     "enabled": false
   },
@@ -35,7 +47,14 @@
     "name": "forward-github",
     "watch_path": "/github/webhook",
     "actions": [
-      { "type": "webhook", "url": "https://example.com/hook", "method": "POST", "vars": { "source": "github" } }
+      {
+        "type": "webhook",
+        "url": "https://example.com/hook",
+        "method": "POST",
+        "vars": {
+          "source": "github"
+        }
+      }
     ],
     "enabled": false
   },
@@ -43,7 +62,14 @@
     "name": "forward-webhook",
     "watch_path": "/webhook",
     "actions": [
-      { "type": "webhook", "url": "https://example.com/hook", "method": "POST", "vars": { "source": "webhook" } }
+      {
+        "type": "webhook",
+        "url": "https://example.com/hook",
+        "method": "POST",
+        "vars": {
+          "source": "webhook"
+        }
+      }
     ],
     "enabled": false
   },
@@ -51,7 +77,11 @@
     "name": "review-with-model-override",
     "watch_path": "/github/webhook",
     "actions": [
-      { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_model": "claude-opus-4-7" }
+      {
+        "type": "agent",
+        "job": "Review the GitHub event and summarize what happened:\n{{body}}",
+        "llm_model": "claude-opus-4-7"
+      }
     ],
     "enabled": false
   },
@@ -59,7 +89,11 @@
     "name": "review-with-codex",
     "watch_path": "/github/webhook",
     "actions": [
-      { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "agent_backend": "codex-cli" }
+      {
+        "type": "agent",
+        "job": "Review the GitHub event and summarize what happened:\n{{body}}",
+        "agent_backend": "codex-cli"
+      }
     ],
     "enabled": false
   },
@@ -67,7 +101,11 @@
     "name": "scoped-webhook-agent",
     "watch_path": "/webhook",
     "actions": [
-      { "type": "agent", "job": "A webhook was received. Read jobs/handle-webhook.md and complete it using the payload:\n{{body}}", "scope": "agents/my-agent" }
+      {
+        "type": "agent",
+        "job": "A webhook was received. Read jobs/handle-webhook.md and complete it using the payload:\n{{body}}",
+        "scope": "agents/my-agent"
+      }
     ],
     "enabled": false
   },
@@ -75,7 +113,13 @@
     "name": "edge-kuth-upload-notification",
     "watch_path": "/edge-kuth/upload",
     "actions": [
-      { "type": "agent", "job": "A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:\n\njob_id={{body.job_id}}\nclient_name={{body.client_name}}\nemail={{body.email}}\nproject={{body.project}}\nroi_half_width={{body.roi_half_width}}\nnormalize_live_time={{body.normalize_live_time}}\nmeasurement_id_column={{body.measurement_id_column}}\nspectra_files={{body.spectra_files}}\ndose_csv_file={{body.dose_csv_file}}\n\nThe .spc files are already saved to edge-kuth-portal/jobs/{{body.job_id}}/spectra/ by the upload server. Do not ask for input — execute all steps autonomously.", "scope": "agents/edge-kuth-portal", "agent_backend": "claude-code", "llm_model": "deepseek-chat" }
+      {
+        "type": "agent",
+        "job": "A client submitted a form to the EDGE K/U/Th Portal. Process the upload immediately. Read jobs/process-spectra.md and execute all steps using the webhook payload:\n\njob_id={{body.job_id}}\nclient_name={{body.client_name}}\nemail={{body.email}}\nproject={{body.project}}\nroi_half_width={{body.roi_half_width}}\nnormalize_live_time={{body.normalize_live_time}}\nmeasurement_id_column={{body.measurement_id_column}}\nspectra_files={{body.spectra_files}}\ndose_csv_file={{body.dose_csv_file}}\n\nThe .spc files are already saved to edge-kuth-portal/jobs/{{body.job_id}}/spectra/ by the upload server. Do not ask for input \u2014 execute all steps autonomously.",
+        "scope": "agents/edge-kuth-portal",
+        "agent_backend": "claude-code",
+        "llm_model": "deepseek-chat"
+      }
     ],
     "enabled": true
   },
@@ -85,10 +129,10 @@
     "actions": [
       {
         "type": "agent",
-        "job": "A client submitted a gamma/flight-log join job via the web form. Process IMMEDIATELY — no batch delay.\n\nRead jobs/process-join.md and execute all steps using these parameters:\n\njob_id={{body.job_id}}\nproject_name={{body.project_name}}\nclient_name={{body.client_name}}\nemail={{body.email}}\ntime_tolerance={{body.time_tolerance}}\nfactory_a0={{body.factory_a0}}\nfactory_a1={{body.factory_a1}}\nfactory_a2={{body.factory_a2}}\nfactory_a3={{body.factory_a3}}\nspectrogram_file={{body.spectrogram_file}}\nflightlog_file={{body.flightlog_file}}\npending_folder_id={{body.pending_folder_id}}\n\nThe input files are in a temporary _pending Drive folder (pending_folder_id). Download them, run the join, upload ONLY the output files (joined CSV, calibration.txt, summary.json) to a new job folder in the main project Drive, then delete the entire _pending folder. Do not ask for input — execute all steps autonomously.",
+        "job": "A client submitted a gamma/flight-log join job via the web form. Process IMMEDIATELY \u2014 no batch delay.\n\nRead jobs/process-join.md and execute all steps using these parameters:\n\njob_id={{body.job_id}}\nproject_name={{body.project_name}}\nclient_name={{body.client_name}}\nemail={{body.email}}\ntime_tolerance={{body.time_tolerance}}\nfactory_a0={{body.factory_a0}}\nfactory_a1={{body.factory_a1}}\nfactory_a2={{body.factory_a2}}\nfactory_a3={{body.factory_a3}}\nspectrogram_file={{body.spectrogram_file}}\nflightlog_file={{body.flightlog_file}}\npending_folder_id={{body.pending_folder_id}}\n\nThe input files are in a temporary _pending Drive folder (pending_folder_id). Download them, run the join, upload ONLY the output files (joined CSV, calibration.txt, summary.json) to a new job folder in the main project Drive, then delete the entire _pending folder. Do not ask for input \u2014 execute all steps autonomously.",
         "scope": "agents/gamma-flight-join"
       }
     ],
-    "enabled": true
+    "enabled": false
   }
 ]
