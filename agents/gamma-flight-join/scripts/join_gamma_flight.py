@@ -658,8 +658,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="Output CSV filename (default: joined_gamma_flight.csv).")
     parser.add_argument("--project-name", type=str, default="project",
                         help="Short name for the project (used in output filenames).")
-    parser.add_argument("--time-tolerance", type=float, default=5.0,
-                        help="Max time difference (seconds) for matching (default: 5).")
+    parser.add_argument("--time-tolerance", type=float, default=1.0,
+                        help="Max time difference (seconds) for matching (default: 1).")
     parser.add_argument("--output-dir", type=str, default=".",
                         help="Directory for output files.")
     parser.add_argument("--factory-a0", type=float, default=0.0, help="Factory offset a0 (keV).")

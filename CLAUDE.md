@@ -260,8 +260,8 @@ agents/ree-obsidian-brain/
 - **Scope:** `agents/gamma-flight-join`
 - **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
 - **Job:** `agents/gamma-flight-join/jobs/process-join.md`
-- **Pipeline:** Upload (spectrogram + flight log) → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → per-job Google Drive folder → Telegram notification
-- **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; portal triggers jobs immediately)
+- **Pipeline:** Public form → Google Apps Script backend saves job to Drive → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → back to the per-job Google Drive folder → Telegram notification
+- **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; scans Drive for pending jobs)
 - **Skills:** `agent-job-dm`, `agent-job-secrets`
 
 ```
@@ -272,10 +272,10 @@ agents/gamma-flight-join/
 │   └── process-join.md
 ├── scripts/
 │   ├── join_gamma_flight.py   # Core join + calibration engine (numpy/pandas/scipy)
-│   ├── drive_utils.sh         # Google Drive OAuth helper (per-job folder + upload)
-│   └── upload-server.mjs      # Zero-dependency Node.js multipart upload receiver
+│   └── drive_utils.sh         # Google Drive OAuth helper (list-jobs/download/create-folder/upload)
 ├── web/
-│   ├── index.html             # Branded upload form (portal + static-hostable)
+│   ├── gas-backend.js         # Google Apps Script Web App backend (serverless — no Docker)
+│   ├── index.html             # Branded upload form (GitHub Pages)
 │   └── style.css
 ├── input/                     # Optional local drop zone for manual runs
 └── skills/

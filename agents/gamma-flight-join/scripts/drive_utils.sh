@@ -11,6 +11,11 @@
 #       -> prints the new folder id on the last stdout line
 #   drive_utils.sh upload --file <path> --folder <folder_id> [--mime <type>]
 #       -> prints "<file_id> <webViewLink>" on the last stdout line
+#   drive_utils.sh list-jobs [--parent <folder_id>]
+#       -> prints one TSV line per pending job: <folder_id>\t<folder_name>
+#          (a job is pending when its folder has job-manifest.json but no *_summary.json)
+#   drive_utils.sh download --folder <folder_id> --name <filename> --out <path>
+#       -> downloads the named file from the folder to <path>
 #
 # The default parent folder is the project folder supplied by the user:
 #   https://drive.google.com/drive/folders/18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3
@@ -117,12 +122,83 @@ cmd_upload() {
   echo "$fid $link"
 }
 
+cmd_list_jobs() {
+  local parent="$DEFAULT_PARENT_FOLDER_ID"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --parent) parent="$2"; shift 2 ;;
+      *) die "Unknown arg: $1" ;;
+    esac
+  done
+  local token; token=$(get_access_token)
+
+  # List subfolders of the project folder.
+  local q resp
+  q=$(python3 -c "import urllib.parse;print(urllib.parse.quote(\"'$parent' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false\"))")
+  resp=$(curl -s -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files?q=$q&fields=files(id,name)&pageSize=1000")
+
+  # For each subfolder, emit a TSV line only if it is pending
+  # (has job-manifest.json but no *_summary.json among its children).
+  printf '%s' "$resp" | python3 -c "
+import sys, json, subprocess, urllib.parse
+token = '''$token'''
+folders = json.load(sys.stdin).get('files', [])
+for fo in folders:
+    fid = fo['id']; name = fo['name']
+    q = urllib.parse.quote(\"'%s' in parents and trashed=false\" % fid)
+    url = 'https://www.googleapis.com/drive/v3/files?q=%s&fields=files(name)&pageSize=1000' % q
+    out = subprocess.run(['curl','-s','-H','Authorization: Bearer '+token, url],
+                         capture_output=True, text=True).stdout
+    try:
+        names = [f['name'] for f in json.loads(out).get('files', [])]
+    except Exception:
+        names = []
+    has_manifest = 'job-manifest.json' in names
+    has_summary = any(n.endswith('_summary.json') for n in names)
+    if has_manifest and not has_summary:
+        print('%s\t%s' % (fid, name))
+"
+}
+
+cmd_download() {
+  local folder="" name="" out=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --folder) folder="$2"; shift 2 ;;
+      --name) name="$2"; shift 2 ;;
+      --out) out="$2"; shift 2 ;;
+      *) die "Unknown arg: $1" ;;
+    esac
+  done
+  [[ -n "$folder" ]] || die "--folder is required"
+  [[ -n "$name" ]] || die "--name is required"
+  [[ -n "$out" ]] || die "--out is required"
+
+  local token; token=$(get_access_token)
+  local q resp fid
+  q=$(python3 -c "import urllib.parse;print(urllib.parse.quote(\"'$folder' in parents and name='$name' and trashed=false\"))")
+  resp=$(curl -s -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files?q=$q&fields=files(id,name)")
+  fid=$(printf '%s' "$resp" | python3 -c "import sys,json;fs=json.load(sys.stdin).get('files',[]);print(fs[0]['id'] if fs else '')" 2>/dev/null || echo "")
+  [[ -n "$fid" ]] || die "File '$name' not found in folder $folder. Response: $resp"
+
+  mkdir -p "$(dirname "$out")"
+  curl -s -L -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files/$fid?alt=media" -o "$out"
+  [[ -s "$out" ]] || die "Downloaded file is empty: $out"
+  echo "[OK] Downloaded $name -> $out" >&2
+  echo "$out"
+}
+
 main() {
-  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload} [args]"
+  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload|list-jobs|download} [args]"
   local cmd="$1"; shift
   case "$cmd" in
     create-folder) cmd_create_folder "$@" ;;
     upload) cmd_upload "$@" ;;
+    list-jobs) cmd_list_jobs "$@" ;;
+    download) cmd_download "$@" ;;
     *) die "Unknown command: $cmd" ;;
   esac
 }

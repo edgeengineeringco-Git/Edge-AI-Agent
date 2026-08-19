@@ -2,52 +2,67 @@
 
 This agent time-synchronises airborne gamma spectrograms with Airdata drone flight logs and produces a joined CSV plus dual calibration metadata.
 
+**Architecture: fully serverless — NO Docker, NO server.** The public form posts to a Google Apps Script Web App, which stores each job in Google Drive. This agent scans Drive for pending jobs and processes them.
+
 ## Directory Structure
 
 - `SYSTEM.md` — Agent identity and instructions
 - `CLAUDE.md` — This file (agent-specific context)
-- `jobs/process-join.md` — Immediate processing job prompt
+- `jobs/process-join.md` — Drive-scan processing job prompt
 - `scripts/join_gamma_flight.py` — Core join + calibration engine (numpy/pandas/scipy)
-- `scripts/drive_utils.sh` — Google Drive OAuth helper (per-job folder create + upload)
-- `scripts/upload-server.mjs` — Zero-dependency Node.js multipart upload receiver
-- `web/index.html`, `web/style.css` — Branded upload form (portal + static-hostable)
-- `input/` — Sample inputs / placeholder
+- `scripts/drive_utils.sh` — Google Drive OAuth helper (list-jobs / download / create-folder / upload)
+- `web/gas-backend.js` — Google Apps Script Web App backend (serverless receiver)
+- `web/index.html`, `web/style.css` — Branded upload form (GitHub Pages)
+- `input/` — Optional local drop zone for manual CLI runs
 - `skills/` — `agent-job-dm`, `agent-job-secrets` (symlinks to skills-library)
 
-## Pipeline Flow
+## Pipeline Flow (serverless)
 
-1. Client submits `web/index.html` form → POSTs multipart to the upload server (`/gamma-join/upload-page`).
-2. Upload server saves the spectrogram (.txt, FORMAT 3) + flight log (.csv) to `data/gamma-flight-join/jobs/{job_id}/input/` and writes `webhook-payload.json`.
-3. Upload server calls `create-agent-job`, scoping to `agents/gamma-flight-join`.
-4. Agent reads `jobs/process-join.md`, runs `scripts/join_gamma_flight.py`.
-5. Agent creates a `{job_id}` folder in the project Google Drive folder and uploads all outputs + inputs.
-6. Agent broadcasts a summary via Telegram (`agent-job-dm`).
+1. Client fills `web/index.html` (hosted on GitHub Pages) and selects the two files.
+2. The page encodes both files as base64 and POSTs a JSON payload to the Google Apps Script Web App (`web/gas-backend.js`).
+3. The Apps Script backend checks the access password, creates a per-job subfolder named `{job_id}` in the project Drive folder, saves the spectrogram + flight log + `job-manifest.json` (status `pending`), and notifies Telegram.
+4. This agent (cron `gamma-flight-join-batch`, or manual) runs `drive_utils.sh list-jobs`, downloads each pending job to `/tmp`, runs `join_gamma_flight.py`, and uploads the outputs back into the same Drive folder.
+5. Agent broadcasts a summary via Telegram (`agent-job-dm`).
 
-## Outputs (per job)
+## Why serverless
+
+The user's constraint: do not add or change anything in Docker. So there is no
+`upload-server.mjs` and no `docker-compose.custom.yml` service. Everything runs on
+Google's infrastructure (Apps Script + Drive) plus this scheduled agent. `docker-compose.custom.yml` is left exactly as it was.
+
+## Outputs (per job, written into the job's Drive folder)
 
 - `{project}_joined_gamma_flight.csv` — one row per spectrum, all channels + SI flight parameters
 - `{project}_calibration.txt` — factory (Cs-check) + best-fit survey calibration
 - `{project}_summary.json` — spectra/flight counts, match rate, calibration coefficients
 
+## Deploying the backend (one-time)
+
+1. Open https://script.google.com → New project, paste `web/gas-backend.js`.
+2. Deploy → New deployment → Web app (Execute as: Me, Access: Anyone). Authorize Drive access.
+3. Copy the `/exec` URL into `DEFAULT_ENDPOINT` in `web/index.html` (or pass `?endpoint=`).
+4. Publish `web/index.html` + `web/style.css` to the public Pages repo `edge-ai-agent-site` under `gamma-flight-join/`.
+
 ## Dependencies
 
-Python engine requires `numpy`, `pandas`, `scipy`. The job prompt installs them via
-`pip --user --break-system-packages` (or apt) if missing.
-
-## Deployment notes
-
-- The upload server is optional wiring. To run it as a service, add a container to
-  `docker-compose.custom.yml` (node:22-alpine, command `node /project/agents/gamma-flight-join/scripts/upload-server.mjs`, Traefik path `/gamma-join/upload-page`, port 3002) and, if desired, a TRIGGERS.json entry. Not enabled by default.
-- The web form can also be published to a public/static repo (GitHub Pages); point it at the
-  portal with `?endpoint=https://<host>/gamma-join/upload-page`.
+Python engine requires `numpy`, `pandas`, `scipy` (installed by the job prompt via
+`pip --user --break-system-packages` if missing).
 
 ## Google Drive
 
-- Project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3` (from the user's Drive URL).
-- Auth: `GOOGLE_DRIVE_OAUTH` secret via `agent-job-secrets` (auto-refreshed OAuth).
+- Project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3` (one subfolder per job).
+- Agent auth: `GOOGLE_DRIVE_OAUTH` secret via `agent-job-secrets`.
+- Backend auth: the Apps Script runs under its deploying Google account (independent of the secret).
+
+## Time-match tolerance
+
+Default is **1 s** (suits typical 1–10 Hz Airdata logs, ≈1–5 m position error). It is
+adjustable per job via the form field / `--time-tolerance`. It cannot be 0 (the two device
+clocks never align to the exact millisecond). A near-zero match rate signals a possible
+timezone/clock offset — flag it, don't trust the result.
 
 ## Security
 
-The upload endpoint uses a shared access password (`UPLOAD_PASSWORD`, default `Edge12345`).
-This is a demo-grade control. For commercial use, issue per-client API keys or front the
-endpoint with thepopebot's platform auth.
+The form uses a shared access password (`ACCESS_PASSWORD` in `gas-backend.js`, default
+`Edge12345`). Demo-grade. For commercial use, issue per-client keys or restrict the
+Apps Script deployment access.

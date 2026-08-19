@@ -1,7 +1,8 @@
 # input/
 
-Optional local drop zone for manual/CLI runs. The live portal saves uploads to
-`data/gamma-flight-join/jobs/{job_id}/input/` instead (git-ignored runtime data).
+Optional local drop zone for manual/CLI runs. The live portal stores uploads in
+Google Drive (one subfolder per job) via the serverless Apps Script backend — this
+folder is only for hand-running the engine locally.
 
 ## Manual run example
 
@@ -11,7 +12,7 @@ python3 ../scripts/join_gamma_flight.py \
   --flightlog   flightlog.csv \
   --project-name my_survey \
   --output-dir   ./out \
-  --time-tolerance 5
+  --time-tolerance 1
 ```
 
 ## Expected input formats

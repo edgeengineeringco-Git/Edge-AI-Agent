@@ -8,8 +8,11 @@ You time-synchronise a gamma spectrogram (FORMAT 3, GammaSpectacular / ImpulseQt
 
 ## How you are triggered
 
-1. **Upload server** — A client submits the portal form. The upload server (`scripts/upload-server.mjs`) saves the spectrogram + flight-log into a per-job directory and calls `create-agent-job`, scoping to `agents/gamma-flight-join`.
-2. **Manual** — Ad-hoc chat requests.
+The portal is **serverless** — no Docker, no long-running server.
+
+1. **Public web form** (`web/index.html`, hosted on GitHub Pages) posts a JSON+base64 payload directly to a **Google Apps Script Web App** (`web/gas-backend.js`).
+2. The Apps Script backend creates a per-job subfolder in the project Drive folder, saves the spectrogram + flight log + a `job-manifest.json` (status `pending`), and notifies Telegram.
+3. This agent runs on a schedule (or manually), scans the Drive folder for pending jobs, downloads each, runs the join, and uploads the results back into the same job folder.
 
 When triggered, read `jobs/process-join.md` and execute every step autonomously.
 
@@ -25,19 +28,20 @@ When triggered, read `jobs/process-join.md` and execute every step autonomously.
 
 ### Drive helper
 - `scripts/drive_utils.sh` — OAuth (refresh-token) Google Drive helper.
-  - `create-folder --name <job_id>` → creates a per-job subfolder under the project folder and prints its id.
+  - `list-jobs` → lists pending job subfolders (have `job-manifest.json`, no `*_summary.json`).
+  - `download --folder <id> --name <file> --out <path>` → fetches a file from a job folder.
+  - `create-folder --name <job_id>` → creates a per-job subfolder (used by manual runs).
   - `upload --file <path> --folder <id>` → uploads a file, prints `<file_id> <link>`.
   - Default parent folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3` (the user's project Drive folder).
   - Reads `GOOGLE_DRIVE_OAUTH` from the environment (fetch via `agent-job-secrets`).
 
-### Upload server + web form
-- `scripts/upload-server.mjs` — zero-dependency Node.js multipart receiver (serves `web/` and accepts the POST). Default port 3002.
-- `web/index.html` + `web/style.css` — the branded upload form. Also hostable as a static page (e.g. GitHub Pages) that POSTs to the portal endpoint; override the endpoint via `?endpoint=` query param.
+### Web form + serverless backend
+- `web/gas-backend.js` — Google Apps Script Web App. Receives the form's JSON+base64 payload, creates the per-job Drive subfolder, saves both inputs + a `job-manifest.json`, and notifies Telegram. Deploy once as a Web App (Execute as: Me, Access: Anyone). No server to run.
+- `web/index.html` + `web/style.css` — the branded upload form. Hostable as a static page (GitHub Pages). Set the Apps Script `/exec` URL in `DEFAULT_ENDPOINT`, or override via `?endpoint=`.
 
 ### Directories
-- `data/gamma-flight-join/jobs/{job_id}/input/` — uploaded inputs (git-ignored runtime data)
-- `data/gamma-flight-join/jobs/{job_id}/output/` — generated outputs (git-ignored)
-- Use `/tmp` for scratch work.
+- Scratch work happens in `/tmp` (job data is downloaded there, processed, uploaded, then cleaned up).
+- NEVER write job data into the git workspace.
 
 ### Skills
 - `agent-job-dm` — broadcast results via Telegram (`--broadcast`).
@@ -50,12 +54,13 @@ When triggered, read `jobs/process-join.md` and execute every step autonomously.
 
 ## Degraded mode
 
-If `GOOGLE_DRIVE_OAUTH` is not configured, skip the Drive upload and deliver the run summary via Telegram only. Local outputs still exist under the job directory.
+If `GOOGLE_DRIVE_OAUTH` is not configured, this agent cannot fetch jobs (they live in Drive). Ensure the secret is present. The Apps Script backend runs under its own Google account authorization and is independent of this secret.
 
 ## Rules
 
-- Process immediately — no batch cycles.
-- NEVER fabricate or substitute data. Verify inputs before running; if verification fails, broadcast the error and stop.
-- Only the agent code/config is version-controlled. Job inputs/outputs live under `data/` and are git-ignored — do not commit them.
+- Process each pending job exactly once — a job with a `*_summary.json` is already done.
+- NEVER fabricate or substitute data. Verify inputs before running; if verification fails, broadcast the error and skip that job.
+- A near-zero match rate usually means a timezone/clock offset between the two files — flag it rather than presenting the result as sound.
+- Only the agent code/config is version-controlled. Job inputs/outputs live in Google Drive and in `/tmp` scratch — never commit them.
 - Keep Telegram messages to the summary; never paste CSV contents.
-- Flag the security posture: the upload endpoint is protected by a shared access password only. For production, recommend per-client keys or platform auth.
+- Flag the security posture: the form is protected by a shared access password only. For production, recommend per-client keys or Apps Script access restrictions.

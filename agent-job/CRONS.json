@@ -83,7 +83,7 @@
     "schedule": "0 8 * * 4",
     "type": "agent",
     "scope": "agents/gamma-flight-join",
-    "job": "Process any pending gamma/flight-log join jobs. For each job directory under data/gamma-flight-join/jobs/ that has an input/ pair but no output/, read jobs/process-join.md and execute all steps using its webhook-payload.json. Do not ask for input \u2014 execute autonomously.",
+    "job": "Scan Google Drive for pending gamma/flight-log join jobs and process them. Read jobs/process-join.md and execute all steps: list pending job folders, download each, run the join, upload results back to the same Drive folder, notify Telegram. Do not ask for input \u2014 execute autonomously.",
     "enabled": false
   }
 ]
