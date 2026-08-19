@@ -1,13 +1,14 @@
 /**
- * Gamma / Flight-Log Join Portal — Google Apps Script Backend (v3)
+ * Gamma / Flight-Log Join Portal — Google Apps Script Backend (v4)
  *
  * Serverless receiver for the Gamma/Flight-Log Join upload page.
  * NO Docker, NO server — runs entirely on Google's infrastructure.
  *
- * v3 changes:
- *   - Input files saved to a TEMPORARY _pending folder (DELETED by agent after processing)
- *   - Only processed OUTPUT files persist in Google Drive
- *   - Processing starts IMMEDIATELY via thepopebot webhook trigger
+ * Architecture (same as edge-kuth-portal):
+ *   1. Form posts files as base64 to this GAS backend
+ *   2. GAS saves input files to a TEMPORARY _pending folder in Drive
+ *   3. GAS calls /api/create-agent-job with x-api-key (bypasses auth)
+ *   4. Agent downloads inputs, processes, uploads ONLY outputs, deletes _pending
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * SETUP (one-time, 2 minutes):
@@ -18,17 +19,19 @@
  *      - Who has access: Anyone
  *   4. Authorize when Google asks (needs Drive access)
  *   5. Copy the Web App URL and paste it into DEFAULT_ENDPOINT in index.html
- *   6. Set WEBHOOK_URL below to your thepopebot server URL (e.g. https://bot.example.com/gamma-join/upload)
+ *   6. Set API_KEY below to match your .env UPLOAD_API_KEY
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 var CONFIG = {
-  // Main project Drive folder — ONLY output files go here after processing.
+  // Main project Drive folder — outputs go here, inputs go to _pending (temporary).
   TARGET_FOLDER_ID: '18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3',
 
-  // thepopebot webhook URL for immediate processing.
-  // Set this to your thepopebot server's public URL + /gamma-join/upload
-  WEBHOOK_URL: 'https://pbot.edgeengineers.net/gamma-join/upload',
+  // thepopebot API endpoint for creating agent jobs (same as edge-kuth-portal uses)
+  API_URL: 'https://pbot.edgeengineers.net/api/create-agent-job',
+
+  // API key for authentication (must match UPLOAD_API_KEY in .env)
+  API_KEY: 'Edge12345',
 
   // Shared access password required on the form (change for production).
   ACCESS_PASSWORD: 'Edge12345',
@@ -93,14 +96,11 @@ function processSubmission(data) {
   // ── Save inputs to a TEMPORARY _pending folder (DELETED by agent after processing) ──
   var parentFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
 
-  // Get or create the _pending container folder
   var pendingFolders = parentFolder.getFoldersByName('_pending');
   var pendingContainer = pendingFolders.hasNext() ? pendingFolders.next() : parentFolder.createFolder('_pending');
 
-  // Create per-job temp folder
   var tempFolder = pendingContainer.createFolder(jobId);
 
-  // Save both input files to the temp folder
   var uploaded = [];
   [spectro, flight].forEach(function (f) {
     var bytes = Utilities.base64Decode(f.data);
@@ -109,7 +109,6 @@ function processSubmission(data) {
     uploaded.push({ name: driveFile.getName(), size: bytes.length });
   });
 
-  // Write manifest to the temp folder (agent reads this to know what to process)
   var manifest = {
     job_id: jobId,
     project_name: projectName,
@@ -129,13 +128,13 @@ function processSubmission(data) {
     Utilities.newBlob(JSON.stringify(manifest, null, 2), 'application/json', 'job-manifest.json')
   );
 
-  // ── Trigger thepopebot webhook for IMMEDIATE processing ──
-  var webhookResult = triggerWebhook(jobId, projectName, fields, spectro, flight, tempFolder.getId());
+  // ── Create agent job via /api/create-agent-job (same as edge-kuth-portal) ──
+  var agentResult = createAgentJob(jobId, projectName, fields, spectro.filename, flight.filename, tempFolder.getId());
 
   // ── Telegram notify (fire-and-forget) ──
-  sendTelegram(jobId, projectName, fields, webhookResult.ok);
+  sendTelegram(jobId, projectName, fields, agentResult.ok);
 
-  if (webhookResult.ok) {
+  if (agentResult.ok) {
     return {
       ok: true,
       job_id: jobId,
@@ -147,39 +146,58 @@ function processSubmission(data) {
     return {
       ok: false,
       job_id: jobId,
-      error: 'Webhook trigger failed: ' + webhookResult.error + '. Processing did not start.',
+      error: 'Agent job creation failed: ' + agentResult.error + '.',
     };
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Webhook Trigger
+// Agent Job Creation (same pattern as edge-kuth-portal)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function triggerWebhook(jobId, projectName, fields, spectro, flight, pendingFolderId) {
-  if (!CONFIG.WEBHOOK_URL || CONFIG.WEBHOOK_URL.indexOf('PASTE_YOUR') !== -1) {
-    return { ok: false, error: 'WEBHOOK_URL not configured' };
+function createAgentJob(jobId, projectName, fields, spectroFilename, flightFilename, pendingFolderId) {
+  if (!CONFIG.API_URL) {
+    return { ok: false, error: 'API_URL not configured' };
   }
 
   try {
+    var jobDesc =
+      'A client submitted a gamma/flight-log join job via the web form. Process IMMEDIATELY.\n\n' +
+      'Read jobs/process-join.md and execute all steps using these parameters:\n\n' +
+      'job_id=' + jobId + '\n' +
+      'project_name=' + projectName + '\n' +
+      'client_name=' + (fields.client_name || '') + '\n' +
+      'email=' + (fields.email || '') + '\n' +
+      'time_tolerance=' + (parseFloat(fields.time_tolerance) || 1.0) + '\n' +
+      'factory_a0=' + (parseFloat(fields.factory_a0) || 0.0) + '\n' +
+      'factory_a1=' + (parseFloat(fields.factory_a1) || 0.739863) + '\n' +
+      'factory_a2=' + (parseFloat(fields.factory_a2) || 0.0) + '\n' +
+      'factory_a3=' + (parseFloat(fields.factory_a3) || 0.0) + '\n' +
+      'spectrogram_file=' + spectroFilename + '\n' +
+      'flightlog_file=' + flightFilename + '\n' +
+      'pending_folder_id=' + pendingFolderId + '\n\n' +
+      'The input files are in a temporary _pending Drive folder (pending_folder_id). ' +
+      'Download them, run the join, upload ONLY the output files (joined CSV, calibration.txt, summary.json) ' +
+      'to a new job folder in the main project Drive, then delete the entire _pending folder. ' +
+      'Do not ask for input — execute all steps autonomously.';
+
     var payload = {
-      job_id: jobId,
-      project_name: projectName,
-      client_name: fields.client_name || '',
-      email: fields.email || '',
-      time_tolerance: parseFloat(fields.time_tolerance) || 1.0,
-      factory_a0: parseFloat(fields.factory_a0) || 0.0,
-      factory_a1: parseFloat(fields.factory_a1) || 0.739863,
-      factory_a2: parseFloat(fields.factory_a2) || 0.0,
-      factory_a3: parseFloat(fields.factory_a3) || 0.0,
-      spectrogram_file: spectro.filename,
-      flightlog_file: flight.filename,
-      pending_folder_id: pendingFolderId,
+      agent_job: jobDesc,
+      scope: 'agents/gamma-flight-join',
+      agent_backend: 'claude-code',
+      llm_model: 'deepseek-chat',
     };
 
-    var resp = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, {
+    var headers = {
+      'Content-Type': 'application/json',
+    };
+    if (CONFIG.API_KEY) {
+      headers['x-api-key'] = CONFIG.API_KEY;
+    }
+
+    var resp = UrlFetchApp.fetch(CONFIG.API_URL, {
       method: 'post',
-      contentType: 'application/json',
+      headers: headers,
       payload: JSON.stringify(payload),
       muteHttpExceptions: true,
     });
