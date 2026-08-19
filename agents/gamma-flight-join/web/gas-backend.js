@@ -33,6 +33,9 @@ var CONFIG = {
   // API key for authentication (AGENT_JOB_TOKEN from .env)
   API_KEY: 'tpb_3cb2a23a075a917f69b344f7d9aa34cb2879e05716cdfec027ea06036270961b',
 
+  // Agent's Drive email — GAS shares _pending folders with this account
+  AGENT_DRIVE_EMAIL: 'edgeengineering.co@gmail.com',
+
   // Shared access password required on the form (change for production).
   ACCESS_PASSWORD: 'Edge12345',
 
@@ -100,6 +103,11 @@ function processSubmission(data) {
   var pendingContainer = pendingFolders.hasNext() ? pendingFolders.next() : parentFolder.createFolder('_pending');
 
   var tempFolder = pendingContainer.createFolder(jobId);
+
+  // Share the temp folder with the agent's Drive account so it can download files
+  if (CONFIG.AGENT_DRIVE_EMAIL) {
+    tempFolder.addEditor(CONFIG.AGENT_DRIVE_EMAIL);
+  }
 
   var uploaded = [];
   [spectro, flight].forEach(function (f) {
