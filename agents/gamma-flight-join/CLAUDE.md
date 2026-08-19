@@ -1,40 +1,42 @@
 # Gamma / Flight-Log Join Portal Agent
 
-Time-synchronises airborne gamma spectrograms with Airdata drone flight logs. Produces a joined CSV plus dual calibration metadata.
+Time-synchronises airborne gamma spectrograms with Airdata drone flight logs.
 
-**Architecture: Form → upload server (disk) → agent → Drive (outputs only).**
+**Input files stay on disk — NEVER in Drive. Only processed outputs go to Drive.**
 
-Input files are saved to disk by the upload server. They NEVER touch Google Drive. Only processed output files are uploaded to Drive.
+## Flow
 
-## Directory Structure
+1. Form (`web/index.html`, GitHub Pages) → POST to upload server
+2. Upload server saves files to disk, triggers agent via `create-agent-job`
+3. Agent processes from disk, uploads ONLY outputs to Drive
+4. Telegram notification with results
 
-- `SYSTEM.md` — Agent identity and instructions
+## Files
+
+- `SYSTEM.md` — Agent identity
 - `CLAUDE.md` — This file
-- `jobs/process-join.md` — Processing job prompt
+- `jobs/process-join.md` — Processing job prompt (reads from disk, uploads outputs to Drive)
 - `scripts/join_gamma_flight.py` — Core join + calibration engine
-- `scripts/drive_utils.sh` — Google Drive helper (upload outputs only)
-- `web/index.html`, `web/style.css` — Branded upload form (GitHub Pages)
-- `web/gas-backend.js` — Legacy GAS backend (no longer used for main flow)
-- `skills/` — `agent-job-dm`, `agent-job-secrets`
+- `scripts/drive_utils.sh` — Drive helper (create-folder, upload only)
+- `web/index.html`, `web/style.css` — Upload form (GitHub Pages)
+- `web/gas-backend.js` — Legacy GAS backend (no longer used for new flow)
 
-## Pipeline Flow
+## Upload server route
 
-1. Client fills form at GitHub Pages URL, selects spectrogram + flight log
-2. Form POSTs multipart to upload server (`https://pbot.edgeengineers.net/api/gamma-join/upload`)
-3. Upload server saves input files to disk (`edge-kuth-portal/jobs/{job_id}/input/`)
-4. Upload server triggers agent via `create-agent-job` API
-5. Agent reads files from disk, runs `join_gamma_flight.py`
-6. Agent uploads ONLY outputs to a new Google Drive folder
-7. Agent broadcasts summary via Telegram
+Added to `edge-kuth-portal/upload-server.mjs`:
+- `POST /api/gamma-join/upload` — receives multipart form, saves to disk, triggers agent
 
-**Inputs are NEVER in Drive.** Only outputs (joined CSV, calibration.txt, summary.json).
+Traefik route in `docker-compose.custom.yml`:
+- `PathPrefix(/api/gamma-join)` → upload server
 
-## Deploy
+## Drive layout
 
-1. Merge PR (activates upload server route + Traefik config)
-2. Upload server restarts with new route `/api/gamma-join/upload`
-3. Form at GitHub Pages posts directly to upload server — no GAS needed
+- Project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3`
+- Each job gets a subfolder `{job_id}/` containing ONLY outputs:
+  - `{project}_joined_gamma_flight.csv`
+  - `{project}_calibration.txt`
+  - `{project}_summary.json`
 
-## Dependencies
+## Security
 
-Python: `numpy`, `pandas`, `scipy` (auto-installed if missing).
+Form password: `Edge12345` (checked by upload server).
