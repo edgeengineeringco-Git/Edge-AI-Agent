@@ -192,8 +192,8 @@ function createAgentJob(jobId, projectName, fields, spectroFilename, flightFilen
     var payload = {
       agent_job: jobDesc,
       scope: 'agents/gamma-flight-join',
-      agent_backend: 'pi-coding-agent',
-      // llm_model omitted — use the instance default (configured in thepopebot admin UI)
+      // No agent_backend or llm_model — use the instance defaults
+      // (configured in thepopebot admin UI under CODING_AGENT)
     };
 
     var headers = {
