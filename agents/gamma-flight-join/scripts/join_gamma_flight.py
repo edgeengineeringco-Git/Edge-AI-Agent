@@ -179,7 +179,7 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
         raise ValueError("Spectrogram file truncated: not enough lines for base spectrum")
 
     _base_spectrum = np.fromiter(
-        (int(lines[i].strip()) for i in range(base_start, base_end)),
+        (int(float(lines[i].strip())) for i in range(base_start, base_end)),
         dtype=np.int32,
         count=n_channels,
     )
@@ -223,7 +223,7 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
         if len(channel_vals) < n_channels:
             print("[WARN] Incomplete channel set at end of file; stopping.")
             break
-        channels = np.fromiter((int(v) for v in channel_vals), dtype=np.int32, count=n_channels)
+        channels = np.fromiter((int(float(v)) for v in channel_vals), dtype=np.int32, count=n_channels)
         idx += n_channels
 
         dt_utc = dt.datetime.fromtimestamp(ts_ms / 1000.0, tz=dt.timezone.utc)
@@ -275,8 +275,8 @@ def parse_flight_log(path: Path) -> pd.DataFrame:
 
     df["time_ms"] = df[time_ms_col]
     df["datetime_utc"] = _ensure_datetime_utc(df[datetime_col])
-    df["latitude_drone"] = df[lat_col].astype(float)
-    df["longitude_drone"] = df[lon_col].astype(float)
+    df["latitude_drone"] = pd.to_numeric(df[lat_col], errors='coerce')
+    df["longitude_drone"] = pd.to_numeric(df[lon_col], errors='coerce')
 
     ft_to_m = 0.3048
     for src, dest in [
@@ -288,7 +288,7 @@ def parse_flight_log(path: Path) -> pd.DataFrame:
     ]:
         src_col = col(src)
         if src_col is not None:
-            df[dest] = df[src_col].astype(float) * ft_to_m
+            df[dest] = pd.to_numeric(df[src_col], errors='coerce') * ft_to_m
 
     mph_to_mps = 0.44704
     for src, dest in [
@@ -299,7 +299,7 @@ def parse_flight_log(path: Path) -> pd.DataFrame:
     ]:
         src_col = col(src)
         if src_col is not None:
-            df[dest] = df[src_col].astype(float) * mph_to_mps
+            df[dest] = pd.to_numeric(df[src_col], errors='coerce') * mph_to_mps
 
     for src, dest in [
         ("distance(feet)", "distance_m"),
@@ -307,7 +307,7 @@ def parse_flight_log(path: Path) -> pd.DataFrame:
     ]:
         src_col = col(src)
         if src_col is not None:
-            df[dest] = df[src_col].astype(float) * ft_to_m
+            df[dest] = pd.to_numeric(df[src_col], errors='coerce') * ft_to_m
 
     for name in [
         "satellites",
