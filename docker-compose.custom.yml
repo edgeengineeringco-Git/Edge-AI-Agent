@@ -98,6 +98,28 @@ services:
       - traefik.http.services.upload-server.loadbalancer.server.port=3001
     restart: unless-stopped
 
+  gamma-join-upload-server:
+    image: node:22-alpine
+    container_name: thepopebot-gamma-join-upload-server
+    command: node /project/agents/gamma-flight-join/scripts/upload-server.mjs
+    volumes:
+      - .:/project
+    environment:
+      - PORT=3002
+      - APP_HOSTNAME=event-handler
+      - CREATE_AGENT_JOB_URL=http://event-handler/api/create-agent-job
+      - UPLOAD_API_KEY=${UPLOAD_API_KEY:-}
+      - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:-Edge12345}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gamma-join.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/gamma-join`)
+      - traefik.http.routers.gamma-join.entrypoints=websecure
+      - traefik.http.routers.gamma-join.tls.certresolver=letsencrypt
+      - traefik.http.routers.gamma-join.tls.domains[0].main=${SSL_DOMAIN}
+      - traefik.http.routers.gamma-join.tls.domains[0].sans=*.${SSL_DOMAIN}
+      - traefik.http.services.gamma-join.loadbalancer.server.port=3002
+    restart: unless-stopped
+
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
     command: --config /litellm/main.yaml --port 4000

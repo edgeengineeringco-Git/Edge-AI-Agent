@@ -125,6 +125,22 @@ agents/ree-obsidian-brain/
     └── Templates/             ← source, element, project templates
 ```
 
+### gamma-flight-join
+
+Gamma / Flight-Log Join Portal — time-synchronises airborne gamma spectrograms (FORMAT 3) with Airdata drone flight logs. Produces a joined CSV (one row per spectrum, all channels + SI-unit flight parameters) and a dual calibration report (factory Cs-check + best-fit survey). Results are written to a per-job folder in Google Drive and announced via Telegram.
+
+- **Scope:** `agents/gamma-flight-join`
+- **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
+- **Job:** `agents/gamma-flight-join/jobs/process-join.md`
+- **Engine:** `scripts/join_gamma_flight.py` (numpy/pandas/scipy)
+- **Drive helper:** `scripts/drive_utils.sh` (OAuth per-job folder create + upload)
+- **Upload server:** `scripts/upload-server.mjs` (zero-dep Node.js multipart receiver, port 3002, Traefik `PathPrefix(/gamma-join)` in `docker-compose.custom.yml`)
+- **Web form:** `web/index.html` + `web/style.css` (portal + static-hostable; override endpoint via `?endpoint=`)
+- **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; the portal triggers jobs immediately on upload)
+- **Skills:** `agent-job-dm`, `agent-job-secrets`
+- **Drive folder:** `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3` (one subfolder per job)
+- **Runtime data:** `data/gamma-flight-join/jobs/{job_id}/` (git-ignored)
+
 ## Removing an Agent
 
 Delete the `agents/<name>/` folder and remove its cron entries from `agent-job/CRONS.json`.

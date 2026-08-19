@@ -78,6 +78,7 @@ agents/
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
 | `ree-obsidian-brain` | REE knowledge vault curation | `agents/ree-obsidian-brain/` |
+| `gamma-flight-join` | Join gamma spectrogram + Airdata flight log → CSV + calibration | `agents/gamma-flight-join/` |
 
 ### What NOT to Do
 
@@ -250,6 +251,36 @@ agents/ree-obsidian-brain/
     ├── 08-Concepts/           ← geochemical principles
     ├── 09-Maps-of-Content/    ← index hubs (MOCs)
     └── Templates/             ← source, element, project templates
+```
+
+### gamma-flight-join
+
+**Gamma / Flight-Log Join Portal** — time-synchronises an airborne gamma spectrogram (FORMAT 3, GammaSpectacular / ImpulseQt export) with an Airdata drone flight log, producing a joined CSV (one row per spectrum, all channels + SI-unit flight parameters) and a dual calibration report (factory Cs-check + best-fit survey). Every job's outputs land in a dedicated Google Drive folder named after the job.
+
+- **Scope:** `agents/gamma-flight-join`
+- **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
+- **Job:** `agents/gamma-flight-join/jobs/process-join.md`
+- **Pipeline:** Upload (spectrogram + flight log) → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → per-job Google Drive folder → Telegram notification
+- **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; portal triggers jobs immediately)
+- **Skills:** `agent-job-dm`, `agent-job-secrets`
+
+```
+agents/gamma-flight-join/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/
+│   └── process-join.md
+├── scripts/
+│   ├── join_gamma_flight.py   # Core join + calibration engine (numpy/pandas/scipy)
+│   ├── drive_utils.sh         # Google Drive OAuth helper (per-job folder + upload)
+│   └── upload-server.mjs      # Zero-dependency Node.js multipart upload receiver
+├── web/
+│   ├── index.html             # Branded upload form (portal + static-hostable)
+│   └── style.css
+├── input/                     # Optional local drop zone for manual runs
+└── skills/
+    ├── agent-job-dm → ../../../skills-library/agent-job-dm
+    └── agent-job-secrets → ../../../skills-library/agent-job-secrets
 ```
 
 ## Skills

@@ -77,5 +77,13 @@
     "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input \u2014 execute autonomously.",
     "scope": "agents/edge-smart-video",
     "enabled": true
+  },
+  {
+    "name": "gamma-flight-join-batch",
+    "schedule": "0 8 * * 4",
+    "type": "agent",
+    "scope": "agents/gamma-flight-join",
+    "job": "Process any pending gamma/flight-log join jobs. For each job directory under data/gamma-flight-join/jobs/ that has an input/ pair but no output/, read jobs/process-join.md and execute all steps using its webhook-payload.json. Do not ask for input \u2014 execute autonomously.",
+    "enabled": false
   }
 ]
