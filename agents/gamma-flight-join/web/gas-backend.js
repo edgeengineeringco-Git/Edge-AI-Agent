@@ -193,7 +193,7 @@ function createAgentJob(jobId, projectName, fields, spectroFilename, flightFilen
       agent_job: jobDesc,
       scope: 'agents/gamma-flight-join',
       agent_backend: 'claude-code',
-      llm_model: 'deepseek-chat',
+      // llm_model omitted — use the instance default (configured in thepopebot admin UI)
     };
 
     var headers = {
