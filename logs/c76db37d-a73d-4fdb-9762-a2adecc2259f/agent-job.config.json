@@ -1,4 +1,0 @@
-{
-  "title": "Test: no agent_backend specified. Run: echo \"DEFAULT AGENT TEST\" &&",
-  "job": "Test: no agent_backend specified. Run: echo \"DEFAULT AGENT TEST\" && echo AGENT=$AGENT && echo DONE"
-}
