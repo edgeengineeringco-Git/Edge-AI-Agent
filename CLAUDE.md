@@ -260,9 +260,8 @@ agents/ree-obsidian-brain/
 - **Scope:** `agents/gamma-flight-join`
 - **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
 - **Job:** `agents/gamma-flight-join/jobs/process-join.md`
-- **Pipeline:** Public form → GAS backend saves inputs to temp `_pending` folder → webhook trigger (`/gamma-join/upload`) → agent processes immediately → uploads ONLY outputs to new job folder → deletes temp folder → Telegram notification
+- **Pipeline:** Public form → GAS backend sends files as base64 in webhook payload → agent decodes to /tmp → processes → uploads ONLY outputs to Drive → Telegram notification
 - **Webhook trigger:** `/gamma-join/upload` in `event-handler/TRIGGERS.json` (**enabled**) — fires agent instantly on form submission
-- **Cron fallback:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (**disabled** by default; sweeps stale `_pending` jobs if webhook fails)
 - **Skills:** `agent-job-dm`, `agent-job-secrets`
 
 ```

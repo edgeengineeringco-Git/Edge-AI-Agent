@@ -77,13 +77,5 @@
     "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-smart-video",
     "enabled": true
-  },
-  {
-    "name": "gamma-flight-join-batch",
-    "schedule": "0 8 * * 4",
-    "type": "agent",
-    "scope": "agents/gamma-flight-join",
-    "job": "Scan Google Drive _pending folder for stale gamma/flight-log join jobs and process them. Read jobs/process-join.md and execute all steps: list pending folders, download each, run the join, upload outputs to a new job folder, delete the pending folder, notify Telegram. Do not ask for input — execute autonomously.",
-    "enabled": false
   }
 ]
