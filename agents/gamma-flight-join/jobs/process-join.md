@@ -121,22 +121,47 @@ Outputs: `{project}_joined_gamma_flight.csv`, `{project}_calibration.txt`, `{pro
 Create a new job folder in the main Drive folder. Upload ONLY the processed output
 files — never upload the input files.
 
+**CRITICAL: Verify each upload succeeded before proceeding.**
+
 ```bash
 OUTPUT_FOLDER_ID=$(bash scripts/drive_utils.sh create-folder --name "$JOB_ID")
 # $OUTPUT_FOLDER_ID now points to the new folder in the main project Drive
 
+UPLOAD_OK=true
 for f in "$WORK/output"/*; do
-  bash scripts/drive_utils.sh upload --file "$f" --folder "$OUTPUT_FOLDER_ID" | tail -1
+  result=$(bash scripts/drive_utils.sh upload --file "$f" --folder "$OUTPUT_FOLDER_ID" 2>&1)
+  if echo "$result" | grep -q "\[OK\]"; then
+    echo "Uploaded: $(basename $f)"
+  else
+    echo "FAIL to upload: $(basename $f) — $result"
+    UPLOAD_OK=false
+  fi
 done
+
+if [ "$UPLOAD_OK" != "true" ]; then
+  echo "ERROR: Some uploads failed. NOT deleting _pending folder."
+  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Upload Failed\n\nJob: $JOB_ID\nProject: $PROJECT\n\nSome output files failed to upload to Drive. Input files preserved in _pending folder." --broadcast
+  exit 1
+fi
 ```
 
-## Step 7 — Delete the _pending temp folder (inputs cleaned up)
+## Step 7 — Verify outputs exist in Drive before deleting inputs
+
+**CRITICAL: Only delete _pending AFTER confirming outputs are in Drive.**
 
 ```bash
-bash scripts/drive_utils.sh delete-folder --folder "$PENDING_FOLDER_ID"
-```
+# Verify the output folder exists and has files
+OUTPUT_CHECK=$(bash scripts/drive_utils.sh list-folder --folder "$OUTPUT_FOLDER_ID" 2>&1)
+if ! echo "$OUTPUT_CHECK" | grep -q "_summary.json"; then
+  echo "ERROR: Output verification failed. NOT deleting _pending folder."
+  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Verification Failed\n\nJob: $JOB_ID\nProject: $PROJECT\n\nOutput files not found in Drive. Input files preserved in _pending folder." --broadcast
+  exit 1
+fi
 
-This removes the input files from Drive permanently. Only the output folder remains.
+# NOW it's safe to delete the _pending folder
+bash scripts/drive_utils.sh delete-folder --folder "$PENDING_FOLDER_ID"
+echo "_pending folder deleted — inputs cleaned up."
+```
 
 ## Step 8 — Notify via Telegram
 

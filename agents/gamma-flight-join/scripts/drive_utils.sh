@@ -265,13 +265,35 @@ for f in files:
   echo "[OK] Deleted folder (id=$folder)" >&2
 }
 
+cmd_list_folder() {
+  local folder="$DEFAULT_PARENT_FOLDER_ID"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --folder) folder="$2"; shift 2 ;;
+      *) die "Unknown arg: $1" ;;
+    esac
+done
+
+  local token; token=$(get_access_token)
+  local resp
+  resp=$(curl -s -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files?q=%27$folder%27+in+parents&fields=files(id,name,mimeType)&orderBy=name")
+  printf '%s' "$resp" | python3 -c "
+import sys,json
+data=json.load(sys.stdin)
+for f in data.get('files',[]):
+    print(f['name'])
+" 2>/dev/null
+}
+
 main() {
-  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload|list-jobs|download|delete-file|delete-folder} [args]"
+  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload|list-jobs|list-folder|download|delete-file|delete-folder} [args]"
   local cmd="$1"; shift
   case "$cmd" in
     create-folder) cmd_create_folder "$@" ;;
     upload) cmd_upload "$@" ;;
     list-jobs) cmd_list_jobs "$@" ;;
+    list-folder) cmd_list_folder "$@" ;;
     download) cmd_download "$@" ;;
     delete-file) cmd_delete_file "$@" ;;
     delete-folder) cmd_delete_folder "$@" ;;
