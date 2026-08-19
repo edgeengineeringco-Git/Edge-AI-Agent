@@ -30,6 +30,7 @@ These are provided in the job trigger text:
 
 ```bash
 export GOOGLE_DRIVE_OAUTH=$(node skills/agent-job-secrets/agent-job-secrets.js get GOOGLE_DRIVE_OAUTH 2>/dev/null || echo "")
+source scripts/update_oauth.sh  # Override old OAuth credentials if needed
 [ -z "$GOOGLE_DRIVE_OAUTH" ] && { echo "FATAL: no Google Drive credentials"; exit 1; }
 ```
 
