@@ -1,25 +1,18 @@
-# Gamma / Flight-Log Join — Immediate Processing Pipeline
+# Gamma / Flight-Log Join — Processing Pipeline
 
 Process a gamma spectrogram + Airdata flight-log job submitted through the public
-web form. **Processing starts IMMEDIATELY via webhook trigger — no batch delay.**
+web form. The GAS backend saves inputs to a temporary `_pending` folder in Drive
+and triggers this agent via `/api/create-agent-job`.
 
-The web form posts to the Google Apps Script backend (`web/gas-backend.js`), which
-saves the input files to a temporary `_pending` folder in Drive and triggers this
-agent via webhook. The agent downloads the inputs, runs the join, uploads ONLY the
-output files to a new job folder in the main Drive folder, and **deletes the
-`_pending` folder** so inputs never persist.
+The agent downloads the inputs, runs the join, uploads ONLY the output files to a
+new job folder in the main Drive folder, verifies outputs exist, and **then deletes
+the `_pending` folder** so inputs never persist.
 
 Execute every step autonomously — never ask for input.
 
-## Trigger
+## Parameters (from the agent job description)
 
-- **Webhook** `/gamma-join/upload` (immediate) — the GAS backend fires this trigger
-  as soon as a client submits the form.
-- **Manual** — a chat request to process a specific job.
-
-## Parameters (from webhook payload)
-
-These are provided by the trigger:
+These are provided in the job trigger text:
 
 | Parameter | Description |
 |-----------|-------------|
@@ -32,17 +25,6 @@ These are provided by the trigger:
 | `spectrogram_file` | Filename of the spectrogram (.txt) |
 | `flightlog_file` | Filename of the flight log (.csv) |
 | `pending_folder_id` | Google Drive folder ID containing the input files |
-
-## Google Drive layout
-
-- **Main project folder:** `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3`
-- **Temp pending folder:** `_pending/{job_id}/` — contains input files + manifest (**DELETED after processing**)
-- **Output job folder:** `{job_id}/` — created in the main folder, contains ONLY outputs:
-  - `{project}_joined_gamma_flight.csv`
-  - `{project}_calibration.txt`
-  - `{project}_summary.json`
-
-**Inputs NEVER persist in Drive.** The `_pending` folder is deleted immediately after processing.
 
 ## Step 0 — Credentials
 
@@ -83,22 +65,30 @@ bash scripts/drive_utils.sh download --folder "$PENDING_FOLDER_ID" --name "$FLIG
 
 ## Step 3 — Verify inputs (NEVER FABRICATE DATA)
 
-- Both input files present and non-empty.
-- Spectrogram first line begins with `FORMAT:`.
-
-If verification fails, broadcast the error via Telegram and skip this job.
-
 ```bash
 [ -s "$WORK/input/$SPECTRO" ] || { echo "FAIL: spectrogram empty/missing"; exit 1; }
 [ -s "$WORK/input/$FLIGHT" ] || { echo "FAIL: flight log empty/missing"; exit 1; }
 head -1 "$WORK/input/$SPECTRO" | grep -q "^FORMAT:" || { echo "FAIL: not a FORMAT 3 spectrogram"; exit 1; }
 ```
 
+If verification fails, broadcast the error via Telegram and skip this job.
+
 ## Step 4 — Ensure Python dependencies
 
+The container may not have pip pre-installed. Bootstrap it if needed.
+
 ```bash
-python3 -c "import numpy, pandas, scipy" 2>/dev/null || \
+# Check if numpy/pandas/scipy are already available
+python3 -c "import numpy, pandas, scipy" 2>/dev/null && echo "deps OK" || {
+  # Bootstrap pip if missing
+  python3 -m pip --version 2>/dev/null || {
+    echo "Bootstrapping pip..."
+    curl -sL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+    python3 /tmp/get-pip.py --user --break-system-packages -q
+  }
+  export PATH="$HOME/.local/bin:$PATH"
   python3 -m pip install --user --break-system-packages -q numpy pandas scipy
+}
 ```
 
 ## Step 5 — Run the join
@@ -118,14 +108,13 @@ Outputs: `{project}_joined_gamma_flight.csv`, `{project}_calibration.txt`, `{pro
 
 ## Step 6 — Create output folder and upload ONLY outputs
 
-Create a new job folder in the main Drive folder. Upload ONLY the processed output
-files — never upload the input files.
-
-**CRITICAL: Verify each upload succeeded before proceeding.**
+**IMPORTANT:** `create-folder` prints the folder ID to stdout and status messages to stderr.
+Capture ONLY stdout to get the clean folder ID.
 
 ```bash
-OUTPUT_FOLDER_ID=$(bash scripts/drive_utils.sh create-folder --name "$JOB_ID")
-# $OUTPUT_FOLDER_ID now points to the new folder in the main project Drive
+# Create output folder — capture ONLY stdout (folder ID)
+OUTPUT_FOLDER_ID=$(bash scripts/drive_utils.sh create-folder --name "$JOB_ID" 2>/dev/null)
+echo "Output folder ID: $OUTPUT_FOLDER_ID"
 
 UPLOAD_OK=true
 for f in "$WORK/output"/*; do
@@ -140,7 +129,12 @@ done
 
 if [ "$UPLOAD_OK" != "true" ]; then
   echo "ERROR: Some uploads failed. NOT deleting _pending folder."
-  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Upload Failed\n\nJob: $JOB_ID\nProject: $PROJECT\n\nSome output files failed to upload to Drive. Input files preserved in _pending folder." --broadcast
+  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Upload Failed
+
+Job: $JOB_ID
+Project: $PROJECT
+
+Some output files failed to upload to Drive. Input files preserved in _pending folder." --broadcast
   exit 1
 fi
 ```
@@ -150,11 +144,16 @@ fi
 **CRITICAL: Only delete _pending AFTER confirming outputs are in Drive.**
 
 ```bash
-# Verify the output folder exists and has files
-OUTPUT_CHECK=$(bash scripts/drive_utils.sh list-folder --folder "$OUTPUT_FOLDER_ID" 2>&1)
+# Verify the output folder has the summary file
+OUTPUT_CHECK=$(bash scripts/drive_utils.sh list-folder --folder "$OUTPUT_FOLDER_ID" 2>/dev/null)
 if ! echo "$OUTPUT_CHECK" | grep -q "_summary.json"; then
   echo "ERROR: Output verification failed. NOT deleting _pending folder."
-  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Verification Failed\n\nJob: $JOB_ID\nProject: $PROJECT\n\nOutput files not found in Drive. Input files preserved in _pending folder." --broadcast
+  node skills/agent-job-dm/agent-job-dm.js send "❌ Gamma/Flight Join — Verification Failed
+
+Job: $JOB_ID
+Project: $PROJECT
+
+Output files not found in Drive. Input files preserved in _pending folder." --broadcast
   exit 1
 fi
 
@@ -165,8 +164,6 @@ echo "_pending folder deleted — inputs cleaned up."
 
 ## Step 8 — Notify via Telegram
 
-Read the summary JSON and broadcast a concise result:
-
 ```bash
 SUMMARY=$(python3 -c "
 import json
@@ -176,7 +173,7 @@ bf=d['best_fit_calibration']
 print(f\"Best-fit cal: E = {bf['b0']:.3f} + {bf['b1']:.5f}·ch + {bf['b2']:.2e}·ch²\")
 " 2>/dev/null || echo "Results available")
 
-node skills/agent-job-dm/agent-job-dm.js send "📡 Gamma/Flight Join — Results Ready
+node skills/agent-job-dm/agent-job-dm.js send "✅ Gamma/Flight Join — Results Ready
 
 Job: $JOB_ID
 Project: $PROJECT
@@ -195,9 +192,8 @@ rm -rf "$WORK"
 
 ## Critical rules
 
-- **ONLY output files persist in Drive.** Input files are in a temporary `_pending` folder that is DELETED after processing.
+- **ONLY output files persist in Drive.** Input files are in a temporary `_pending` folder that is DELETED after processing — but only AFTER outputs are verified in Drive.
 - NEVER fabricate or substitute data. Process only the exact uploaded files.
-- If a low match rate is reported (e.g. near 0%), suspect a timezone/clock offset between
-  the two files — flag it in the Telegram message rather than presenting the result as sound.
+- If a low match rate is reported (e.g. near 0%), suspect a timezone/clock offset between the two files — flag it in the Telegram message rather than presenting the result as sound.
 - Do NOT write job data into the git workspace — use `/tmp`. Only agent code/config is version-controlled.
 - Keep Telegram messages to the summary; never paste CSV contents.

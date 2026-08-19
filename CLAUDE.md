@@ -260,8 +260,8 @@ agents/ree-obsidian-brain/
 - **Scope:** `agents/gamma-flight-join`
 - **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
 - **Job:** `agents/gamma-flight-join/jobs/process-join.md`
-- **Pipeline:** Public form → GAS backend sends files as base64 in webhook payload → agent decodes to /tmp → processes → uploads ONLY outputs to Drive → Telegram notification
-- **Webhook trigger:** `/gamma-join/upload` in `event-handler/TRIGGERS.json` (**enabled**) — fires agent instantly on form submission
+- **Pipeline:** Public form → GAS backend saves inputs to `_pending` Drive folder → calls `/api/create-agent-job` → agent downloads inputs → processes → uploads ONLY outputs → verifies outputs → deletes `_pending` → Telegram notification
+- **API trigger:** `/api/create-agent-job` with `x-api-key` header (same pattern as edge-kuth-portal). Also has webhook trigger `/gamma-join/upload` in `TRIGGERS.json` (enabled) as fallback.
 - **Skills:** `agent-job-dm`, `agent-job-secrets`
 
 ```
@@ -272,9 +272,9 @@ agents/gamma-flight-join/
 │   └── process-join.md
 ├── scripts/
 │   ├── join_gamma_flight.py   # Core join + calibration engine (numpy/pandas/scipy)
-│   └── drive_utils.sh         # Google Drive OAuth helper (create/upload/download/delete)
+│   └── drive_utils.sh         # Google Drive OAuth helper (create/upload/download/list/delete)
 ├── web/
-│   ├── gas-backend.js         # Google Apps Script Web App backend (v2 — temp + webhook)
+│   ├── gas-backend.js         # Google Apps Script Web App backend (v4 — _pending folder + API)
 │   ├── index.html             # Branded upload form (GitHub Pages)
 │   └── style.css
 ├── input/                     # Optional local drop zone for manual runs
