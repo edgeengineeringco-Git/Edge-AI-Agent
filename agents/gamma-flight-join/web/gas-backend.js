@@ -1,28 +1,35 @@
 /**
- * Gamma / Flight-Log Join Portal — Google Apps Script Backend
+ * Gamma / Flight-Log Join Portal — Google Apps Script Backend (v2)
  *
  * Serverless receiver for the Gamma/Flight-Log Join upload page.
  * NO Docker, NO server — runs entirely on Google's infrastructure.
  *
- * Receives a JSON+base64 submission (one gamma spectrogram .txt + one Airdata
- * flight-log .csv), creates a per-job subfolder inside the project Drive
- * folder, saves both files, and (optionally) notifies Telegram.
+ * v2 changes:
+ *   - Input files saved to a TEMPORARY _pending folder (cleaned up by agent)
+ *   - Only processed OUTPUT files land in the main project Drive folder
+ *   - Processing starts IMMEDIATELY via thepopebot webhook trigger
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * SETUP (one-time, 2 minutes — identical to the intake portal backend):
+ * SETUP (one-time, 2 minutes):
  *   1. Go to https://script.google.com → New project
  *   2. Delete the default code, paste this entire file
  *   3. Deploy → New deployment → Web app
  *      - Execute as: Me
  *      - Who has access: Anyone
  *   4. Authorize when Google asks (needs Drive access)
- *   5. Copy the Web App URL and paste it into GAS_URL in gamma-flight-join/index.html
+ *   5. Copy the Web App URL and paste it into DEFAULT_ENDPOINT in index.html
+ *   6. Set WEBHOOK_URL below to your thepopebot server URL (e.g. https://bot.example.com/gamma-join/upload)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 var CONFIG = {
-  // The user's gamma project Drive folder — every job gets a subfolder here.
+  // Main project Drive folder — ONLY output files go here after processing.
   TARGET_FOLDER_ID: '18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3',
+
+  // thepopebot webhook URL for immediate processing.
+  // Set this to your thepopebot server's public URL + /gamma-join/upload
+  // e.g. https://bot.edgeengineers.net/gamma-join/upload
+  WEBHOOK_URL: 'https://pbot.edgeengineers.net/gamma-join/upload',
 
   // Shared access password required on the form (change for production).
   ACCESS_PASSWORD: 'Edge12345',
@@ -84,20 +91,26 @@ function processSubmission(data) {
   var safeName = projectName.replace(/[^a-zA-Z0-9 _-]/g, '').substring(0, 40).trim() || 'project';
   var jobId = safeName.replace(/\s+/g, '_') + '_' + tsStr;
 
-  // ── Per-job subfolder under the gamma project folder ──
+  // ── Save inputs to a TEMPORARY _pending folder (will be deleted after processing) ──
   var parentFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
-  var jobFolder = parentFolder.createFolder(jobId);
 
-  // ── Save both files ──
+  // Get or create the _pending container folder
+  var pendingFolders = parentFolder.getFoldersByName('_pending');
+  var pendingContainer = pendingFolders.hasNext() ? pendingFolders.next() : parentFolder.createFolder('_pending');
+
+  // Create per-job temp folder
+  var tempFolder = pendingContainer.createFolder(jobId);
+
+  // Save both input files to the temp folder
   var uploaded = [];
   [spectro, flight].forEach(function (f) {
     var bytes = Utilities.base64Decode(f.data);
     var blob = Utilities.newBlob(bytes, f.mimeType || 'application/octet-stream', f.filename);
-    var driveFile = jobFolder.createFile(blob);
-    uploaded.push({ name: driveFile.getName(), link: driveFile.getUrl(), size: bytes.length });
+    var driveFile = tempFolder.createFile(blob);
+    uploaded.push({ name: driveFile.getName(), size: bytes.length });
   });
 
-  // ── Write a job manifest so the processing agent can pick it up ──
+  // Write manifest to the temp folder (agent reads this to know what to process)
   var manifest = {
     job_id: jobId,
     project_name: projectName,
@@ -113,37 +126,92 @@ function processSubmission(data) {
     submitted_utc: ts.toISOString(),
     status: 'pending',
   };
-  jobFolder.createFile(
+  tempFolder.createFile(
     Utilities.newBlob(JSON.stringify(manifest, null, 2), 'application/json', 'job-manifest.json')
   );
 
-  // ── Telegram notify (fire-and-forget) ──
-  sendTelegram(jobId, projectName, fields, jobFolder.getUrl());
+  // ── Trigger thepopebot webhook for IMMEDIATE processing ──
+  var webhookResult = triggerWebhook(jobId, projectName, fields, tempFolder.getId());
 
-  return {
-    ok: true,
-    job_id: jobId,
-    folderUrl: jobFolder.getUrl(),
-    fileCount: uploaded.length,
-    message:
-      'Job ' + jobId + ' received. Files saved to your Google Drive folder "' + jobId +
-      '". You will be notified when the joined CSV and calibration are ready.',
-  };
+  // ── Telegram notify (fire-and-forget) ──
+  sendTelegram(jobId, projectName, fields, webhookResult.ok);
+
+  if (webhookResult.ok) {
+    return {
+      ok: true,
+      job_id: jobId,
+      message:
+        'Job ' + jobId + ' received and processing has started. ' +
+        'You will be notified when the joined CSV and calibration are ready.',
+    };
+  } else {
+    return {
+      ok: true,
+      job_id: jobId,
+      message:
+        'Job ' + jobId + ' received and files saved. ' +
+        'Webhook trigger failed (' + webhookResult.error + ') — the batch cron will pick it up as fallback.',
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Webhook Trigger
+// ═══════════════════════════════════════════════════════════════════════════
+
+function triggerWebhook(jobId, projectName, fields, pendingFolderId) {
+  if (!CONFIG.WEBHOOK_URL || CONFIG.WEBHOOK_URL.indexOf('PASTE_YOUR') !== -1) {
+    return { ok: false, error: 'WEBHOOK_URL not configured' };
+  }
+
+  try {
+    var payload = {
+      job_id: jobId,
+      project_name: projectName,
+      client_name: fields.client_name || '',
+      email: fields.email || '',
+      time_tolerance: parseFloat(fields.time_tolerance) || 1.0,
+      factory_a0: parseFloat(fields.factory_a0) || 0.0,
+      factory_a1: parseFloat(fields.factory_a1) || 0.739863,
+      factory_a2: parseFloat(fields.factory_a2) || 0.0,
+      factory_a3: parseFloat(fields.factory_a3) || 0.0,
+      spectrogram_file: fields.spectrogram_file || '',
+      flightlog_file: fields.flightlog_file || '',
+      pending_folder_id: pendingFolderId,
+    };
+
+    var resp = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
+    });
+
+    var code = resp.getResponseCode();
+    if (code >= 200 && code < 300) {
+      return { ok: true };
+    } else {
+      return { ok: false, error: 'HTTP ' + code + ': ' + resp.getContentText().substring(0, 200) };
+    }
+  } catch (e) {
+    return { ok: false, error: e.toString() };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-function sendTelegram(jobId, projectName, fields, folderUrl) {
+function sendTelegram(jobId, projectName, fields, processingStarted) {
   if (!CONFIG.TELEGRAM_BOT_TOKEN) return;
   try {
+    var status = processingStarted ? '⚡ Processing started immediately' : '💾 Files saved (batch fallback)';
     var text =
       '📡 *Gamma/Flight Join — New Job*\n\n' +
       '*Job:* ' + jobId + '\n' +
       '*Project:* ' + projectName + '\n' +
       (fields.client_name ? '*Client:* ' + fields.client_name + '\n' : '') +
-      '*Drive folder:* ' + folderUrl;
+      '*Status:* ' + status;
     UrlFetchApp.fetch('https://api.telegram.org/bot' + CONFIG.TELEGRAM_BOT_TOKEN + '/sendMessage', {
       method: 'post',
       contentType: 'application/json',

@@ -2,35 +2,59 @@
 
 This agent time-synchronises airborne gamma spectrograms with Airdata drone flight logs and produces a joined CSV plus dual calibration metadata.
 
-**Architecture: fully serverless — NO Docker, NO server.** The public form posts to a Google Apps Script Web App, which stores each job in Google Drive. This agent scans Drive for pending jobs and processes them.
+**Architecture: fully serverless — NO Docker, NO server.** The public form posts to a Google Apps Script Web App, which saves input files to a temporary `_pending` folder in Drive and triggers this agent via webhook for **immediate processing**. Only processed output files land in the main Drive folder — inputs are cleaned up.
 
 ## Directory Structure
 
 - `SYSTEM.md` — Agent identity and instructions
 - `CLAUDE.md` — This file (agent-specific context)
-- `jobs/process-join.md` — Drive-scan processing job prompt
+- `jobs/process-join.md` — Immediate processing job prompt (webhook-triggered)
 - `scripts/join_gamma_flight.py` — Core join + calibration engine (numpy/pandas/scipy)
-- `scripts/drive_utils.sh` — Google Drive OAuth helper (list-jobs / download / create-folder / upload)
-- `web/gas-backend.js` — Google Apps Script Web App backend (serverless receiver)
+- `scripts/drive_utils.sh` — Google Drive OAuth helper (create / upload / download / delete)
+- `web/gas-backend.js` — Google Apps Script Web App backend (v2 — saves to _pending, triggers webhook)
 - `web/index.html`, `web/style.css` — Branded upload form (GitHub Pages)
 - `input/` — Optional local drop zone for manual CLI runs
 - `skills/` — `agent-job-dm`, `agent-job-secrets` (symlinks to skills-library)
 
-## Pipeline Flow (serverless)
+## Pipeline Flow (immediate, serverless)
 
 1. Client fills `web/index.html` (hosted on GitHub Pages) and selects the two files.
 2. The page encodes both files as base64 and POSTs a JSON payload to the Google Apps Script Web App (`web/gas-backend.js`).
-3. The Apps Script backend checks the access password, creates a per-job subfolder named `{job_id}` in the project Drive folder, saves the spectrogram + flight log + `job-manifest.json` (status `pending`), and notifies Telegram.
-4. This agent (cron `gamma-flight-join-batch`, or manual) runs `drive_utils.sh list-jobs`, downloads each pending job to `/tmp`, runs `join_gamma_flight.py`, and uploads the outputs back into the same Drive folder.
+3. The Apps Script backend:
+   - Checks the access password
+   - Saves input files + `job-manifest.json` to a **temporary `_pending/{job_id}/` folder** in Drive
+   - Calls the thepopebot webhook (`/gamma-join/upload`) with job metadata
+   - Notifies Telegram
+4. This agent fires **immediately** via the webhook trigger:
+   - Downloads inputs from the `_pending` folder
+   - Runs `join_gamma_flight.py`
+   - Creates a new `{job_id}/` folder in the main Drive folder
+   - Uploads **ONLY** the output files (joined CSV, calibration.txt, summary.json)
+   - **Deletes the `_pending/{job_id}/` folder** (inputs gone from Drive)
 5. Agent broadcasts a summary via Telegram (`agent-job-dm`).
 
-## Why serverless
+## Why this architecture
 
-The user's constraint: do not add or change anything in Docker. So there is no
-`upload-server.mjs` and no `docker-compose.custom.yml` service. Everything runs on
-Google's infrastructure (Apps Script + Drive) plus this scheduled agent. `docker-compose.custom.yml` is left exactly as it was.
+- **No Docker, no server** — everything runs on Google's infrastructure (Apps Script + Drive) plus this agent.
+- **Immediate processing** — webhook trigger fires the agent instantly on form submission.
+- **Clean Drive** — only processed outputs persist in Drive. Input files are temporary and cleaned up.
+- **Fallback** — if the webhook fails, inputs remain in `_pending`. The batch cron (`gamma-flight-join-batch`, disabled by default) can be enabled to sweep stale jobs.
 
-## Outputs (per job, written into the job's Drive folder)
+## Webhook Trigger
+
+Added to `event-handler/TRIGGERS.json`:
+```json
+{
+  "name": "gamma-join-upload",
+  "watch_path": "/gamma-join/upload",
+  "actions": [{ "type": "agent", "job": "...", "scope": "agents/gamma-flight-join" }],
+  "enabled": true
+}
+```
+
+The GAS backend must be configured with `WEBHOOK_URL` set to the thepopebot server's public URL + `/gamma-join/upload`.
+
+## Outputs (per job, in the output Drive folder)
 
 - `{project}_joined_gamma_flight.csv` — one row per spectrum, all channels + SI flight parameters
 - `{project}_calibration.txt` — factory (Cs-check) + best-fit survey calibration
@@ -39,9 +63,10 @@ Google's infrastructure (Apps Script + Drive) plus this scheduled agent. `docker
 ## Deploying the backend (one-time)
 
 1. Open https://script.google.com → New project, paste `web/gas-backend.js`.
-2. Deploy → New deployment → Web app (Execute as: Me, Access: Anyone). Authorize Drive access.
-3. Copy the `/exec` URL into `DEFAULT_ENDPOINT` in `web/index.html` (or pass `?endpoint=`).
-4. Publish `web/index.html` + `web/style.css` to the public Pages repo `edge-ai-agent-site` under `gamma-flight-join/`.
+2. Set `WEBHOOK_URL` in the config to your thepopebot server URL (e.g. `https://bot.example.com/gamma-join/upload`).
+3. Deploy → New deployment → Web app (Execute as: Me, Access: Anyone). Authorize Drive access.
+4. Copy the `/exec` URL into `DEFAULT_ENDPOINT` in `web/index.html` (or pass `?endpoint=`).
+5. Publish `web/index.html` + `web/style.css` to the public Pages repo `edge-ai-agent-site` under `gamma-flight-join/`.
 
 ## Dependencies
 
@@ -50,7 +75,9 @@ Python engine requires `numpy`, `pandas`, `scipy` (installed by the job prompt v
 
 ## Google Drive
 
-- Project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3` (one subfolder per job).
+- Main project folder: `18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3`
+- Temp `_pending` folder: created automatically by GAS backend, deleted by agent after processing
+- Output folders: `{job_id}/` in the main folder, containing only outputs
 - Agent auth: `GOOGLE_DRIVE_OAUTH` secret via `agent-job-secrets`.
 - Backend auth: the Apps Script runs under its deploying Google account (independent of the secret).
 

@@ -16,6 +16,16 @@
 #          (a job is pending when its folder has job-manifest.json but no *_summary.json)
 #   drive_utils.sh download --folder <folder_id> --name <filename> --out <path>
 #       -> downloads the named file from the folder to <path>
+#   drive_utils.sh delete-file --folder <folder_id> --name <filename>
+#       -> deletes the named file from the folder
+#   drive_utils.sh delete-folder --folder <folder_id>
+#       -> permanently deletes the folder and all its contents (use for temp cleanup)
+#   drive_utils.sh delete-file --folder <folder_id> --name <filename>
+#       -> deletes the named file from the folder
+#   drive_utils.sh delete-folder --folder <folder_id>
+#       -> permanently deletes the folder and all its contents
+#   drive_utils.sh delete --folder <folder_id> --name <filename>
+#       -> deletes the named file from the folder (skips gracefully if not found)
 #
 # The default parent folder is the project folder supplied by the user:
 #   https://drive.google.com/drive/folders/18fSXEOVp8D039BUXWMiYrPuIeIXOxgt3
@@ -191,14 +201,82 @@ cmd_download() {
   echo "$out"
 }
 
+cmd_delete_file() {
+  local folder="" name=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --folder) folder="$2"; shift 2 ;;
+      --name) name="$2"; shift 2 ;;
+      *) die "Unknown arg: $1" ;;
+    esac
+  done
+  [[ -n "$folder" ]] || die "--folder is required"
+  [[ -n "$name" ]] || die "--name is required"
+
+  local token; token=$(get_access_token)
+  local q resp fid
+  q=$(python3 -c "import urllib.parse;print(urllib.parse.quote(\"'$folder' in parents and name='$name' and trashed=false\"))")
+  resp=$(curl -s -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files?q=$q&fields=files(id,name)")
+  fid=$(printf '%s' "$resp" | python3 -c "import sys,json;fs=json.load(sys.stdin).get('files',[]);print(fs[0]['id'] if fs else '')" 2>/dev/null || echo "")
+  if [[ -z "$fid" ]]; then
+    echo "[WARN] File '$name' not found in folder $folder; skipping delete." >&2
+    return 0
+  fi
+
+  curl -s -X DELETE -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files/$fid" >/dev/null 2>&1
+  echo "[OK] Deleted '$name' from folder $folder" >&2
+}
+
+cmd_delete_folder() {
+  local folder=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --folder) folder="$2"; shift 2 ;;
+      *) die "Unknown arg: $1" ;;
+    esac
+  done
+  [[ -n "$folder" ]] || die "--folder is required"
+
+  local token; token=$(get_access_token)
+
+  # Delete all files inside the folder first
+  local q resp
+  q=$(python3 -c "import urllib.parse;print(urllib.parse.quote(\"'$folder' in parents and trashed=false\"))")
+  resp=$(curl -s -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files?q=$q&fields=files(id,name)&pageSize=1000")
+
+  printf '%s' "$resp" | python3 -c "
+import sys, json, subprocess
+token = '''$token'''
+files = json.load(sys.stdin).get('files', [])
+for f in files:
+    fid = f['id']
+    subprocess.run(['curl','-s','-X','DELETE','-H','Authorization: Bearer '+token,
+                    'https://www.googleapis.com/drive/v3/files/'+fid],
+                   capture_output=True)
+    print('[OK] Deleted: %s (%s)' % (f['name'], fid), file=sys.stderr)
+" 2>&1
+
+  # Delete the folder itself
+  curl -s -X DELETE -H "Authorization: Bearer $token" \
+    "https://www.googleapis.com/drive/v3/files/$folder" >/dev/null 2>&1
+  echo "[OK] Deleted folder (id=$folder)" >&2
+}
+
 main() {
-  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload|list-jobs|download} [args]"
+  [[ $# -ge 1 ]] || die "Usage: drive_utils.sh {create-folder|upload|list-jobs|download|delete-file|delete-folder} [args]"
   local cmd="$1"; shift
   case "$cmd" in
     create-folder) cmd_create_folder "$@" ;;
     upload) cmd_upload "$@" ;;
     list-jobs) cmd_list_jobs "$@" ;;
     download) cmd_download "$@" ;;
+    delete-file) cmd_delete_file "$@" ;;
+    delete-folder) cmd_delete_folder "$@" ;;
+    # Legacy alias
+    delete) cmd_delete_file "$@" ;;
     *) die "Unknown command: $cmd" ;;
   esac
 }

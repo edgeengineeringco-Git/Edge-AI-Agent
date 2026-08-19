@@ -34,7 +34,7 @@
     "schedule": "0 7 * * 1",
     "type": "agent",
     "scope": "agents/edge-critical-minerals",
-    "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input \u2014 execute autonomously.",
+    "job": "Read agents/edge-critical-minerals/jobs/weekly-report.md and execute the full EDGE Critical Minerals Intel pipeline described there. Do not ask for input — execute autonomously.",
     "user_id": "4ab4ba80-a095-4c07-bb61-3e3471545055",
     "enabled": true
   },
@@ -58,7 +58,7 @@
     "name": "edge-kuth-portal-batch",
     "schedule": "0 8 * * 1",
     "type": "agent",
-    "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input \u2014 execute autonomously.",
+    "job": "Read jobs/process-spectra.md and execute the full K/U/Th spectral analysis pipeline for any pending jobs. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-kuth-portal",
     "enabled": false
   },
@@ -74,7 +74,7 @@
     "name": "edge-smart-video-generate",
     "schedule": "0 10 * * 3",
     "type": "agent",
-    "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input \u2014 execute autonomously.",
+    "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-smart-video",
     "enabled": true
   },
@@ -83,7 +83,7 @@
     "schedule": "0 8 * * 4",
     "type": "agent",
     "scope": "agents/gamma-flight-join",
-    "job": "Scan Google Drive for pending gamma/flight-log join jobs and process them. Read jobs/process-join.md and execute all steps: list pending job folders, download each, run the join, upload results back to the same Drive folder, notify Telegram. Do not ask for input \u2014 execute autonomously.",
-    "enabled": true
+    "job": "Scan Google Drive _pending folder for stale gamma/flight-log join jobs and process them. Read jobs/process-join.md and execute all steps: list pending folders, download each, run the join, upload outputs to a new job folder, delete the pending folder, notify Telegram. Do not ask for input — execute autonomously.",
+    "enabled": false
   }
 ]

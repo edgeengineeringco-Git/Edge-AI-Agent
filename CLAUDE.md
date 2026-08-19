@@ -255,13 +255,14 @@ agents/ree-obsidian-brain/
 
 ### gamma-flight-join
 
-**Gamma / Flight-Log Join Portal** — time-synchronises an airborne gamma spectrogram (FORMAT 3, GammaSpectacular / ImpulseQt export) with an Airdata drone flight log, producing a joined CSV (one row per spectrum, all channels + SI-unit flight parameters) and a dual calibration report (factory Cs-check + best-fit survey). Every job's outputs land in a dedicated Google Drive folder named after the job.
+**Gamma / Flight-Log Join Portal** — time-synchronises an airborne gamma spectrogram (FORMAT 3, GammaSpectacular / ImpulseQt export) with an Airdata drone flight log, producing a joined CSV (one row per spectrum, all channels + SI-unit flight parameters) and a dual calibration report (factory Cs-check + best-fit survey). Only processed output files land in Google Drive — input files are temporary and cleaned up.
 
 - **Scope:** `agents/gamma-flight-join`
 - **System prompt:** `agents/gamma-flight-join/SYSTEM.md`
 - **Job:** `agents/gamma-flight-join/jobs/process-join.md`
-- **Pipeline:** Public form → Google Apps Script backend saves job to Drive → verify → parse FORMAT 3 + Airdata CSV → nearest-time UTC join → best-fit calibration → joined CSV + calibration.txt + summary.json → back to the per-job Google Drive folder → Telegram notification
-- **Cron:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (disabled by default; scans Drive for pending jobs)
+- **Pipeline:** Public form → GAS backend saves inputs to temp `_pending` folder → webhook trigger (`/gamma-join/upload`) → agent processes immediately → uploads ONLY outputs to new job folder → deletes temp folder → Telegram notification
+- **Webhook trigger:** `/gamma-join/upload` in `event-handler/TRIGGERS.json` (**enabled**) — fires agent instantly on form submission
+- **Cron fallback:** `gamma-flight-join-batch` in `agent-job/CRONS.json` (**disabled** by default; sweeps stale `_pending` jobs if webhook fails)
 - **Skills:** `agent-job-dm`, `agent-job-secrets`
 
 ```
@@ -272,9 +273,9 @@ agents/gamma-flight-join/
 │   └── process-join.md
 ├── scripts/
 │   ├── join_gamma_flight.py   # Core join + calibration engine (numpy/pandas/scipy)
-│   └── drive_utils.sh         # Google Drive OAuth helper (list-jobs/download/create-folder/upload)
+│   └── drive_utils.sh         # Google Drive OAuth helper (create/upload/download/delete)
 ├── web/
-│   ├── gas-backend.js         # Google Apps Script Web App backend (serverless — no Docker)
+│   ├── gas-backend.js         # Google Apps Script Web App backend (v2 — temp + webhook)
 │   ├── index.html             # Branded upload form (GitHub Pages)
 │   └── style.css
 ├── input/                     # Optional local drop zone for manual runs
