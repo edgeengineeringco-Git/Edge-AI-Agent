@@ -5,10 +5,9 @@
  * NO Docker, NO server — runs entirely on Google's infrastructure.
  *
  * v3 changes:
- *   - Input files are NEVER saved to Drive — sent as base64 in webhook payload
- *   - Only processed OUTPUT files land in Google Drive
+ *   - Input files saved to a TEMPORARY _pending folder (DELETED by agent after processing)
+ *   - Only processed OUTPUT files persist in Google Drive
  *   - Processing starts IMMEDIATELY via thepopebot webhook trigger
- *   - Removed all _pending folder logic
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * SETUP (one-time, 2 minutes):
@@ -29,7 +28,6 @@ var CONFIG = {
 
   // thepopebot webhook URL for immediate processing.
   // Set this to your thepopebot server's public URL + /gamma-join/upload
-  // e.g. https://bot.edgeengineers.net/gamma-join/upload
   WEBHOOK_URL: 'https://pbot.edgeengineers.net/gamma-join/upload',
 
   // Shared access password required on the form (change for production).
@@ -92,8 +90,47 @@ function processSubmission(data) {
   var safeName = projectName.replace(/[^a-zA-Z0-9 _-]/g, '').substring(0, 40).trim() || 'project';
   var jobId = safeName.replace(/\s+/g, '_') + '_' + tsStr;
 
-  // ── Trigger thepopebot webhook with file data INLINE (no Drive upload for inputs) ──
-  var webhookResult = triggerWebhook(jobId, projectName, fields, spectro, flight);
+  // ── Save inputs to a TEMPORARY _pending folder (DELETED by agent after processing) ──
+  var parentFolder = DriveApp.getFolderById(CONFIG.TARGET_FOLDER_ID);
+
+  // Get or create the _pending container folder
+  var pendingFolders = parentFolder.getFoldersByName('_pending');
+  var pendingContainer = pendingFolders.hasNext() ? pendingFolders.next() : parentFolder.createFolder('_pending');
+
+  // Create per-job temp folder
+  var tempFolder = pendingContainer.createFolder(jobId);
+
+  // Save both input files to the temp folder
+  var uploaded = [];
+  [spectro, flight].forEach(function (f) {
+    var bytes = Utilities.base64Decode(f.data);
+    var blob = Utilities.newBlob(bytes, f.mimeType || 'application/octet-stream', f.filename);
+    var driveFile = tempFolder.createFile(blob);
+    uploaded.push({ name: driveFile.getName(), size: bytes.length });
+  });
+
+  // Write manifest to the temp folder (agent reads this to know what to process)
+  var manifest = {
+    job_id: jobId,
+    project_name: projectName,
+    client_name: fields.client_name || '',
+    email: fields.email || '',
+    time_tolerance: parseFloat(fields.time_tolerance) || 1.0,
+    factory_a0: parseFloat(fields.factory_a0) || 0.0,
+    factory_a1: parseFloat(fields.factory_a1) || 0.739863,
+    factory_a2: parseFloat(fields.factory_a2) || 0.0,
+    factory_a3: parseFloat(fields.factory_a3) || 0.0,
+    spectrogram_file: spectro.filename,
+    flightlog_file: flight.filename,
+    submitted_utc: ts.toISOString(),
+    status: 'pending',
+  };
+  tempFolder.createFile(
+    Utilities.newBlob(JSON.stringify(manifest, null, 2), 'application/json', 'job-manifest.json')
+  );
+
+  // ── Trigger thepopebot webhook for IMMEDIATE processing ──
+  var webhookResult = triggerWebhook(jobId, projectName, fields, spectro, flight, tempFolder.getId());
 
   // ── Telegram notify (fire-and-forget) ──
   sendTelegram(jobId, projectName, fields, webhookResult.ok);
@@ -119,16 +156,9 @@ function processSubmission(data) {
 // Webhook Trigger
 // ═══════════════════════════════════════════════════════════════════════════
 
-function triggerWebhook(jobId, projectName, fields, spectro, flight) {
+function triggerWebhook(jobId, projectName, fields, spectro, flight, pendingFolderId) {
   if (!CONFIG.WEBHOOK_URL || CONFIG.WEBHOOK_URL.indexOf('PASTE_YOUR') !== -1) {
     return { ok: false, error: 'WEBHOOK_URL not configured' };
-  }
-
-  // Safety: check total payload size (base64 files + JSON overhead)
-  var totalBytes = (spectro.data || '').length + (flight.data || '').length;
-  var totalMB = totalBytes / (1024 * 1024);
-  if (totalMB > 15) {
-    return { ok: false, error: 'Files too large for inline webhook (' + totalMB.toFixed(1) + ' MB encoded, max 15 MB)' };
   }
 
   try {
@@ -142,11 +172,9 @@ function triggerWebhook(jobId, projectName, fields, spectro, flight) {
       factory_a1: parseFloat(fields.factory_a1) || 0.739863,
       factory_a2: parseFloat(fields.factory_a2) || 0.0,
       factory_a3: parseFloat(fields.factory_a3) || 0.0,
-      // File data inline as base64 — inputs NEVER touch Drive
-      spectrogram_filename: spectro.filename,
-      spectrogram_b64: spectro.data,
-      flightlog_filename: flight.filename,
-      flightlog_b64: flight.data,
+      spectrogram_file: spectro.filename,
+      flightlog_file: flight.filename,
+      pending_folder_id: pendingFolderId,
     };
 
     var resp = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, {
