@@ -171,7 +171,8 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
     description = lines[6].strip()
     device = lines[7].strip()
     base_duration_s = float(lines[8].strip())
-    n_channels = int(lines[9].strip())
+    # FORMAT 3 exports may serialise integer fields as e.g. ``8192.0``.
+    n_channels = int(float(lines[9].strip()))
 
     base_start = 10
     base_end = base_start + n_channels
@@ -201,6 +202,8 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
         n_channels=n_channels,
     )
 
+    # Read each raw channel vector as exactly n_channels consecutive values.
+    # Calibration is metadata only and must never alter or reorder channels.
     remaining_text = "".join(lines[base_end:])
     tokens = remaining_text.split()
 
@@ -216,23 +219,30 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
             lon = float(tokens[idx]); idx += 1
             duration = float(tokens[idx]); idx += 1
 
-            # FORMAT 3 variant: some exporters put the absolute timestamp
-            # in the 4th field (labelled 'duration') and leave ts_ms=0.
-            # If ts_ms is 0 but 'duration' looks like a Unix epoch, swap.
-            if ts_ms == 0 and duration > 1e11:
-                ts_ms = int(duration)
-                duration = 5.0  # default per-record integration (s)
         except (ValueError, IndexError) as exc:
             print(f"[WARN] Stopping delta-spectrum parse at token {idx}: {exc}")
             break
 
         channel_vals = tokens[idx: idx + n_channels]
-        if len(channel_vals) < n_channels:
-            print("[WARN] Incomplete channel set at end of file; stopping.")
+        if len(channel_vals) != n_channels:
+            print(
+                f"[WARN] Incomplete channel set at token {idx}: "
+                f"got {len(channel_vals)}, expected {n_channels}; stopping."
+            )
             break
-        channels = np.fromiter((int(float(v)) for v in channel_vals), dtype=np.int32, count=n_channels)
+
+        # Counts are raw detector channels. Convert only numeric formatting
+        # (some exporters write 12.0); never energy-calibrate or reorder them.
+        channels = np.fromiter(
+            (int(float(value)) for value in channel_vals),
+            dtype=np.int32,
+            count=n_channels,
+        )
         idx += n_channels
 
+        # The four fields are always: timestamp_ms, latitude, longitude,
+        # duration_s.  Keep the channel vector aligned exactly after them;
+        # do not infer or substitute header fields from channel data.
         dt_utc = dt.datetime.fromtimestamp(ts_ms / 1000.0, tz=dt.timezone.utc)
 
         records.append(
