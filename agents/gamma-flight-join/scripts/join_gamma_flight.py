@@ -63,6 +63,9 @@ class SpectrogramHeader:
     device: str
     base_duration_s: float
     n_channels: int
+    n_calibration_coefficients: int
+    calibration_coefficients: List[float]
+    base_channels: np.ndarray
 
 
 @dataclasses.dataclass
@@ -75,7 +78,9 @@ class GammaRecord:
     latitude_phone: float
     longitude_phone: float
     duration_s: float
-    channels: np.ndarray
+    altitude_phone: float = math.nan
+    channels: np.ndarray = dataclasses.field(default_factory=lambda: np.array([], dtype=np.int32))
+    record_type: str = "Delta"
 
 
 # ---------------------------------------------------------------------------
@@ -173,13 +178,17 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
     base_duration_s = float(lines[8].strip())
     # FORMAT 3 exports may serialise integer fields as e.g. ``8192.0``.
     n_channels = int(float(lines[9].strip()))
+    n_cal = int(float(lines[10].strip()))
+    cal_start = 11
+    cal_end = cal_start + n_cal
+    calibration_coefficients = [float(lines[i].strip()) for i in range(cal_start, cal_end)]
 
-    base_start = 10
+    base_start = cal_end
     base_end = base_start + n_channels
     if base_end > len(lines):
         raise ValueError("Spectrogram file truncated: not enough lines for base spectrum")
 
-    _base_spectrum = np.fromiter(
+    base_spectrum = np.fromiter(
         (int(float(lines[i].strip())) for i in range(base_start, base_end)),
         dtype=np.int32,
         count=n_channels,
@@ -200,6 +209,9 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
         device=device,
         base_duration_s=base_duration_s,
         n_channels=n_channels,
+        n_calibration_coefficients=n_cal,
+        calibration_coefficients=calibration_coefficients,
+        base_channels=base_spectrum,
     )
 
     # Read each raw channel vector as exactly n_channels consecutive values.
@@ -232,16 +244,34 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
     else:
         idx = len(tokens)
 
-    records: List[GammaRecord] = []
-    spectrum_id = 0
-    per_record_header = 4
+    # Determine whether this export uses four metadata fields
+    # (timestamp, lat, lon, duration) or five (plus altitude). Exact token
+    # grouping prevents a different base integration time from shifting data.
+    if (len(tokens) - idx) % (5 + n_channels) == 0:
+        per_record_header = 5
+    elif (len(tokens) - idx) % (4 + n_channels) == 0:
+        per_record_header = 4
+    else:
+        per_record_header = 5 if idx + 5 < len(tokens) else 4
+
+    records: List[GammaRecord] = [GammaRecord(
+        spectrum_id=0, timestamp_ms=gps_start_ms,
+        datetime_utc=dt.datetime.fromtimestamp(gps_start_ms / 1000.0, tz=dt.timezone.utc),
+        latitude_phone=phone_lat, longitude_phone=phone_lon, altitude_phone=math.nan,
+        duration_s=base_duration_s, channels=base_spectrum, record_type="Base")]
+    spectrum_id = 1
 
     while idx + per_record_header + n_channels <= len(tokens):
         try:
             ts_ms = int(float(tokens[idx])); idx += 1
             lat = float(tokens[idx]); idx += 1
             lon = float(tokens[idx]); idx += 1
-            duration = float(tokens[idx]); idx += 1
+            fourth = float(tokens[idx]); idx += 1
+            altitude = math.nan
+            duration = fourth
+            if per_record_header == 5:
+                altitude = fourth
+                duration = float(tokens[idx]); idx += 1
 
         except (ValueError, IndexError) as exc:
             print(f"[WARN] Stopping delta-spectrum parse at token {idx}: {exc}")
@@ -276,8 +306,10 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
                 datetime_utc=dt_utc,
                 latitude_phone=lat,
                 longitude_phone=lon,
+                altitude_phone=altitude,
                 duration_s=duration,
                 channels=channels,
+                record_type=f"Delta {spectrum_id}",
             )
         )
         spectrum_id += 1
@@ -521,7 +553,9 @@ def records_to_dataframe(header: SpectrogramHeader, records: List[GammaRecord]) 
         "gamma_datetime_utc": [r.datetime_utc for r in records],
         "gamma_lat_phone": [r.latitude_phone for r in records],
         "gamma_lon_phone": [r.longitude_phone for r in records],
+        "gamma_alt_phone": [r.altitude_phone for r in records],
         "gamma_duration_s": [r.duration_s for r in records],
+        "spectrum_type": [r.record_type for r in records],
         "gamma_counts_total": header.counts_total,
         "gamma_cps": header.cps,
         "gamma_integration_time_s": header.integration_time_s,
@@ -731,7 +765,7 @@ def main() -> None:
         f"counts_total={header.counts_total}, cps={header.cps:.3f}, "
         f"n_channels={header.n_channels}"
     )
-    print(f"[INFO] Parsed {len(records)} delta-spectrum records.")
+    print(f"[INFO] Parsed {len(records)} spectra (Base + {max(0, len(records) - 1)} delta spectra).")
 
     gamma_df = records_to_dataframe(header, records)
 
@@ -753,6 +787,7 @@ def main() -> None:
         "gamma_datetime_utc", "gamma_timestamp_ms", "gamma_lat_phone",
         "gamma_lon_phone", "gamma_duration_s", "gamma_counts_total",
         "gamma_cps", "gamma_integration_time_s", "gamma_base_duration_s",
+        "gamma_alt_phone", "spectrum_type",
     ])
 
     channel_cols = [c for c in joined_df.columns if c.startswith("ch_")]
