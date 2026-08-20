@@ -556,13 +556,17 @@ def records_to_dataframe(header: SpectrogramHeader, records: List[GammaRecord]) 
         "gamma_alt_phone": [r.altitude_phone for r in records],
         "gamma_duration_s": [r.duration_s for r in records],
         "spectrum_type": [r.record_type for r in records],
-        "gamma_counts_total": header.counts_total,
-        "gamma_cps": header.cps,
-        "gamma_integration_time_s": header.integration_time_s,
-        "gamma_base_duration_s": header.base_duration_s,
     }
 
     channel_matrix = np.vstack([r.channels for r in records])  # (n_records, n_channels)
+    row_counts = channel_matrix.sum(axis=1).astype(np.int64)
+    row_duration = np.asarray([r.duration_s for r in records], dtype=float)
+    row_cps = np.divide(row_counts.astype(float), row_duration,
+                        out=np.full(row_counts.shape, np.nan, dtype=float),
+                        where=row_duration > 0)
+    data["gamma_counts_total"] = row_counts
+    data["gamma_cps"] = row_cps
+
     for ch in range(n_channels):
         data[f"ch_{ch}"] = channel_matrix[:, ch]
 
@@ -786,7 +790,7 @@ def main() -> None:
     cols_to_keep.update([
         "gamma_datetime_utc", "gamma_timestamp_ms", "gamma_lat_phone",
         "gamma_lon_phone", "gamma_duration_s", "gamma_counts_total",
-        "gamma_cps", "gamma_integration_time_s", "gamma_base_duration_s",
+        "gamma_cps",
         "gamma_alt_phone", "spectrum_type",
     ])
 
