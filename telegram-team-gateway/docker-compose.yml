@@ -1,0 +1,11 @@
+services:
+  telegram-team-gateway:
+    build:
+      context: ..
+      dockerfile: telegram-team-gateway/Dockerfile
+    environment:
+      TEAM_TELEGRAM_BOT_TOKEN: ${TEAM_TELEGRAM_BOT_TOKEN}
+      PORT: "8090"
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
