@@ -15,11 +15,29 @@ Search Ireland locations including Dublin, Cork, Galway, Limerick, Maynooth, Wat
 Read `data/ireland-geospatial-opportunities/state.json` before compiling results. Apply every freshness and duplicate rule in `SYSTEM.md`. Use a small Python script if useful for URL canonicalisation, hashing and atomic JSON updates. Never put state in git-tracked files.
 
 ## Message
-Send one concise Telegram message via the `agent-job-dm` skill:
-- heading and run date
-- number of new/changed validated opportunities
-- for each: title, employer, Irish location, type, closing date (or “not stated”), why it matches, and the direct original URL
-- a clear note that expired and repeated unchanged positions were excluded
-- if zero: say no new qualifying positions were found; do not resend prior listings
+Send one polished, compact Telegram message via the `agent-job-dm` skill. The message is the user interface: use clear spacing, short sections, bullet points and restrained emojis. Show only the main information—do not paste research notes or long descriptions.
+
+Use this layout:
+
+🔎 **Ireland Geospatial Opportunities**
+📅 Checked: DD Month YYYY · Europe/Dublin
+📍 Republic of Ireland only
+
+✅ **N new opportunities**
+
+For each result:
+**1. Role title**
+🏢 Employer · 📍 Irish location
+🎓 Type: job/postdoc/research role
+⏳ Deadline: exact date and time, or “not stated”
+🧭 Match: one short reason
+🔗 Apply: direct original vacancy URL
+
+Finish with:
+🛡️ Expired, removed, duplicate and unchanged previously sent listings excluded.
+
+If zero qualifying results survive validation, use:
+📭 **No new qualifying opportunities found today.**
+All checked listings were either outside the criteria, expired, duplicate, or could not be verified as open. No previous positions were resent.
 
 Keep within Telegram message limits; split into numbered messages if necessary. Update state only after successful delivery. If delivery fails, do not mark candidates as sent.
