@@ -77,5 +77,13 @@
     "job": "Read jobs/generate-content.md and execute the full EDGE Smart Video content generation pipeline. Process one pending topic: generate post, images, and video. Do not ask for input — execute autonomously.",
     "scope": "agents/edge-smart-video",
     "enabled": true
+  },
+  {
+    "name": "ireland-geospatial-opportunities",
+    "schedule": "0 8 * * 1,4",
+    "type": "agent",
+    "scope": "agents/ireland-geospatial-opportunities",
+    "job": "Read jobs/search-and-notify.md and execute the Ireland-only geospatial opportunities search. Do not ask for input — execute autonomously.",
+    "enabled": true
   }
 ]

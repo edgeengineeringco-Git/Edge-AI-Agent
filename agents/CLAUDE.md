@@ -12,6 +12,16 @@ The EDGE Weekly Critical Minerals Intel pipeline. Runs every Monday at 08:00 Ire
 - **Skills**: Inherits root skills (agent-job-dm, agent-job-secrets, google-drive-upload)
 - **Secrets needed**: `GOOGLE_DRIVE_OAUTH` (OAuth refresh token JSON — client_id, client_secret, refresh_token)
 
+### ireland-geospatial-opportunities
+
+Ireland-only opportunities agent for remote sensing, GIS, UAV/UAS, photogrammetry, LiDAR and related academic/industry roles. Runs twice weekly (Monday and Thursday at 08:00 Europe/Dublin), sends a concise Telegram briefing through `agent-job-dm`, and keeps only runtime deduplication state outside the tracked workspace.
+
+- **Cron:** `ireland-geospatial-opportunities` in `agent-job/CRONS.json`
+- **Job:** `agents/ireland-geospatial-opportunities/jobs/search-and-notify.md`
+- **System prompt:** `agents/ireland-geospatial-opportunities/SYSTEM.md`
+- **Freshness:** validates live original listings; excludes expired, removed, duplicate and unchanged previously sent positions
+- **Storage:** no Google Drive, GitHub, email or report archive
+
 ## Adding an Agent
 
 Each subdirectory defines an agent. At minimum create a folder with a `SYSTEM.md` file:

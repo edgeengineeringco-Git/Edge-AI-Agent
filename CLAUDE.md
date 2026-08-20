@@ -96,6 +96,15 @@ agents/
 
 ## Agents
 
+### ireland-geospatial-opportunities
+
+Ireland-only opportunity discovery agent for remote sensing, GIS, UAV/UAS, photogrammetry, LiDAR and related jobs and postdoctoral/research positions. Runs Mondays and Thursdays at 08:00 Europe/Dublin and sends validated, non-duplicate results via Telegram through the existing team subscription. It does not use Google Drive, GitHub, email or external report storage. Runtime deduplication state is kept outside the tracked workspace.
+
+- **Scope:** `agents/ireland-geospatial-opportunities`
+- **Schedule:** `ireland-geospatial-opportunities` in `agent-job/CRONS.json`
+- **Job:** `agents/ireland-geospatial-opportunities/jobs/search-and-notify.md`
+
+
 ### edge-critical-minerals
 
 The **EDGE Critical Minerals Intel Agent** runs every Monday at 08:00 Ireland time. It autonomously researches and generates a weekly intelligence briefing covering funding, events, policy, and R&D opportunities for critical minerals prospecting (REE, K-Th-U).
