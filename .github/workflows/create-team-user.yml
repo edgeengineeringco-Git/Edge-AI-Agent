@@ -1,0 +1,21 @@
+name: Create Team User
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-user:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Pull latest and create user
+        run: |
+          docker exec thepopebot-event-handler bash -c '
+            git -C /project fetch origin main
+            git -C /project reset --hard origin/main
+          '
+          docker exec -e CREATE_EMAIL="m.khoshlahjeh.azar@gmail.com" \
+                      -e CREATE_PASSWORD="MahdiTeam2026!" \
+                      -e CREATE_TELEGRAM_ID="262358925" \
+                      thepopebot-event-handler \
+                      node /project/scripts/create-team-user.mjs
