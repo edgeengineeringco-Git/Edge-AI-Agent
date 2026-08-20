@@ -207,8 +207,32 @@ def parse_spectrogram(path: Path) -> Tuple[SpectrogramHeader, List[GammaRecord]]
     remaining_text = "".join(lines[base_end:])
     tokens = remaining_text.split()
 
-    records: List[GammaRecord] = []
+    # A FORMAT 3 export can contain a few trailing base-spectrum values or
+    # padding lines before the first delta record. Locate the first genuine
+    # record header rather than silently treating padding as timestamp/lat/
+    # lon/duration and shifting every channel vector.
     idx = 0
+    while idx + 4 + n_channels <= len(tokens):
+        try:
+            candidate_ts = int(float(tokens[idx]))
+            candidate_lat = float(tokens[idx + 1])
+            candidate_lon = float(tokens[idx + 2])
+            candidate_duration = float(tokens[idx + 3])
+        except ValueError:
+            idx += 1
+            continue
+        if (
+            candidate_ts > 1e11
+            and -90.0 <= candidate_lat <= 90.0
+            and -180.0 <= candidate_lon <= 180.0
+            and 0.0 < candidate_duration <= 3600.0
+        ):
+            break
+        idx += 1
+    else:
+        idx = len(tokens)
+
+    records: List[GammaRecord] = []
     spectrum_id = 0
     per_record_header = 4
 
