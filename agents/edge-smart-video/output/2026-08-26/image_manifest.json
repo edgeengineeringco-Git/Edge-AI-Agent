@@ -1,0 +1,27 @@
+{
+  "topic": "Decision-support tool for foundation design in variable soils",
+  "sector": "Geotechnical",
+  "backend": "pollinations",
+  "slides": {
+    "slide1": {
+      "path": "output/2026-08-26/slide1.png",
+      "prompt": "Professional engineering technology background, Geotechnical industry, Decision-support tool for foundation design in variable soils, sleek dark blue tone, cinematic lighting, photorealistic, 16:9",
+      "seed": 4000
+    },
+    "slide2": {
+      "path": "output/2026-08-26/slide2.png",
+      "prompt": "Infographic technical diagram about Decision-support tool for foundation design in variable soils in Geotechnical, data visualization, dark theme with cyan accents, professional, 16:9",
+      "seed": 4946
+    },
+    "slide3": {
+      "path": "output/2026-08-26/slide3.png",
+      "prompt": "Engineering team working on Decision-support tool for foundation design in variable soils, Geotechnical industry, innovation, modern workplace, professional photography, warm tones, 16:9",
+      "seed": 8133
+    },
+    "cta": {
+      "path": "output/2026-08-26/cta.png",
+      "prompt": "Abstract technology network background, Geotechnical concept, global connection, dark theme electric blue accents, minimalist, professional, 16:9",
+      "seed": 6360
+    }
+  }
+}
