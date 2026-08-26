@@ -1,0 +1,32 @@
+[
+  {
+    "type": "title",
+    "headline": "Designing foundations for variable soils",
+    "subtitle": "Geotechnical decision support | EDGE Engineers",
+    "sector": "Geotechnical"
+  },
+  {
+    "type": "content",
+    "headline": "The uncertainty problem",
+    "bullets": [
+      "Ground conditions vary between investigation points",
+      "Sparse data encourages conservative assumptions",
+      "Redesign and site surprises consume programme time"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "A better design decision",
+    "bullets": [
+      "Combine soil, groundwater and variability data",
+      "Compare foundation options transparently",
+      "Reduce avoidable redesign and construction risk"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Turn ground data into confident decisions",
+    "url": "www.edgeengineers.net",
+    "subtitle": "EDGE Engineers | Geotechnical and digital engineering"
+  }
+]
