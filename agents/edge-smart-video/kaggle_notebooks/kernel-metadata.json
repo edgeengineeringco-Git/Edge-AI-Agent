@@ -1,0 +1,13 @@
+{
+  "id": "edge/edge-talking-head-intro",
+  "title": "EDGE 90s Talking-Head (SadTalker)",
+  "code_file": "EDGE_TalkingHead.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
