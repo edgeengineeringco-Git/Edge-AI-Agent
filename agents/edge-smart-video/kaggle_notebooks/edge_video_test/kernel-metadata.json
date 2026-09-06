@@ -1,7 +1,7 @@
 {
-  "id": "edgeengineers/edge-diag3-postverify",
-  "title": "EDGE diag3 postverify",
-  "code_file": "diag2.ipynb",
+  "id": "edgeengineers/edgep100test1788714647",
+  "title": "EDGE P100 GPU test",
+  "code_file": "P100_test.ipynb",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": true,

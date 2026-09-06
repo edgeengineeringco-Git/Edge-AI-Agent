@@ -1,6 +1,6 @@
 {
-  "id": "edge/edge-talking-head-intro",
-  "title": "EDGE 90s Talking-Head (SadTalker)",
+  "id": "edgeengineers/edge-90s-talking-head-v3",
+  "title": "EDGE 90s Talking-Head v3",
   "code_file": "EDGE_TalkingHead.ipynb",
   "language": "python",
   "kernel_type": "notebook",
