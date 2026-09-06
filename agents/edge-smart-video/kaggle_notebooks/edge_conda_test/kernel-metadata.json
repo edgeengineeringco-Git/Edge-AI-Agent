@@ -1,0 +1,13 @@
+{
+  "id": "edgeengineers/edgecondatest1788717883",
+  "title": "EDGE conda P100 test v3",
+  "code_file": "conda_test.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}

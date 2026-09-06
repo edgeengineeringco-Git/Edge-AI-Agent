@@ -1,0 +1,13 @@
+{
+  "id": "edgeengineers/edge-uv-p100-test",
+  "title": "EDGE uv P100 test (fixed torch pin)",
+  "code_file": "uv_test2.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
