@@ -1,67 +1,23 @@
 1
-00:00:00,000 --> 00:00:03,000
-My name is Mirsina Aghdam, CEO of EDGE.
+00:00:00,000 --> 00:00:04,000
+Welcome to EDGE
 
 2
-00:00:03,000 --> 00:00:07,000
-Earthwise Dynamics Geo Environs.
+00:00:04,000 --> 00:00:12,000
+Europe needs more secure and responsible access to critical minerals.
 
 3
-00:00:07,000 --> 00:00:11,000
-Europe needs more secure and responsible
+00:00:12,000 --> 00:00:20,000
+Identifying and prioritising promising areas for exploration remains slow, fragmented and expensive.
 
 4
-00:00:11,000 --> 00:00:15,000
-access to critical minerals.
+00:00:20,000 --> 00:00:30,000
+At EDGE, we are developing TerraLens AI: an evidence-led system.
 
 5
-00:00:15,000 --> 00:00:19,500
-Identifying and prioritising promising areas
+00:00:30,000 --> 00:00:38,000
+The aim is practical: clearer, traceable evidence for exploration teams.
 
 6
-00:00:19,500 --> 00:00:24,000
-for exploration remains slow, fragmented and expensive.
-
-7
-00:00:24,000 --> 00:00:29,000
-At EDGE, we are developing TerraLens AI:
-
-8
-00:00:29,000 --> 00:00:33,000
-an evidence-led system bringing together
-
-9
-00:00:33,000 --> 00:00:37,000
-drone, LiDAR, satellite, hyperspectral and geological data.
-
-10
-00:00:37,000 --> 00:00:42,000
-The aim is practical: clearer, traceable evidence
-
-11
-00:00:42,000 --> 00:00:47,000
-for exploration teams assessing potential targets.
-
-12
-00:00:47,000 --> 00:00:53,000
-With support from ESA BIC Ireland, we are progressing
-
-13
-00:00:53,000 --> 00:00:59,000
-terrestrial development and preparing European field validation.
-
-14
-00:00:59,000 --> 00:01:03,000
-This work provides the foundation for AstraLens:
-
-15
-00:01:03,000 --> 00:01:07,000
-EDGE’s future roadmap for space-enabled mineral intelligence.
-
-16
-00:01:07,000 --> 00:01:11,000
-EDGE combines geoengineering and AI automation
-
-17
-00:01:11,000 --> 00:01:15,000
-with Earth observation for informed decisions.
+00:00:38,000 --> 00:00:44,000
+EDGE combines geoengineering, AI automation and Earth observation.
