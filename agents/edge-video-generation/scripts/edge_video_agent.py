@@ -13,6 +13,13 @@ from urllib.error import HTTPError, URLError
 
 MODELS = ("wan3.0-video", "kling-v3-omni", "minimax-h3")
 DEFAULT_BUDGET = 15.0
+AIHUBMIX_BASE_URL = "https://aihubmix.com"
+DEFAULT_ENDPOINTS = {
+    "models": AIHUBMIX_BASE_URL + "/api/v1/models",
+    "generate": AIHUBMIX_BASE_URL + "/v1/videos",
+    "status": AIHUBMIX_BASE_URL + "/v1/videos/{video_id}",
+    "download": AIHUBMIX_BASE_URL + "/v1/videos/{video_id}/content",
+}
 ROOT = Path(__file__).resolve().parents[3]
 
 class SafeError(RuntimeError): pass
@@ -55,11 +62,10 @@ def credential_headers(secret: object) -> dict[str, str]:
     if isinstance(secret, str): return {"Authorization": "Bearer " + secret}
     raise SafeError("VIDEO_GENERATION_API_KEYS is not configured.")
 
-def endpoint(name: str) -> str:
+def endpoint(name: str, **values) -> str:
     key = {"models":"VIDEO_GENERATION_API_MODELS_URL", "generate":"VIDEO_GENERATION_API_GENERATE_URL", "status":"VIDEO_GENERATION_API_STATUS_URL", "download":"VIDEO_GENERATION_API_DOWNLOAD_URL"}[name]
-    value = os.environ.get(key, "").strip()
-    if not value: raise SafeError(f"Provider {name} endpoint is not documented/configured; refusing to guess an endpoint.")
-    return value
+    value = os.environ.get(key, DEFAULT_ENDPOINTS[name]).strip()
+    return value.format(**values)
 
 def request_json(url: str, headers: dict, payload=None, method="GET"):
     body = None if payload is None else json.dumps(payload).encode()
@@ -76,7 +82,7 @@ def request_json(url: str, headers: dict, payload=None, method="GET"):
 def _model_records(value):
     """Find model metadata without retaining or printing credential-bearing fields."""
     if isinstance(value, dict):
-        name = str(value.get("id") or value.get("model") or value.get("name") or "")
+        name = str(value.get("id") or value.get("model") or value.get("name") or value.get("model_id") or "")
         if name in MODELS: yield name, value
         for child in value.values(): yield from _model_records(child)
     elif isinstance(value, list):
@@ -88,6 +94,9 @@ def _price(meta):
         if isinstance(meta.get(key), (int, float)): return float(meta[key]), "per_second"
     for key in ("price_per_clip", "usd_per_clip", "cost_per_clip"):
         if isinstance(meta.get(key), (int, float)): return float(meta[key]), "per_clip"
+    pricing = meta.get("pricing")
+    if isinstance(pricing, dict) and isinstance(pricing.get("output"), (int, float)):
+        return float(pricing["output"]), "provider_output_unit"
     price = meta.get("price")
     if isinstance(price, (int, float)) and meta.get("price_unit") in ("per_second", "per_clip"):
         return float(price), str(meta["price_unit"])
@@ -102,8 +111,11 @@ def validate_provider(secret: object, logpath: Path) -> dict:
     for model, meta in records.items():
         price, unit = _price(meta)
         capabilities = json.dumps(meta).lower()
-        if price is None or not unit or not any(x in capabilities for x in ("duration", "max_duration")) or not any(x in capabilities for x in ("resolution", "aspect_ratio", "aspect")):
-            raise SafeError(f"Provider metadata for {model} lacks an explicit current price or capability limits.")
+        # AIHubMix exposes video type and pricing in the models response; it
+        # may omit duration/resolution limits there. Request validation uses the
+        # documented video endpoint fields below.
+        if price is None or not unit or "video" not in capabilities:
+            raise SafeError(f"Provider metadata for {model} lacks an explicit current video price.")
     log(logpath, "provider_validated", models=list(MODELS), http_status=status)
     return data
 
@@ -126,6 +138,9 @@ def route(shot: dict) -> tuple[str,str]:
     if any(x in c for x in ("person","people","geologist","equipment","drone deployment","hero")): return "kling-v3-omni","wan3.0-video"
     if any(x in c for x in ("landscape","geology","terrain","satellite","earth","aerial","b-roll","technical")): return "wan3.0-video","minimax-h3"
     return "wan3.0-video","minimax-h3"
+
+def model_metadata(provider: dict) -> dict:
+    return dict(_model_records(provider))
 
 def prompt_for(shot,b):
     style=b.get("brand_style","restrained documentary corporate realism")

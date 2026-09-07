@@ -1,0 +1,309 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-09-07T04:53:51.104898+00:00",
+  "brief": {
+    "title": "EDGE company introduction",
+    "company": "EDGE \u2014 Earthwise Dynamics Geo Environs",
+    "presenter": "Mirsina Aghdam",
+    "audience": [
+      "innovation programme evaluators",
+      "research partners",
+      "ESA/space-technology stakeholders",
+      "European critical-minerals stakeholders",
+      "commercial partners",
+      "investors"
+    ],
+    "purpose": "Introduce EDGE, TerraLens AI, the terrestrial validation plan and the future AstraLens roadmap.",
+    "target_duration_seconds": 75,
+    "minimum_duration_seconds": 60,
+    "maximum_duration_seconds": 90,
+    "brand_style": "credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera",
+    "narration": {
+      "language": "en",
+      "voice": "clear natural professional male English voice",
+      "text": "My name is Mirsina Aghdam, CEO of EDGE \u2014 Earthwise Dynamics Geo Environs. Europe needs more secure and responsible access to critical minerals. Yet identifying and prioritising promising areas for exploration remains slow, fragmented and expensive. At EDGE, we are developing TerraLens AI: an evidence-led system that brings together drone gamma-ray spectrometry, LiDAR, satellite and hyperspectral data, geochemistry, mineralogy and geological records. The aim is practical. TerraLens AI helps exploration teams identify, assess and prioritise potential rare-earth targets with a clearer, traceable evidence trail. With support from ESA BIC Ireland, we are progressing terrestrial development and preparing field validation across European geological settings, beginning with collaboration opportunities in Sweden. This terrestrial work will provide the foundation for AstraLens: EDGE\u2019s future roadmap for space-enabled mineral intelligence. EDGE combines geoengineering, AI automation and Earth observation to support more informed decisions in the critical-minerals sector."
+    },
+    "shots": [
+      {
+        "id": "shot-01",
+        "description": "Authorised portrait still of Mirsina Aghdam on a clean dark navy and charcoal studio-style backdrop; restrained 2.5D push-in or parallax added in post; no talking avatar or lip sync",
+        "duration_seconds": 5,
+        "category": "portrait still",
+        "post_only": true
+      },
+      {
+        "id": "shot-02",
+        "description": "Photorealistic aerial landscape of rugged exposed European rock formations, muted natural colours, overcast early daylight, very slow forward aerial drift, no mine or machinery",
+        "duration_seconds": 8,
+        "category": "landscape",
+        "difficult": true,
+        "camera_move": "very slow stable forward aerial drift"
+      },
+      {
+        "id": "shot-03",
+        "description": "Documentary view of a fictional geologist examining exposed rock with notebook and compact field kit; person secondary, no close face detail, slow lateral camera move",
+        "duration_seconds": 7,
+        "category": "field geologist",
+        "difficult": true,
+        "camera_move": "slow stable lateral documentary move"
+      },
+      {
+        "id": "shot-04",
+        "description": "Small professional geology team preparing a compact practical survey drone in a rocky European field setting with survey cases; wide view moving slowly toward equipment; no telemetry screens or logos",
+        "duration_seconds": 10,
+        "category": "field survey drone",
+        "hero": true,
+        "difficult": true,
+        "camera_move": "slow controlled move from wide team view toward equipment"
+      },
+      {
+        "id": "shot-05",
+        "description": "Real Landsat imagery or neutral photorealistic high-altitude Earth-observation landscape with slow pan and subtle parallax added in post; do not claim satellite imagery unless real Landsat source is used",
+        "duration_seconds": 9,
+        "category": "satellite earth observation",
+        "post_asset_preferred": true
+      },
+      {
+        "id": "shot-06",
+        "description": "Documentary scene of a field scientist packing samples beside a handheld geological tool, rock exposure and drone equipment; practical natural light, no visible result",
+        "duration_seconds": 9,
+        "category": "technical field b-roll",
+        "camera_move": "slow controlled documentary move"
+      },
+      {
+        "id": "shot-07",
+        "description": "Wide rugged Nordic or European landscape with a small field team conducting a careful survey in the distance; cloudy natural daylight, no flags or identifiable place claim",
+        "duration_seconds": 10,
+        "category": "European validation landscape"
+      },
+      {
+        "id": "shot-08",
+        "description": "Photorealistic Earth seen from low orbit with a small credible Earth-observation satellite at a distance; realistic blue atmospheric horizon, dark space and subtle sunlight, slow elegant pull-back",
+        "duration_seconds": 10,
+        "category": "orbit satellite hero",
+        "hero": true,
+        "difficult": true,
+        "camera_move": "slow elegant camera pull-back"
+      },
+      {
+        "id": "shot-09",
+        "description": "Return to authorised Mirsina Aghdam portrait still with calm subtle post-production motion and clean closing card; no avatar or lip sync",
+        "duration_seconds": 7,
+        "category": "closing portrait still",
+        "post_only": true
+      }
+    ],
+    "aspect_ratio": "16:9",
+    "resolution": "1920x1080",
+    "fps": 30,
+    "visual_constraints": [
+      "no generated text",
+      "no logos or watermarks",
+      "no fictional product UI",
+      "no fabricated data layers",
+      "no unsupported scientific claims",
+      "no ESA endorsement implication",
+      "no cartoon or neon hologram style",
+      "no music unless separately approved"
+    ],
+    "budget_ceiling_eur": 7.5,
+    "budget_ceiling_usd": 7.5,
+    "currency_note": "User-approved maximum is EUR 7.50. The execution ceiling must not exceed the EUR 7.50 equivalent; do not spend above the approved amount.",
+    "delivery_format": "H.264/AAC MP4 1920x1080 30fps, SRT, Markdown shot plan, JSON manifest, ZIP",
+    "approved_assets": [
+      "authorised EDGE portrait image",
+      "public Landsat imagery if reliably available"
+    ],
+    "deliverables": [
+      "edge_company_introduction_master_75sec.mp4",
+      "edge_company_introduction_master_75sec.srt",
+      "edge_company_introduction_review_with_subtitles.mp4",
+      "edge_75sec_shot_plan.md",
+      "edge_75sec_cost_report.md",
+      "edge_75sec_generation_manifest.json",
+      "edge_company_introduction_delivery.zip"
+    ]
+  },
+  "provider_validation": "passed",
+  "budget_ceiling_usd": 7.5,
+  "shots": [
+    {
+      "shot_number": 1,
+      "id": "shot-01",
+      "duration_seconds": 5.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Authorised portrait still of Mirsina Aghdam on a clean dark navy and charcoal studio-style backdrop; restrained 2.5D push-in or parallax added in post; no talking avatar or lip sync. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow stable documentary movement. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": false,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-01",
+        "description": "Authorised portrait still of Mirsina Aghdam on a clean dark navy and charcoal studio-style backdrop; restrained 2.5D push-in or parallax added in post; no talking avatar or lip sync",
+        "duration_seconds": 5,
+        "category": "portrait still",
+        "post_only": true
+      }
+    },
+    {
+      "shot_number": 2,
+      "id": "shot-02",
+      "duration_seconds": 8.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Photorealistic aerial landscape of rugged exposed European rock formations, muted natural colours, overcast early daylight, very slow forward aerial drift, no mine or machinery. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: very slow stable forward aerial drift. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": true,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-02",
+        "description": "Photorealistic aerial landscape of rugged exposed European rock formations, muted natural colours, overcast early daylight, very slow forward aerial drift, no mine or machinery",
+        "duration_seconds": 8,
+        "category": "landscape",
+        "difficult": true,
+        "camera_move": "very slow stable forward aerial drift"
+      }
+    },
+    {
+      "shot_number": 3,
+      "id": "shot-03",
+      "duration_seconds": 7.0,
+      "model": "kling-v3-omni",
+      "fallback_model": "wan3.0-video",
+      "mode": "text-to-video",
+      "prompt": "Subject: Documentary view of a fictional geologist examining exposed rock with notebook and compact field kit; person secondary, no close face detail, slow lateral camera move. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow stable lateral documentary move. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": true,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-03",
+        "description": "Documentary view of a fictional geologist examining exposed rock with notebook and compact field kit; person secondary, no close face detail, slow lateral camera move",
+        "duration_seconds": 7,
+        "category": "field geologist",
+        "difficult": true,
+        "camera_move": "slow stable lateral documentary move"
+      }
+    },
+    {
+      "shot_number": 4,
+      "id": "shot-04",
+      "duration_seconds": 10.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Small professional geology team preparing a compact practical survey drone in a rocky European field setting with survey cases; wide view moving slowly toward equipment; no telemetry screens or logos. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow controlled move from wide team view toward equipment. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": true,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-04",
+        "description": "Small professional geology team preparing a compact practical survey drone in a rocky European field setting with survey cases; wide view moving slowly toward equipment; no telemetry screens or logos",
+        "duration_seconds": 10,
+        "category": "field survey drone",
+        "hero": true,
+        "difficult": true,
+        "camera_move": "slow controlled move from wide team view toward equipment"
+      }
+    },
+    {
+      "shot_number": 5,
+      "id": "shot-05",
+      "duration_seconds": 9.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Real Landsat imagery or neutral photorealistic high-altitude Earth-observation landscape with slow pan and subtle parallax added in post; do not claim satellite imagery unless real Landsat source is used. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow stable documentary movement. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": false,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-05",
+        "description": "Real Landsat imagery or neutral photorealistic high-altitude Earth-observation landscape with slow pan and subtle parallax added in post; do not claim satellite imagery unless real Landsat source is used",
+        "duration_seconds": 9,
+        "category": "satellite earth observation",
+        "post_asset_preferred": true
+      }
+    },
+    {
+      "shot_number": 6,
+      "id": "shot-06",
+      "duration_seconds": 9.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Documentary scene of a field scientist packing samples beside a handheld geological tool, rock exposure and drone equipment; practical natural light, no visible result. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow controlled documentary move. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": false,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-06",
+        "description": "Documentary scene of a field scientist packing samples beside a handheld geological tool, rock exposure and drone equipment; practical natural light, no visible result",
+        "duration_seconds": 9,
+        "category": "technical field b-roll",
+        "camera_move": "slow controlled documentary move"
+      }
+    },
+    {
+      "shot_number": 7,
+      "id": "shot-07",
+      "duration_seconds": 10.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Wide rugged Nordic or European landscape with a small field team conducting a careful survey in the distance; cloudy natural daylight, no flags or identifiable place claim. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow stable documentary movement. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": false,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-07",
+        "description": "Wide rugged Nordic or European landscape with a small field team conducting a careful survey in the distance; cloudy natural daylight, no flags or identifiable place claim",
+        "duration_seconds": 10,
+        "category": "European validation landscape"
+      }
+    },
+    {
+      "shot_number": 8,
+      "id": "shot-08",
+      "duration_seconds": 10.0,
+      "model": "kling-v3-omni",
+      "fallback_model": "wan3.0-video",
+      "mode": "text-to-video",
+      "prompt": "Subject: Photorealistic Earth seen from low orbit with a small credible Earth-observation satellite at a distance; realistic blue atmospheric horizon, dark space and subtle sunlight, slow elegant pull-back. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow elegant camera pull-back. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": true,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-08",
+        "description": "Photorealistic Earth seen from low orbit with a small credible Earth-observation satellite at a distance; realistic blue atmospheric horizon, dark space and subtle sunlight, slow elegant pull-back",
+        "duration_seconds": 10,
+        "category": "orbit satellite hero",
+        "hero": true,
+        "difficult": true,
+        "camera_move": "slow elegant camera pull-back"
+      }
+    },
+    {
+      "shot_number": 9,
+      "id": "shot-09",
+      "duration_seconds": 7.0,
+      "model": "wan3.0-video",
+      "fallback_model": "minimax-h3",
+      "mode": "text-to-video",
+      "prompt": "Subject: Return to authorised Mirsina Aghdam portrait still with calm subtle post-production motion and clean closing card; no avatar or lip sync. Setting: realistic professional environment. Lighting: natural controlled cinematic light. Camera: slow stable documentary movement. Style: credible, calm, technically mature European deep-tech science and innovation documentary; deep navy, charcoal, slate grey and restrained white typography; stable deliberate cinematic documentary camera; photorealistic, physically plausible, clean composition, no generated text.",
+      "negative_prompt": "text, labels, captions, logos, watermark, invented scientific data, fake map, distorted geology, cartoon, neon hologram, sci-fi interface, facial deformation, extra limbs, extra fingers, morphing equipment, flicker, heavy shake, blur, low resolution",
+      "test_required": false,
+      "estimated_cost_usd": null,
+      "source": {
+        "id": "shot-09",
+        "description": "Return to authorised Mirsina Aghdam portrait still with calm subtle post-production motion and clean closing card; no avatar or lip sync",
+        "duration_seconds": 7,
+        "category": "closing portrait still",
+        "post_only": true
+      }
+    }
+  ],
+  "projected_duration_seconds": 75.0,
+  "cost_note": "Exact current price is provider metadata-dependent; no paid generation is allowed until pricing is validated and approved."
+}
