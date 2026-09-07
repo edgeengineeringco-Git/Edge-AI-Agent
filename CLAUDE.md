@@ -200,6 +200,26 @@ agents/edge-smart-video/
     └── YYYY-MM-DD-topic/     # Generated assets per run
 ```
 
+### edge-video-generation
+
+**EDGE Video Generation Agent** — approval-gated corporate video production from one structured creative brief. Routes individual shots among `wan3.0-video`, `kling-v3-omni`, and `minimax-h3` using validated provider metadata, enforces a default USD 15 ceiling, creates tests and fallbacks, performs quality-controlled FFmpeg editing, and packages MP4/SRT/manifests/documentation.
+
+- **Scope:** `agents/edge-video-generation`
+- **System prompt:** `agents/edge-video-generation/SYSTEM.md`
+- **Job contract:** `agents/edge-video-generation/jobs/generate-video.md`
+- **Engine:** `agents/edge-video-generation/scripts/edge_video_agent.py`
+- **Secret:** `VIDEO_GENERATION_API_KEYS`, retrieved only through `agent-job-secrets`
+- **Approval:** planning is free; paid generation requires explicit confirmation: `Approve this generation plan and maximum budget of USD $[amount]?`
+
+```text
+agents/edge-video-generation/
+├── SYSTEM.md
+├── CLAUDE.md
+├── jobs/generate-video.md
+├── scripts/edge_video_agent.py
+└── skills/agent-job-secrets → ../../../skills-library/agent-job-secrets
+```
+
 ### geosync-expert
 
 **GeoSync Expert** — geochemical survey processing pipeline for REE prospecting. Processes pXRF / gamma-ray / ICP-MS CSV data through QC → anomaly detection → resource estimation → HTML report generation. Triggered on schedule or manually.
