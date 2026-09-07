@@ -1,0 +1,109 @@
+{
+  "provider": "AIHubMix",
+  "started_at": "2026-09-07T04:59:01.969624+00:00",
+  "tasks": [
+    {
+      "task": "test-landscape",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiODNjZWY2MjYtODM3MC00YzZhLWIzNmMtODk2ZjNiZTg2OWVjIiwiY3JlYXRlZF9hdCI6MTc4ODc1NzE0Mn0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 5,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.21125000000000002,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic documentary aerial view of rugged exposed European rock formations in muted natural colours under overcast daylight. Slow stable forward aerial movement, realistic natural geology, calm science documentary style. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "5",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "test-landscape.mp4",
+      "review_status": "pending"
+    },
+    {
+      "task": "test-field",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiNWUyZDYwOWMtYzg2OS00MWFjLThmMDktZjJlMWFmMjQ3OTY0IiwiY3JlYXRlZF9hdCI6MTc4ODc1NzMwOX0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 5,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.21125000000000002,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic documentary scene of two professional geologists preparing a compact practical survey drone in a rocky European field. Survey cases, credible equipment, natural movement, stable slow camera approach, no close facial detail. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "5",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "test-field.mp4",
+      "review_status": "pending"
+    },
+    {
+      "task": "shot-02-landscape",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiMDM0NmVjZDctMWU5Yi00ZWRmLTkyZjYtNThhMWNlMTM3NmRjIiwiY3JlYXRlZF9hdCI6MTc4ODc1NzQ5MH0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 8,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.676,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic documentary aerial view of rugged exposed European rock formations in muted natural colours under overcast daylight. Very slow stable forward aerial drift, realistic exposed geology and natural terrain, calm premium science documentary. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "8",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "shot-02-landscape.mp4",
+      "review_status": "pending"
+    },
+    {
+      "task": "shot-04-field-drone",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiNjEwMWE4YjUtOWIxMy00MjRmLWEwODUtNzhlMzVhMjMyODk2IiwiY3JlYXRlZF9hdCI6MTc4ODc1Nzk3NH0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 10,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.8450000000000001,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic documentary view of two professional geologists preparing a compact practical survey drone in a realistic rocky European landscape. Modest survey cases, credible field equipment, slow deliberate move from wide team view toward equipment, natural overcast daylight. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "10",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "shot-04-field-drone.mp4",
+      "review_status": "pending"
+    },
+    {
+      "task": "shot-05-fieldwork",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiYTg2ODIxYTEtMDdkMi00MDRkLWIwZWQtZGU5MWNmYjQ3NzZiIiwiY3JlYXRlZF9hdCI6MTc4ODc1ODI2OX0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 8,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.676,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic restrained documentary scene of practical geological fieldwork: a field scientist carefully handling sample bags and examining ordinary rock exposure beside a handheld geological tool and compact drone equipment. Natural light, controlled slow camera movement, no visible result. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "8",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "shot-05-fieldwork.mp4",
+      "review_status": "pending"
+    },
+    {
+      "task": "shot-08-orbit",
+      "id": "eyJtb2RlbCI6IndhbjMuMC12aWRlbyIsImlkIjoiNzM5YWJkYWUtZGJiZS00ODgxLWIwNmQtNDIxNWJmZmE4MWU0IiwiY3JlYXRlZF9hdCI6MTc4ODc1ODYwNH0channel6371",
+      "model": "wan3.0-video",
+      "seconds": 8,
+      "size": "1280x720",
+      "estimated_cost_usd": 0.676,
+      "request": {
+        "model": "wan3.0-video",
+        "prompt": "Photorealistic Earth seen from low orbit with a small credible Earth-observation satellite at a respectful distance. Realistic blue atmospheric horizon, dark space, subtle sunlight, physically plausible proportions, slow elegant camera pull-back. No text, labels, captions, logos or watermark. No invented data, mineral discovery, map, neon, cartoon or science-fiction styling.",
+        "seconds": "8",
+        "size": "1280x720"
+      },
+      "status": "completed",
+      "output_filename": "shot-08-orbit.mp4",
+      "review_status": "pending"
+    }
+  ],
+  "actual_estimated_usd": 3.2955000000000005
+}
