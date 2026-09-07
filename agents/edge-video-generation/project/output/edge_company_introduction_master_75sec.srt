@@ -1,27 +1,31 @@
 1
-00:00:00,000 --> 00:00:05,000
+00:00:00,000 --> 00:00:07,000
 My name is Mirsina Aghdam, CEO of EDGE — Earthwise Dynamics Geo Environs.
 
 2
-00:00:05,000 --> 00:00:13,000
+00:00:07,000 --> 00:00:15,000
 Europe needs more secure and responsible access to critical minerals.
 
 3
-00:00:13,000 --> 00:00:23,000
-Identifying and prioritising promising areas for exploration remains slow, fragmented and expensive.
+00:00:15,000 --> 00:00:24,000
+Yet identifying and prioritising promising areas for exploration remains slow, fragmented and expensive.
 
 4
-00:00:23,000 --> 00:00:33,000
-At EDGE, we are developing TerraLens AI: an evidence-led system.
+00:00:24,000 --> 00:00:37,000
+At EDGE, we are developing TerraLens AI: an evidence-led system that brings together drone gamma-ray spectrometry, LiDAR, satellite and hyperspectral data, geochemistry, mineralogy and geological records.
 
 5
-00:00:33,000 --> 00:00:41,000
-The aim is practical: clearer, traceable evidence for exploration teams.
+00:00:37,000 --> 00:00:47,000
+The aim is practical. TerraLens AI helps exploration teams identify, assess and prioritise potential rare-earth targets with a clearer, traceable evidence trail.
 
 6
-00:00:41,000 --> 00:00:49,000
-This terrestrial work will provide the foundation for AstraLens.
+00:00:47,000 --> 00:00:59,000
+With support from ESA BIC Ireland, we are progressing terrestrial development and preparing field validation across European geological settings, beginning with collaboration opportunities in Sweden.
 
 7
-00:00:49,000 --> 00:01:00,000
-EDGE combines geoengineering, AI automation and Earth observation.
+00:00:59,000 --> 00:01:07,000
+This terrestrial work will provide the foundation for AstraLens: EDGE’s future roadmap for space-enabled mineral intelligence.
+
+8
+00:01:07,000 --> 00:01:15,000
+EDGE combines geoengineering, AI automation and Earth observation to support more informed decisions in the critical-minerals sector.
