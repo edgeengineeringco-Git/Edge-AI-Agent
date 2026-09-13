@@ -1,0 +1,39 @@
+# National REE Prospectivity — single source of truth for weights/priors/thresholds.
+# Nothing hardcoded in scripts; everything reads from here.
+projection:
+  target_epsg: 2157          # EPSG:2157 Irish Transverse Mercator
+  target_resolution_m: 50
+# ---- Layer registry: status flips to CONFIRMED as each layer passes its gate ----
+# Each entry mirrors layer_confirmation.csv. Populated by the ADD-CONFIRM cycle.
+layers:
+  L1_Tellus_airborne_eTh:
+    status: CONFIRMED
+    source: "GSI Tellus airborne radiometric (eTh band); edge-ai-agent-site/data/radiometrics/values.bin band 3"
+    crs: "EPSG:2157"
+    grid: [630, 495]
+    eTh_range_ppm: [0.003, 14.941]
+    note: "Native GSI ImageServer token-gated / MapServer RGB-only; verified from already-acquired grid. Native-50m extraction = OPEN GAP."
+  L2_Tellus_airborne_eU:
+    status: CONFIRMED
+    source: "GSI Tellus airborne radiometric (eU band 1); edge-ai-agent-site/data/radiometrics/values.bin band 1"
+    crs: "EPSG:2157"
+    grid: [630, 495]
+    eU_range_ppm: [0.0, 4.472]
+    cross_check: "eU vs eTh Spearman 0.746 / Pearson 0.715 positive -> PASS"
+    note: "Native-50m extraction = OPEN GAP (shared)."
+  L3_Tellus_airborne_K_eThK:
+    status: CONFIRMED
+    source: "GSI Tellus airborne radiometric (K band 0); eTh/K ratio computed over K>0"
+    crs: "EPSG:2157"
+    grid: [630, 495]
+    K_range_pct: [0.0, 3.917]
+    eThK_ratio_max: 1169.5
+    note: "0 div-by-zero/inf artefacts. Native-50m extraction = OPEN GAP (shared)."
+# Stage-2 values are PLACEHOLDERS until calibrated against labelled points (S3).
+# Filled honestly after L10/L11 give occurrences; not used for L1-L18 confirmation.
+weights: {}                 # populated in Stage 2 (S1 independence audit)
+priors: {}
+thresholds:
+  d_ratio: [0.35, 0.65]      # REE-type discriminator (LREE/HREE) — placeholder, S3-calibrated
+  rpi_classes: [25, 50, 75]  # placeholder; S3-calibrated against Mourne/xenotime
+stage2_status: NOT_STARTED   # locked until F1-F4 final gate complete
