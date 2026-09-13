@@ -1,39 +1,109 @@
-# National REE Prospectivity — single source of truth for weights/priors/thresholds.
-# Nothing hardcoded in scripts; everything reads from here.
+# National REE Prospectivity — single source of truth for weights/priors/thresholds
+# AND the data-layer inventory (L1–L18). Nothing hardcoded in scripts.
 projection:
   target_epsg: 2157          # EPSG:2157 Irish Transverse Mercator
   target_resolution_m: 50
-# ---- Layer registry: status flips to CONFIRMED as each layer passes its gate ----
-# Each entry mirrors layer_confirmation.csv. Populated by the ADD-CONFIRM cycle.
+  note: "Native 50 m GSI rasters are token-gated; resampled/downloaded grids used until token obtained."
+
+# ---- Layer registry: status flips as each layer is accessed/confirmed ----
+# Status values: CONFIRMED | CONFIRMED (sample) | BLOCKED | PENDING
 layers:
   L1_Tellus_airborne_eTh:
     status: CONFIRMED
-    source: "GSI Tellus airborne radiometric (eTh band); edge-ai-agent-site/data/radiometrics/values.bin band 3"
+    source: "GSI Tellus airborne radiometric eTh - edge-ai-agent-site/data/radiometrics/values.bin band 3 (genuine GSI Tellus)"
     crs: "EPSG:2157"
     grid: [630, 495]
     eTh_range_ppm: [0.003, 14.941]
-    note: "Native GSI ImageServer token-gated / MapServer RGB-only; verified from already-acquired grid. Native-50m extraction = OPEN GAP."
+    note: "Native 50 m token-gated; resampled grid used."
   L2_Tellus_airborne_eU:
     status: CONFIRMED
-    source: "GSI Tellus airborne radiometric (eU band 1); edge-ai-agent-site/data/radiometrics/values.bin band 1"
+    source: "values.bin band 1"
     crs: "EPSG:2157"
     grid: [630, 495]
     eU_range_ppm: [0.0, 4.472]
-    cross_check: "eU vs eTh Spearman 0.746 / Pearson 0.715 positive -> PASS"
-    note: "Native-50m extraction = OPEN GAP (shared)."
+    cross_check: "eU~eTh Spearman 0.746 / Pearson 0.715 positive -> PASS"
   L3_Tellus_airborne_K_eThK:
     status: CONFIRMED
-    source: "GSI Tellus airborne radiometric (K band 0); eTh/K ratio computed over K>0"
+    source: "values.bin band 0 (K) + eTh/K ratio"
     crs: "EPSG:2157"
     grid: [630, 495]
     K_range_pct: [0.0, 3.917]
     eThK_ratio_max: 1169.5
-    note: "0 div-by-zero/inf artefacts. Native-50m extraction = OPEN GAP (shared)."
+    note: "0 div-by-zero/inf artefacts."
+  L4_magnetics_TMI:
+    status: BLOCKED
+    source: "GSI Geophysics IE_GSI_GSNI_Magnetic_Intensity_50m_IE32_ITM_GRID ImageServer"
+    barrier: "ImageServer returns 499 Token Required; no ROI magnetic REST service. Needs GSI token or BGS Tellus NI-border mirror."
+  L5_stream_sediment:
+    status: CONFIRMED
+    source: "GSI_Tellus_C_stream_sediment_geochemistry.zip (XLSX, 8862 rows x59)"
+    crs: "EPSG:2157"
+    elements: "Y Zr Nb Nd Sm Yb Hf Ta W Th U La Ce + Au/Pd/Pt"
+  L6_stream_water:
+    status: CONFIRMED
+    source: "GSI_Tellus_W_stream_water_geochemistry.zip (XLSX, 6837 rows x71)"
+    crs: "EPSG:2157"
+    elements: "full REE La-Lu + Y Zr Th U (ICP-MS)"
+  L7_soil_xrfs:
+    status: CONFIRMED
+    source: "GSI FeatureServer IE_GSI_Geochemistry_Deeper_Topsoil_S_XRFS_IE26_ITM (5642 pts)"
+    crs: "EPSG:2157"
+    elements: "La Ce Y Zr pathfinders + major/trace XRFS"
+  L8_bedrock_100k:
+    status: CONFIRMED
+    source: "GSI Bedrock_Geology_Datasets_100K_IE26_ITM.zip (SHP 68MB)"
+    crs: "EPSG:2157"
+    scale: "1:100k polys+lines"
+  L9_quaternary:
+    status: CONFIRMED
+    source: "GSI FeatureServer IE_GSI_Quaternary_Sediments_50K_IE26_ITM (206336 polys)"
+    crs: "EPSG:2157"
+  L10_mineral_locations:
+    status: CONFIRMED
+    source: "GSI FeatureServer IE_GSI_Mineral_Locations_IE26_ITM (7252 pts)"
+    crs: "EPSG:2157"
+    fields: "MINERAL MIN_TYPE DESCRIPTIO"
+  L11_boreholes:
+    status: CONFIRMED
+    source: "GSI FeatureServer IE_GSI_MINERAL_EXPLORATION_BOREHOLES_50K_IE26_ITM (15055 pts)"
+    crs: "EPSG:2157"
+    fields: "X_ITM Y_ITM BH_LEN_M DRILL_YEAR"
+  L12_mpm_soils_345k:
+    status: BLOCKED
+    source: "CKAN 'Mineral Potential Mapping' (aggregate scores only)"
+    barrier: "No public 'MPM soils 345k' dataset; CKAN returns aggregate (sand/gravel/crushed-rock) scores. Proxy: L7 soil + L5/L6 stream."
+  L13_mpm_lineaments:
+    status: BLOCKED
+    source: "Derived from L4 magnetics"
+    barrier: "Lineaments need magnetic TMI (L4) which is token-gated/ROI-missing."
+  L14_dem_glo30:
+    status: "CONFIRMED (sample)"
+    source: "Copernicus DEM GLO-30 AWS s3://copernicus-dem-30m (tile N54W010 downloaded; full = ~12 tiles)"
+    crs: "EPSG:4326"
+    res_m: 30
+  L15_worldcover_10m:
+    status: CONFIRMED
+    source: "ESA WorldCover 2021 v200 AWS s3://esa-worldcover (4 Ireland tiles ~140MB)"
+    crs: "EPSG:4326"
+    res_m: 10
+  L16_sentinel2_l2a:
+    status: PENDING
+    source: "Copernicus Data Space (auth)"
+    barrier: "Needs S2 L2A download + cloud-masked compositing (Copernicus auth). Heaviest layer."
+  L17_gsro_licences:
+    status: BLOCKED
+    source: "data.gov.ie (offshore petroleum only)"
+    barrier: "Onshore mineral prospecting licences (State mineral rights) not openly published."
+  L18_npws_sac_spa_nha:
+    status: CONFIRMED
+    source: "npws.ie SAC/SPA datasheets + pNHA_ITM_2015_11.zip (real .shp)"
+    crs: "EPSG:2157"
+
 # Stage-2 values are PLACEHOLDERS until calibrated against labelled points (S3).
-# Filled honestly after L10/L11 give occurrences; not used for L1-L18 confirmation.
 weights: {}                 # populated in Stage 2 (S1 independence audit)
 priors: {}
 thresholds:
   d_ratio: [0.35, 0.65]      # REE-type discriminator (LREE/HREE) — placeholder, S3-calibrated
   rpi_classes: [25, 50, 75]  # placeholder; S3-calibrated against Mourne/xenotime
 stage2_status: NOT_STARTED   # locked until F1-F4 final gate complete
+data_inventory_path: "data/raw/"   # files fetched via data/fetch_all_layers.sh

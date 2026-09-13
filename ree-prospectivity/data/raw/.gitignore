@@ -1,0 +1,4 @@
+# Large raw rasters / intermediate exports — reproducible via ../fetch_all_layers.sh
+*.tif
+L9_quaternary.geojson
+MPM_aggregate.zip
