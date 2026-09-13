@@ -74,6 +74,7 @@ agents/
 |-------|---------|----------|
 | `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
 | `terrestrial-dose` | Terrestrial radiation dose GIS (FastAPI + React) | `agents/terrestrial-dose/` |
+| `geo-eire` | Ireland ITM geospatial viewer (EPSG:2157) | `agents/geo-eire/` |
 | `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
@@ -137,6 +138,13 @@ agents/edge-kuth-portal/
 └── jobs/
     └── process-spectra.md
 ```
+
+### geo-eire
+
+**Edge's Geo-Eire Agent** — Ireland geospatial viewer using EPSG:2157 / ITM end-to-end. The agent definition lives in this main repository; its public HTML viewer and assets live in the separate `edge-ai-agent-site` repository. Satellite, geology, and radiometrics must share the ITM display CRS.
+
+- **Scope:** `agents/geo-eire`
+- **System prompt:** `agents/geo-eire/SYSTEM.md`
 
 ### terrestrial-dose
 
