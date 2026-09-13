@@ -74,7 +74,7 @@ agents/
 |-------|---------|----------|
 | `edge-kuth-portal` | K/U/Th gamma-ray spectral analysis (.spc files) | `agents/edge-kuth-portal/` |
 | `terrestrial-dose` | Terrestrial radiation dose GIS (FastAPI + React) | `agents/terrestrial-dose/` |
-| `geo-eire` | Ireland ITM geospatial viewer (EPSG:2157) | `agents/geo-eire/` |
+| `geo-eire` | Ireland ITM geospatial viewer (EPSG:2157) | `agents/geo-eire/` (definition only; live viewer in `edge-ai-agent-site`) |
 | `edge-critical-minerals` | Weekly critical minerals intel briefing | `agents/edge-critical-minerals/` |
 | `edge-smart-video` | LinkedIn video content generation | `agents/edge-smart-video/` |
 | `geosync-expert` | Geochemical survey processing (REE) | `agents/geosync-expert/` |
@@ -141,10 +141,12 @@ agents/edge-kuth-portal/
 
 ### geo-eire
 
-**Edge's Geo-Eire Agent** — Ireland geospatial viewer using EPSG:2157 / ITM end-to-end. The agent definition lives in this main repository; its public HTML viewer and assets live in the separate `edge-ai-agent-site` repository. Satellite, geology, and radiometrics must share the ITM display CRS.
+**Edge's Geo-Eire Agent** — Ireland geospatial viewer using EPSG:2157 / ITM end-to-end. The agent *definition* lives in this main repository (`agents/geo-eire/`); the *live HTML viewer and its data* live in the separate `edge-ai-agent-site` repository (root `ireland-geology-map.html` + `data/`). Satellite, geology, and radiometrics must share the ITM display CRS.
 
 - **Scope:** `agents/geo-eire`
 - **System prompt:** `agents/geo-eire/SYSTEM.md`
+- **Live viewer:** `edge-ai-agent-site/ireland-geology-map.html` (satellite + GSI 100K bedrock + Tellus radiometrics)
+- **Viewer data:** `edge-ai-agent-site/data/geology-100k.geojson` + `edge-ai-agent-site/data/radiometrics/`
 
 ### terrestrial-dose
 

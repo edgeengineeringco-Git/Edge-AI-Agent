@@ -65,7 +65,11 @@ For reusable tasks, write the prompt as markdown in `agents/<name>/jobs/<task>.m
 EDGE K/U/Th Portal — gamma-ray spectral analysis pipeline. Processes .spc files **immediately** on form submission. The client form posts to the upload server (`upload-server.mjs`, Docker container, exposed at `/edge-kuth/upload-page`), which saves .spc files and triggers the agent via `/edge-kuth/upload` webhook (TRIGGERS.json, **enabled**).
 
 ### geo-eire
-Edge's Geo-Eire Agent — Ireland ITM geospatial viewer (EPSG:2157) with ITM-native satellite export, GSI bedrock and Tellus radiometric layers. Public viewer is in `edge-ai-agent-site`; the agent definition is in the private main repo.
+Edge's Geo-Eire Agent — Ireland ITM geospatial viewer (EPSG:2157) with ITM-native satellite export, GSI bedrock and Tellus radiometric layers.
+
+- **Definition (private `Edge-AI-Agent`):** `agents/geo-eire/` — `SYSTEM.md` + `CLAUDE.md` only.
+- **Live viewer (public `edge-ai-agent-site`):** `ireland-geology-map.html` + `data/geology-100k.geojson` + `data/radiometrics/`.
+- **Note:** the live viewer currently renders in Leaflet Web-Mercator/WGS84, not ITM — re-projection is a pending edit (see SYSTEM.md).
 
 ### terrestrial-dose
 Terrestrial Dose Indicator — interactive web GIS that estimates terrestrial radiation dose (radon-222, thoron-220, external gamma) at any European land point. FastAPI backend + React/MapLibre frontend.
