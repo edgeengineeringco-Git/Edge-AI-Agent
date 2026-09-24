@@ -5,7 +5,7 @@
 **AOI:** Shoreline/marsh parcel adjoining Strangford Lough, Comber, Co. Down, Northern Ireland
 **Event of interest (context only):** Item reportedly placed in an oil drum and buried in 2005. Critical window ~2002–2008, monitor to present.
 
-> **Scope & limits.** This report (a) defines and confirms the search area, (b) records the Earth-observation (EO) data that was **actually retrieved and preserved** for this AOI with exact, reproducible URLs/dates, and (c) states honestly what image analysis could and could not be performed in this environment. It makes **no determination** about burial, concealment, or any intent. No change-detection result is presented as fact because the pixel analysis could not be completed to a verifiable standard here (see §4).
+> **Scope & limits.** This report (a) defines and confirms the search area, (b) records the Earth-observation (EO) data that was **actually retrieved and preserved** for this AOI with exact, reproducible URLs/dates, and (c) states honestly what image analysis could and could not be performed in this environment. It makes **no determination** about burial, concealment, or any intent. No change-detection result is presented as fact because the pixel analysis could not be completed to a verifiable standard here (see §4). The best free disturbance tool is the 0.6 m Esri Wayback 2014–2024 timeline viewer over the confirmed point (see §2a and the public WebGIS `sites/comber_timeline_v2.html`); it post-dates the 2005 event and therefore cannot show the burial itself.
 
 ---
 
@@ -62,6 +62,8 @@ World Imagery archival layers. Tile service (follow redirects with `-L`):
 | 2024 | 41468 | 2024-01-18 | `wb2024_0_0 … 2_2.jpg` (9) | ≈0.6 m |
 
 > **Caveat:** Wayback begins in **2014** — there is **no free, dated, high-resolution imagery before 2014** covering this AOI. The 2005 event predates this archive; only coarse (Landsat, §2b) or commercial air photos (§3) cover 2002–2008 at resolvable scale.
+>
+> **Working disturbance viewer (free):** a self-contained 2014–2024 high-resolution timeline is published at `sites/comber_timeline_v2.html` (also `sites/index.html`). It shows a 3×3 tile grid (≈462 m) centred on the confirmed point for each year, with the point and 250 m buffer overlaid. The 99 tiles are saved in `sites/assets/wayback/{year}_{dx}_{dy}.jpg` and are also inlined into the viewer so it needs no external assets. A human must inspect the frames — the tool does not detect disturbance automatically.
 
 ### 2b. Identified open satellite scenes (dated, lower resolution)
 - **Landsat-5, 2005-11-19 (19 % cloud)** — collection `landsat-c2-l2`, item `LT05_L2SP_206022_20051119_02_T1`. (30 m; can establish a 2005 baseline but cannot resolve a sub-30 m feature.)
@@ -156,6 +158,15 @@ The retrieved 0.6 m Wayback tiles (§2a) are the correct data to inspect. To run
 | 6 | **Georeferenced Landsat-5 / Landsat-7 pixel extracts** | Scene records were found, but the preview endpoint ignored bbox; proper GeoTIFF asset download and geotransform-based crop are still required. |
 
 ---
+
+## 6b. BURIAL-EVIDENCE STATUS (honest summary)
+
+| Question | Answer |
+|---|---|
+| Can the free data show a 1–2 m buried drum at the 2005 event? | **No.** Free high-res (Wayback) starts 2014; free satellite (MODIS/MERIS/Landsat) is too coarse (≥30 m). |
+| Can the free data show *later* ground disturbance at this point? | **Yes, partially** — the 2014–2024 Wayback timeline can reveal excavation, infill, tracks, vegetation clearance, or structure changes after 2014, for a human to inspect. |
+| Can the 2002–2008 burial be evidenced for free? | **No.** It requires commercial OSNI/LPS, Bluesky, Getmapping, or NCAP aerial photography of the AOI, ordered separately. |
+| Did this agent locate or infer a burial site? | **No.** No pixel analysis was performed (model cannot view images; no image libraries). No candidate location is asserted. |
 
 ## 7. EXPLICIT NON-DETERMINATION STATEMENT
 

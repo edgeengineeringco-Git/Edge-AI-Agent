@@ -1,0 +1,122 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comber AOI — Multi-Year Satellite & Aerial Evidence Viewer (2002–2008)</title><style>
+:root{--bg:#0c141b;--card:#14222e;--ink:#e8eef3;--mut:#9fb2c0;--blue:#5cc0ff;--amber:#ffb454;--red:#ff7b6b;--line:#2c4150}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Segoe UI,Arial,sans-serif}
+header{padding:16px 22px;background:linear-gradient(90deg,#0f2436,#16384f);border-bottom:2px solid var(--blue)}
+h1{margin:0 0 4px;font-size:21px}h2{font-size:17px;color:var(--blue);border-left:3px solid var(--blue);padding-left:9px;margin:20px 0 10px}
+.sub,.small{color:var(--mut);font-size:13px}.warn{margin:14px 0;padding:11px 14px;background:#3a2412;border:1px solid #a76a28;border-radius:7px;color:#ffdca6;font-size:13px}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 22px;background:#102231;border-bottom:1px solid var(--line)}
+nav button{background:#1c3142;color:var(--ink);border:1px solid #3a556a;border-radius:6px;padding:8px 12px;cursor:pointer}
+nav button.on{background:var(--blue);color:#04121d;border-color:#bfe6ff;font-weight:700}
+main{max-width:1120px;margin:auto;padding:0 16px 50px}.sec{display:none}.sec.on{display:block}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0;background:var(--card);padding:10px;border-radius:7px;border:1px solid var(--line)}
+.toolbar label{color:var(--mut);font-size:13px}
+select,input[type=range]{accent-color:var(--blue)}
+select{padding:6px 8px;background:#0e1c27;color:var(--ink);border:1px solid #3a556a;border-radius:5px}
+button.act{background:#0a7bbd;border:1px solid #7ed0ff;color:#fff;padding:8px 12px;border-radius:5px;cursor:pointer}
+.stage{position:relative;width:100%;aspect-ratio:1552/1326;background:#0a1218;border:1px solid #46627a;border-radius:8px;overflow:hidden}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:none}
+.stage img.show{display:block}
+.stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cap{padding:8px 2px;color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+th{color:var(--blue)}td{color:var(--ink)}.kv{display:grid;grid-template-columns:200px 1fr;gap:5px 12px;font-size:14px}.kv b{color:var(--blue)}
+a{color:var(--blue)}code{color:#b9e6ff}.status{color:var(--amber);font-weight:700}
+.tag{display:inline-block;background:#10303f;border:1px solid #2f5266;color:#bfe6ff;padding:2px 7px;border-radius:11px;font-size:12px;margin:2px}
+</style></head><body>
+<header><h1>Comber AOI — Multi-Year Satellite &amp; Aerial Evidence Viewer</h1>
+<div class="sub">Newtownards Road, Comber, Co. Down, BT23 5ZP · Strangford Lough · ///magnetic.deeply.orbited · WGS84 54.544375, −5.729841</div></header>
+<nav><button data-sec="s1" class="on">1 · Satellite timeline 2002–2008</button><button data-sec="s2">2 · High-res inspection 2014–2024</button><button data-sec="s3">3 · Landsat coverage 2002–2008</button><button data-sec="s4">4 · Ground-disturbance evidence &amp; limits</button><button data-sec="s5">5 · Commercial imagery</button></nav>
+<main>
+<section id="s1" class="sec on">
+  <div class="warn"><b>What this shows:</b> every year 2002–2008 from NASA GIBS MODIS Terra (≈250 m) and MERIS (coarse optical). These are genuine, georeferenced, bbox-constrained images. They give <b>regional/seasonal context only</b> — they cannot resolve a 1–2 m buried drum. Use the high-res 2014–2024 viewer for site-scale inspection.</div>
+  <div class="toolbar"><b>Sensor</b>
+    <label><input type="radio" name="sen" value="MODIS" checked> MODIS Terra</label>
+    <label><input type="radio" name="sen" value="MERIS"> MERIS</label>
+    <label>Year <select id="yr"></select></label>
+    <label>Opacity <input id="op" type="range" min="10" max="100" value="90"></label>
+    <label><input type="checkbox" id="cmp"> Compare</label>
+    <label>With <select id="yr2"></select></label>
+    <label>Split <input id="split" type="range" min="0" max="100" value="50"></label>
+    <button class="act" id="reset">Reset</button>
+  </div>
+  <div class="stage">
+    <img id="b1"><img id="b2">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="#9fd0ff" stroke-width="0.4" stroke-dasharray="2 1.5" opacity="0.7"/>
+      <ellipse cx="50.66" cy="46.875" rx="16.2" ry="18.86" fill="rgba(255,180,84,0.12)" stroke="#ffb454" stroke-width="0.4" stroke-dasharray="1.2 1"/>
+      <circle cx="50.66" cy="46.875" r="1.6" fill="#ffb454" stroke="#111" stroke-width="0.25"/>
+      <text x="53" y="45" fill="#fff" font-size="2.4" stroke="#111" stroke-width="0.12">site ●</text>
+      <line x1="4" y1="95" x2="36.2" y2="95" stroke="#fff" stroke-width="0.5"/><text x="4" y="98.5" fill="#fff" font-size="2.3">500 m</text>
+      <text x="92" y="6" fill="#fff" font-size="3" font-weight="bold">N↑</text>
+    </svg>
+  </div>
+  <div class="cap">Dashed rectangle = common AOI (lat 54.538–54.550, lon −5.742–−5.718). Orange dot = confirmed point; orange ellipse = 250 m review buffer. All images share this footprint.</div>
+</section>
+<section id="s2" class="sec">
+  <div class="warn"><b>Post-event high-resolution inspection.</b> Esri Wayback at this location begins 2014, so these are <b>after</b> the reported 2005 event. They let a human inspect the site for later ground disturbance (excavation, infill, new tracks) at ~0.3–0.6 m. They cannot show the original burial.</div>
+  <div class="toolbar"><label>Year <select id="wbyr"></select></label><span class="small">~0.3–0.6 m Esri World Imagery (centre tile over the point)</span></div>
+  <div class="stage" style="aspect-ratio:1/1"><img id="wb"><svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <circle cx="59.0" cy="65.4" r="2.2" fill="#ffb454" stroke="#111" stroke-width="0.3"/>
+    <line x1="56" y1="65.4" x2="62" y2="65.4" stroke="#111" stroke-width="0.4"/><line x1="59" y1="62.4" x2="59" y2="68.4" stroke="#111" stroke-width="0.4"/>
+    <text x="62" y="63" fill="#fff" font-size="3" stroke="#111" stroke-width="0.15">point</text></svg></div>
+  <div class="cap">Single 156 m tile centred ~24 m S, 14 m E of the point. Use the year slider to scan 2014→2024 for change at the site.</div>
+</section>
+<section id="s3" class="sec"><h2>Landsat-5 / Landsat-7 coverage 2002–2008</h2>
+  <div class="card"><p class="small">Source: Planetary Computer STAC, collection <code>landsat-c2-l2</code>, WRS-2 path/row <b>206/022</b> and <b>205/022</b>, bbox over Comber. Many cloud-free scenes exist every year. These confirm extensive 30 m coverage is available; 30 m can reveal large disturbances but not a drum-scale object.</p>
+  <table><thead><tr><th>Date</th><th>Cloud</th><th>Path/Row</th><th>Scene ID</th></tr></thead><tbody>__INV__</tbody></table></div>
+</section>
+<section id="s4" class="sec"><h2>Ground-disturbance evidence &amp; limitations</h2>
+  <div class="card">
+  <p class="status">No validated ground-disturbance or burial signature is presented here.</p>
+  <p>Honest position on what the available free data can and cannot support:</p>
+  <div class="kv">
+    <b>MODIS / MERIS (2002–2008)</b><div>≈250 m / coarse. Regional context only. Cannot locate a 1–2 m object.</div>
+    <b>Landsat 5/7 (2002–2008)</b><div>~30 m. Can show large disturbances; not drum-scale. Properly georeferenced 30 m crops can be generated on request.</div>
+    <b>Esri Wayback (2014–2024)</b><div>0.3–0.6 m, but post-event. For human inspection of later disturbance only.</div>
+    <b>Commercial 2002–2008</b><div>Sub-metre (IKONOS/QuickBird/SPOT/GeoEye/ALOS) and OSNI/LPS air photos: required for true drum-scale evidence. See section 5.</div>
+  </div>
+  <p class="small">No determination of burial, concealment, or intent is made. Any candidate feature must be confirmed by a human or image-capable system using licensed high-res imagery.</p>
+  </div>
+</section>
+<section id="s5" class="sec"><h2>Commercial / licensed imagery to obtain 2002–2008 evidence</h2>
+  <div class="card"><p>For a defensible site-scale disturbance or burial assessment in the 2002–2008 window, order one or more of:</p>
+  <table><thead><tr><th>Source</th><th>Resolution / period</th><th>Access</th></tr></thead><tbody>
+  <tr><td>OSNI / Land &amp; Property Services (LPS) air photo archive</td><td>Authoritative NI historical orthophotos, periodic ~2000s</td><td>opendatani.gov.uk &amp; LPS Map Shop (aerial copy service)</td></tr>
+  <tr><td>Bluesky / oldaerialphotos.com</td><td>UK &amp; Ireland historical, 1940s–2000s</td><td>oldaerialphotos.com</td></tr>
+  <tr><td>Getmapping archive</td><td>National UK surveys 1999+, incl. NI</td><td>getmapping.com</td></tr>
+  <tr><td>Maxar (IKONOS 1 m, QuickBird 0.6 m, GeoEye-1 0.5 m)</td><td>2002–2008 sub-metre satellite</td><td>Maxar / resellers (licensed)</td></tr>
+  <tr><td>SPOT / Airbus</td><td>2.5–10 m, 2002–2008</td><td>Airbus DS resellers</td></tr>
+  <tr><td>ALOS AVNIR-2 (JAXA)</td><td>10 m, 2006–2011 (free for research)</td><td>JAXA ALOS portal</td></tr>
+  <tr><td>NCAP</td><td>Declassified historical photography</td><td>ncap.org.uk</td></tr>
+  </tbody></table>
+  <p class="small">Once licensed frames for the AOI are supplied, this viewer can be extended with them for direct before/after comparison.</p></div>
+</section>
+<p class="small">Imagery: NASA GIBS (MODIS Terra Corrected Reflectance True Color; MERIS ENVISAT True Color) and Esri Wayback World Imagery. CRS EPSG:4326. No inference of criminal activity is made.</p>
+</main>
+<script>
+const D=__DATA__;
+const $=id=>document.getElementById(id);
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));$(b.dataset.sec).classList.add('on');});
+const yrs=[2002,2003,2004,2005,2006,2007,2008];
+yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.text=y;$('yr').appendChild(o);$('yr2').appendChild(o.cloneNode(true));});
+const wbyrs=[2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024];
+wbyrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.text=y;$('wbyr').appendChild(o);});
+$('yr').value=2002;$('yr2').value=2008;$('wbyr').value=2014;
+let sen='MODIS',cmp=false;
+function showSat(){
+  const top=D[sen][+$('yr').value], bot=D[sen][+$('yr2').value];
+  $('b1').src=top;$('b1').classList.add('show');
+  if(cmp){$('b2').src=bot;$('b2').classList.add('show');const p=+$('split').value;$('b2').style.clipPath='inset(0 '+(100-p)+'% 0 0)';}
+  else{$('b2').classList.remove('show');$('b2').style.clipPath='inset(0 0 0 0)';}
+}
+function applyOp(){const o=$('op').value/100;$('b1').style.opacity=o;$('b2').style.opacity=o;}
+document.querySelectorAll('input[name=sen]').forEach(r=>r.onchange=()=>{sen=r.value;showSat();});
+$('yr').onchange=showSat;$('yr2').onchange=showSat;
+$('cmp').onchange=()=>{cmp=$('cmp').checked;showSat();};
+$('split').oninput=()=>{if(cmp)showSat();};
+$('op').oninput=applyOp;
+$('reset').onclick=()=>{cmp=false;$('cmp').checked=false;$('yr').value=2002;$('yr2').value=2008;$('op').value=90;showSat();applyOp();};
+$('wbyr').onchange=()=>{$('wb').src=D.WB[+$('wbyr').value];$('wb').classList.add('show');};
+showSat();applyOp();$('wb').src=D.WB[2014];$('wb').classList.add('show');
+</script></body></html>
