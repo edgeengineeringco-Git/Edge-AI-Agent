@@ -78,6 +78,6 @@ var site=L.circleMarker(SITE,{radius:7,color:'#ffb454',fillColor:'#ffb454',fillO
 var buf=L.circle(SITE,{radius:250,color:'#ffb454',weight:1,fill:false}).bindPopup('~250 m buffer');
 site.addTo(map);buf.addTo(map);
 L.control.layers({'Esri World Imagery':esri,'OpenStreetMap':osm},{'MODIS 2002':m2002,'MODIS 2005':m2005,'MODIS 2008':m2008,'Wayback 2014':wb14,'Wayback 2024':wb24},{collapsed:false}).addTo(map);
-map.fitBounds(B_MOD);
+map.setView([54.544,-5.730],16);
 </script>
 </body></html>
