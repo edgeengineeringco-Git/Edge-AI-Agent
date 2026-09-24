@@ -1,7 +1,7 @@
 # Geospatial Imagery Evidence Report — Newtownards Road, Comber, Co. Down, BT23 5ZP
 
 **Prepared by:** Geospatial intelligence agent (automated)
-**Date of report:** 2026-09-24 (UTC) — UPDATED
+**Date of report:** 2026-09-24 (UTC) — UPDATED (2002 & 2008 imagery retrieved & verified; see §2d)
 **AOI:** Shoreline/marsh parcel adjoining Strangford Lough, Comber, Co. Down, Northern Ireland
 **Event of interest (context only):** Item reportedly placed in an oil drum and buried in 2005. Critical window ~2002–2008, monitor to present.
 
@@ -73,20 +73,40 @@ These are *identified* (confirmed to exist over the AOI) but the actual band ass
 ### 2c. Current imagery (undated basemap)
 A current Esri World Imagery tile was also preserved (`reports/evidence/comber_current_basemap_z18_evidence.jpg`); the source does **not expose per-tile capture dates**, so it is undated and excluded from change detection.
 
+### 2d. RETRIEVED & VERIFIED 2002 and 2008 imagery (the years requested)
+Using the corrected AOI bounding box (`bbox=-5.76,54.50,-5.70,54.58`, order lon/lat), the following were queried from the open Planetary Computer STAC (collection `landsat-c2-l2`), downloaded as true-colour `rendered_preview` PNGs, and **decoded & verified** with an independent PNG decoder (verified valid: non-zero, high spatial variance = real scene content). These are genuine dated images over the Comber AOI.
+
+| Year | Sensor / scene | Capture date | Cloud | Preserved file(s) in `reports/evidence/2002-2008/` | Res / note |
+|---|---|---|---|---|---|
+| 2002 | Landsat-7 `LE07_L2SP_206022_20021018_02_T1` (path 206 / row 022 = Comber) | 2002-10-18 | 11 % | `landsat_2002-10-18_comber_p206r022.png` (full scene) + `landsat_2002-10-18_comber_AOIcrop.png` (512 px zoom on AOI) | 30 m native; preview upscaled |
+| 2008 | Landsat-5 `LT05_L2SP_205022_20080901_02_T1` | 2008-09-01 | 23 % | `landsat_2008-09-01_comber_p205r022.png` (full scene) + `landsat_2008-09-01_comber_AOIcrop.png` | 30 m native; preview upscaled |
+| 2002 | MODIS Terra True Color (NASA GIBS) | 2002-06-15 | — | `MODIS_Comber_2002-06-15.png` | 250 m |
+| 2008 | MODIS Terra True Color (NASA GIBS) | 2008-06-15 | — | `MODIS_Comber_2008-06-15.png` | 250 m |
+
+**Reproducible retrieval**
+- Scene list (lowest cloud): `GET https://planetarycomputer.microsoft.com/api/stac/v1/collections/landsat-c2-l2/items?bbox=-5.76,54.50,-5.70,54.58&datetime=2002-01-01T00:00:00Z/2002-12-31T23:59:59Z&limit=15` (replace `2002`→`2008`). STAC `datetime` must be RFC3339 and the bbox order is **lon,lat,lon,lat**. Sort by `properties.eo:cloud_cover`.
+- Preview / AOI crop PNG: `GET https://planetarycomputer.microsoft.com/api/data/v1/item/preview.png?collection=landsat-c2-l2&item=<ITEM_ID>&assets=red&assets=green&assets=blue&format=png[&bbox=<lon,lat,lon,lat>&width=512&height=512]` (the `bbox`+`width/height` zoom is optional; the AOI crop uses `bbox=-5.742,54.538,-5.718,54.550`).
+- MODIS: GIBS WMS `LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&TIME=2002-06-15` (EPSG:4326, `BBOX=54.50,-5.76,54.58,-5.70`).
+
+> **Honest resolution note:** These 2002/2008 images are **satellite** (Landsat 30 m; MODIS 250 m). At 30 m a 1–2 m buried drum is sub-pixel and **cannot be located** from them. They show what the area looked like from space in those years (land/water/large features, cloud) but are **not** a substitute for the high-resolution air photos required to see a drum-scale disturbance (§3).
+
 ---
 
-## 3. SOURCES THAT COULD RESOLVE THE 2005 EVENT BUT WERE NOT RETRIEVABLE HERE
+## 3. HIGH-RESOLUTION AIR PHOTOS THAT COULD RESOLVE THE 2005 EVENT (commercial — not free)
 
 These are the only sources with resolution fine enough (~0.25–1 m) to show a buried-drum-scale disturbance in the critical 2002–2008 window. They are **commercial / orderable** and could not be downloaded without purchase or a licensed account:
 
-| Source | Coverage | Access / ordering |
+| Source | Coverage | Access / ordering (direct) |
 |---|---|---|
-| **Bluesky / OSNI historical aerial archive (oldaerialphotos.com)** | UK & Ireland historical air photos (1940s–2000s) | https://www.oldaerialphotos.com/ (search "Comber") |
+| **OSNI / Land & Property Services (LPS) aerial archive** — *authoritative for Northern Ireland* | NI government historical orthophotography & archival air photos (periodic captures incl. ~2000s) | https://www.opendatani.gov.uk/ and the LPS / OSNI Map Shop (aerial photograph copy service). LPS is the official NI mapping body — start here for Comber frames. |
+| **Bluesky International (oldaerialphotos.com)** | UK & Ireland historical air photos (1940s–2000s) | https://www.oldaerialphotos.com/ → search "Comber" |
 | **Getmapping historical archive** | National UK surveys (1999–present) incl. NI | https://www.getmapping.com/ |
 | **UK Aerial Photos (ukaerialphotos.com)** | UK historical photos | https://www.ukaerialphotos.com/ |
-| **OSNI / Land & Property Services orthophotography** | NI government orthophotos (periodic captures) | https://www.opendatani.gov.uk/ (LPS is the authoritative NI mapping body) |
+| **NCAP (National Collection of Aerial Photography)** | Declassified + historical worldwide; check for NI coverage | https://ncap.org.uk/ |
 
-No specific frame or capture date for this AOI was confirmed from any of these.
+No specific frame or capture date for this AOI was confirmed from any of these. A single archival air-photo frame over a point typically costs on the order of tens–hundreds of GBP depending on licence; an OSNI/LPS enquiry for "Comber, Co. Down, aerial photography ~2002–2008" is the most direct route.
+
+---
 
 ---
 
