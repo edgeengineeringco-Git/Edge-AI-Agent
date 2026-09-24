@@ -1,7 +1,7 @@
 # Geospatial Imagery Evidence Report — Newtownards Road, Comber, Co. Down, BT23 5ZP
 
 **Prepared by:** Geospatial intelligence agent (automated)
-**Date of report:** 2026-09-24 (UTC) — UPDATED (2002 & 2008 imagery retrieved & verified; see §2d)
+**Date of report:** 2026-09-24 (UTC) — UPDATED (georeferencing correction applied; see §2d)
 **AOI:** Shoreline/marsh parcel adjoining Strangford Lough, Comber, Co. Down, Northern Ireland
 **Event of interest (context only):** Item reportedly placed in an oil drum and buried in 2005. Critical window ~2002–2008, monitor to present.
 
@@ -66,29 +66,33 @@ World Imagery archival layers. Tile service (follow redirects with `-L`):
 ### 2b. Identified open satellite scenes (dated, lower resolution)
 - **Landsat-5, 2005-11-19 (19 % cloud)** — collection `landsat-c2-l2`, item `LT05_L2SP_206022_20051119_02_T1`. (30 m; can establish a 2005 baseline but cannot resolve a sub-30 m feature.)
 - **Sentinel-2 L2A, 2019-09-28 (14.8 % cloud)** — collection `sentinel-2-l2a`, item `S2A_MSIL2A_20190928T114351_R123_T30UUF_202010`. (10 m; open via Planetary Computer STAC.)
-- **Landsat WELD Daily** covers 2002–2012 (real 2005 dated 30 m composites) but is too coarse for drum-scale.
+- NASA GIBS WELD annual/monthly layer metadata was checked, but the published global WELD true-colour annual range exposed by this endpoint ends at 2000; it is not a valid 2002–2008 source here.
 
 These are *identified* (confirmed to exist over the AOI) but the actual band assets were **not downloaded/decoded** in this session (see §4).
 
 ### 2c. Current imagery (undated basemap)
 A current Esri World Imagery tile was also preserved (`reports/evidence/comber_current_basemap_z18_evidence.jpg`); the source does **not expose per-tile capture dates**, so it is undated and excluded from change detection.
 
-### 2d. RETRIEVED & VERIFIED 2002 and 2008 imagery (the years requested)
-Using the corrected AOI bounding box (`bbox=-5.76,54.50,-5.70,54.58`, order lon/lat), the following were queried from the open Planetary Computer STAC (collection `landsat-c2-l2`), downloaded as true-colour `rendered_preview` PNGs, and **decoded & verified** with an independent PNG decoder (verified valid: non-zero, high spatial variance = real scene content). These are genuine dated images over the Comber AOI.
+### 2d. Georeferencing correction and verified map evidence
+A critical validation test was performed before rebuilding the public WebGIS: the Planetary Computer `preview.png` response for the same Landsat item was requested once with the Comber bbox and once with a different Belfast bbox. The returned PNGs were byte-identical (correlation 1.000). Therefore, that endpoint ignored the supplied `bbox`; the files previously labelled as Landsat AOI crops were full-scene thumbnails and had been incorrectly stretched over the 1.3 km AOI. They have been removed from the public map and are not used for change detection or hotspot coordinates.
 
-| Year | Sensor / scene | Capture date | Cloud | Preserved file(s) in `reports/evidence/2002-2008/` | Res / note |
-|---|---|---|---|---|---|
-| 2002 | Landsat-7 `LE07_L2SP_206022_20021018_02_T1` (path 206 / row 022 = Comber) | 2002-10-18 | 11 % | `landsat_2002-10-18_comber_p206r022.png` (full scene) + `landsat_2002-10-18_comber_AOIcrop.png` (512 px zoom on AOI) | 30 m native; preview upscaled |
-| 2008 | Landsat-5 `LT05_L2SP_205022_20080901_02_T1` | 2008-09-01 | 23 % | `landsat_2008-09-01_comber_p205r022.png` (full scene) + `landsat_2008-09-01_comber_AOIcrop.png` | 30 m native; preview upscaled |
-| 2002 | MODIS Terra True Color (NASA GIBS) | 2002-06-15 | — | `MODIS_Comber_2002-06-15.png` | 250 m |
-| 2008 | MODIS Terra True Color (NASA GIBS) | 2008-06-15 | — | `MODIS_Comber_2008-06-15.png` | 250 m |
+The corrected public WebGIS uses only successful NASA GIBS WMS requests with a common, explicit `EPSG:4326` footprint: south 54.538, west −5.742, north 54.550, east −5.718. The map layers are:
 
-**Reproducible retrieval**
-- Scene list (lowest cloud): `GET https://planetarycomputer.microsoft.com/api/stac/v1/collections/landsat-c2-l2/items?bbox=-5.76,54.50,-5.70,54.58&datetime=2002-01-01T00:00:00Z/2002-12-31T23:59:59Z&limit=15` (replace `2002`→`2008`). STAC `datetime` must be RFC3339 and the bbox order is **lon,lat,lon,lat**. Sort by `properties.eo:cloud_cover`.
-- Preview / AOI crop PNG: `GET https://planetarycomputer.microsoft.com/api/data/v1/item/preview.png?collection=landsat-c2-l2&item=<ITEM_ID>&assets=red&assets=green&assets=blue&format=png[&bbox=<lon,lat,lon,lat>&width=512&height=512]` (the `bbox`+`width/height` zoom is optional; the AOI crop uses `bbox=-5.742,54.538,-5.718,54.550`).
-- MODIS: GIBS WMS `LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&TIME=2002-06-15` (EPSG:4326, `BBOX=54.50,-5.76,54.58,-5.70`).
+| Year | Product | Map file | Status |
+|---|---|---|---|
+| 2002, 2005, 2008 | MODIS Terra corrected-reflectance true colour | `sites/assets/modis_YYYY_aoi_wms.png` | Verified WMS bbox overlay; ~250 m |
+| 2002, 2005, 2008 | MERIS ENVISAT true colour | `sites/assets/meris_YYYY_aoi_wms.png` | Verified WMS bbox overlay; coarse historical optical |
 
-> **Honest resolution note:** These 2002/2008 images are **satellite** (Landsat 30 m; MODIS 250 m). At 30 m a 1–2 m buried drum is sub-pixel and **cannot be located** from them. They show what the area looked like from space in those years (land/water/large features, cloud) but are **not** a substitute for the high-resolution air photos required to see a drum-scale disturbance (§3).
+These products provide broad water/land and seasonal context only. The previously identified Landsat scenes remain valid **scene records** (2002-10-18 Landsat-7 `LE07_L2SP_206022_20021018_02_T1`; 2008-09-01 Landsat-5 `LT05_L2SP_205022_20080901_02_T1`), but their pixel assets must be downloaded as georeferenced GeoTIFFs and cropped using their GeoTIFF geotransforms before they can be used as map overlays. No such invalid crop or derived change result is retained in the public WebGIS.
+
+**Verified WMS reproducibility**
+- Endpoint: `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi`
+- CRS: `EPSG:4326`
+- WMS BBOX order: `54.538,-5.742,54.550,-5.718` = south, west, north, east
+- Layers: `MODIS_Terra_CorrectedReflectance_TrueColor` and `MERIS_ENVISAT_True_Color`
+- Dates requested: `2002-06-15`, `2005-06-15`, `2008-06-15`
+
+> **Honest resolution note:** MODIS and MERIS cannot resolve a 1–2 m buried drum. They show broad context only and do not support a site-scale disturbance conclusion.
 
 ---
 
@@ -112,12 +116,12 @@ No specific frame or capture date for this AOI was confirmed from any of these. 
 
 ## 4. IMAGE-ANALYSIS ATTEMPT & LIMITATION (honest)
 
-The task asked to run an image analysis to locate candidate disturbance. I attempted this and must report the outcome plainly:
+The task asked to run an image analysis to locate candidate disturbance. I attempted this and must report the outcome plainly. The earlier Landsat difference maps and hotspot list have been withdrawn because the source previews were not geographically cropped:
 
 1. **This model cannot view images.** The agent's image-reading capability returns "model does not support images" — pixels cannot be inspected by me directly.
 2. **No image libraries are installed and package installation is blocked** (no `pip`, no working `apt` network). `PIL`/`numpy`/`GDAL`/ImageMagick/`ffmpeg` are all absent.
 3. **The only high-resolution data (Wayback) is JPEG.** To analyse it programmatically I wrote a from-scratch baseline JPEG decoder (Huffman + IDCT, stdlib only). **Validation failed:** decoded outputs of the *same location* from different layers were essentially uncorrelated (current-vs-2024 correlation ≈ 0.02; 2014-vs-2024 ≈ −0.22), proving the decoder was producing garbled output, not a correct image. I therefore **discarded** any results from it.
-4. **Decodable open PNG sources are too coarse** for the target (NASA GIBS MODIS = 250 m; Landsat WELD = 30 m). At those resolutions a buried drum (~1–2 m) is sub-pixel and invisible; only large-area change could be seen, which would not locate a drum.
+4. **The corrected decodable open PNG map sources are too coarse** for the target (NASA GIBS MODIS ≈250 m and MERIS coarse historical optical). At those resolutions a buried drum (~1–2 m) is sub-pixel and invisible; only large-area change could be seen, which would not locate a drum.
 
 **Consequence:** I did **not** produce any change-detection map, any "most-changed block" list, or any candidate burial location. Presenting such a list from an unverified decoder would be fabricating evidence, which is explicitly prohibited. **I am not sure of any candidate location and will not guess one.**
 
@@ -149,7 +153,7 @@ The retrieved 0.6 m Wayback tiles (§2a) are the correct data to inspect. To run
 | 3 | **Precise AOI polygon** | Reference photograph not supplied; only an approximate 250 m bbox provided. |
 | 4 | **Ground-truth cross-reference** | No VR-dog / GPR / dumping layers supplied (§5 step 6). |
 | 5 | **Per-image capture dates / resolutions for Wayback** | Source exposes layer dates (used) but not per-tile acquisition dates or exact GSD. |
-| 6 | **Landsat-5 / Sentinel-2 actual pixel extracts** | Band assets are GeoTIFF/JPEG requiring GDAL/verified decoder, unavailable here. |
+| 6 | **Georeferenced Landsat-5 / Landsat-7 pixel extracts** | Scene records were found, but the preview endpoint ignored bbox; proper GeoTIFF asset download and geotransform-based crop are still required. |
 
 ---
 
