@@ -1,0 +1,10 @@
+{
+  "id": "SVT002",
+  "topic": "Autonomous Drilling Optimisation Using Real-Time Data",
+  "sector": "Civil Automation",
+  "status": "Draft Ready",
+  "notes": "",
+  "sheet_row": null,
+  "sheet_id": "local-fallback://input/topics.csv",
+  "source": "local-fallback://input/topics.csv"
+}
