@@ -1,0 +1,41 @@
+[
+  {
+    "type": "title",
+    "headline": "Autonomous Drilling, Optimised in Real Time",
+    "subtitle": "Civil Automation | EDGE Engineers",
+    "sector": "Civil Automation"
+  },
+  {
+    "type": "content",
+    "headline": "Drilling Blind",
+    "bullets": [
+      "Fixed rig parameters set before the borehole even begins",
+      "Refusal, voids and changing ground spotted days too late",
+      "Non-productive time and over-drilling silently burn budget"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The Rig That Thinks",
+    "bullets": [
+      "Live torque, ROP, vibration & gamma stream into adaptive control",
+      "Rig self-tunes drilling parameters to the ground as it advances",
+      "Ground classified in real time \u2014 no waiting on the lab"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "What It Means for Your Project",
+    "bullets": [
+      "Up to 30% faster boreholes via live parameter tuning",
+      "Early anomaly detection before it becomes a change-order",
+      "Clean digital record feeding straight into your model"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Stop drilling on yesterday's data.",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
