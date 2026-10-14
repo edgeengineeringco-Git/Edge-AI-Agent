@@ -1,0 +1,41 @@
+[
+  {
+    "type": "title",
+    "headline": "Digital Twins for Underground Infrastructure Monitoring",
+    "subtitle": "Civil Automation | EDGE Engineers",
+    "sector": "Civil Automation"
+  },
+  {
+    "type": "content",
+    "headline": "The Blind Spot Beneath Our Cities",
+    "bullets": [
+      "Underground assets \u2014 sewers, tunnels, cables, foundations \u2014 fail silently",
+      "Defects surface only after collapse, with catastrophic cost and risk",
+      "Most operators are reactive: they discover problems when it's too late to act cheaply"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Digital Twin",
+    "bullets": [
+      "Continuous sensor fusion + geotechnical modelling of live assets",
+      "Automated anomaly detection flags movement, leakage, and drift early",
+      "Real-time twin lets engineers see risk emerge \u2014 not after the event"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "Measurable Impact",
+    "bullets": [
+      "Up to 40% lower unplanned intervention cost",
+      "Days of early-warning lead time on critical defects",
+      "Reduced OPEX and avoided shutdowns and safety incidents"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "See risk before it becomes failure.",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
