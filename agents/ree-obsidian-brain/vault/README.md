@@ -208,4 +208,4 @@ This vault is maintained by the `ree-obsidian-brain` agent in the thepopebot ins
 
 ---
 
-*Vault seeded: 2026-07-29 | 52 notes | Dataview 0.5.70 | Omni Search | Obsidian Git*
+*Vault seeded: 2026-07-29 | 101 notes (2026-10-25 curation) | Dataview 0.5.70 | Omni Search | Obsidian Git*

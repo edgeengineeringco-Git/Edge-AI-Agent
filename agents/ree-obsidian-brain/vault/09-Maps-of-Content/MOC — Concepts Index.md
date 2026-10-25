@@ -1,7 +1,7 @@
 ---
 title: "MOC — Concepts Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-10-25
 tags: [moc, index, concepts]
 status: seed
 ---
@@ -13,7 +13,7 @@ status: seed
 - [[Lanthanide Contraction]] — Controls mineral site preference
 - [[Ce Anomaly]] — Redox indicator
 - [[Eu Anomaly]] — Feldspar fractionation indicator
-- [[Y/Ho Ratio]] — Marine vs. terrestrial fingerprint
+- [[Y-Ho Ratio]] — Marine vs. terrestrial fingerprint
 
 ## Grade & Resource Calculations
 - [[TREO Calculation]] — Total Rare Earth Oxide

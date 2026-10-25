@@ -1,7 +1,7 @@
 ---
 title: "REE Market Overview — July 2026"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-10-25
 tags: [market, prices, demand, supply-chain, quarterly-update]
 status: seed
 ---
@@ -46,5 +46,5 @@ status: seed
 
 ## Related
 - [[MOC — REE Master Index]]
-- [[MOC — Markets]]
+- [[MOC — Markets Index]]
 - [[07-Projects/Mountain Pass]]
