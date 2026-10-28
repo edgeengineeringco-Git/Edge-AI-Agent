@@ -1,0 +1,41 @@
+[
+  {
+    "type": "title",
+    "headline": "Smart Sensor Networks for Tunnel Deformation Detection",
+    "subtitle": "Geo-Engineering | EDGE Engineers",
+    "sector": "Geo-Engineering"
+  },
+  {
+    "type": "content",
+    "headline": "The Blind Spot Beneath Our Cities",
+    "bullets": [
+      "Deformation is continuous \u2014 but inspection is periodic. Cracks open between surveys, undetected.",
+      "Manual total-station rounds are slow, labour-intensive, and leave gaps in coverage.",
+      "A single unplanned tunnel closure can cost six figures per day in lost throughput."
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Sensor Mesh",
+    "bullets": [
+      "Fibre-optic strain sensing + automated robotic total stations + IoT inclinometers.",
+      "Millimetre-level movement streamed continuously to a live operations dashboard.",
+      "Automated threshold alerts fire the moment drift exceeds safe limits \u2014 day or night."
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "Measurable Outcomes",
+    "bullets": [
+      "Early warning weeks ahead of visible distress \u2014 planned intervention, not emergency repair.",
+      "Up to 70% reduction in monitoring labour with higher spatial data density.",
+      "Audit-ready digital records protect life safety and your licence to operate."
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Know before it matters.",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
