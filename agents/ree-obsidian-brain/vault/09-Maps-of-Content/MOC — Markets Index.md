@@ -1,7 +1,7 @@
 ---
 title: "MOC — Markets Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, markets]
 status: seed
 ---
@@ -42,3 +42,6 @@ status: seed
 ## Related
 - [[MOC — REE Master Index]]
 - [[MOC — Projects Index]] — supply pipeline
+
+---
+*Last curated: 2026-11-01*

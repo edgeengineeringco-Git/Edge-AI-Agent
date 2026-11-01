@@ -1,7 +1,7 @@
 ---
 title: "MOC — Deposits Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, deposits]
 status: evergreen
 ---
@@ -49,3 +49,6 @@ status: evergreen
 - [[MOC — REE Master Index]]
 - [[MOC — Projects Index]] — specific mines and developments
 - [[MOC — Exploration Index]] — how to find these deposits
+
+---
+*Last curated: 2026-11-01*

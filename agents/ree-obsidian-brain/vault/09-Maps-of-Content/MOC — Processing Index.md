@@ -1,7 +1,7 @@
 ---
 title: "MOC — Processing Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, processing]
 status: seed
 ---
@@ -37,3 +37,6 @@ status: seed
 ## Related
 - [[MOC — REE Master Index]]
 - [[MOC — Deposits Index]] — ore types dictate processing route
+
+---
+*Last curated: 2026-11-01*

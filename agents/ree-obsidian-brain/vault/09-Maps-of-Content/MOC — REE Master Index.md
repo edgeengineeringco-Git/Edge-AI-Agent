@@ -1,7 +1,7 @@
 ---
 title: "MOC — REE Master Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, ree]
 status: evergreen
 ---
@@ -57,4 +57,4 @@ The central hub for the Rare Earth Element knowledge vault. This note bridges al
 
 ---
 
-*Last curated: 2026-07-29*
+*Last curated: 2026-11-01*

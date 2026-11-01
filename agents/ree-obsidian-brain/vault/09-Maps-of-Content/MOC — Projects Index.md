@@ -1,7 +1,7 @@
 ---
 title: "MOC — Projects Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, projects]
 status: seed
 ---
@@ -36,3 +36,6 @@ status: seed
 ## Related
 - [[MOC — REE Master Index]]
 - [[MOC — Deposits Index]] — deposit type context
+
+---
+*Last curated: 2026-11-01*

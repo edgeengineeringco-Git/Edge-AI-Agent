@@ -1,7 +1,7 @@
 ---
 title: "MOC — Elements Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, elements]
 status: evergreen
 ---
@@ -65,3 +65,6 @@ graph LR
 ---
 
 *Back to [[MOC — REE Master Index]]*
+
+---
+*Last curated: 2026-11-01*

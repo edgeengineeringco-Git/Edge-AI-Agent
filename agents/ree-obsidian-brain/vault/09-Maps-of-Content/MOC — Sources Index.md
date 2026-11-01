@@ -1,7 +1,7 @@
 ---
 title: "MOC — Sources Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-01
 tags: [moc, index, sources]
 status: seed
 ---
@@ -31,3 +31,6 @@ status: seed
 
 ## Related
 - [[MOC — REE Master Index]]
+
+---
+*Last curated: 2026-11-01*
