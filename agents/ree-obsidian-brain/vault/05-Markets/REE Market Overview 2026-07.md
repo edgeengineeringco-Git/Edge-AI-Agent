@@ -46,5 +46,5 @@ status: seed
 
 ## Related
 - [[MOC — REE Master Index]]
-- [[MOC — Markets]]
+- [[MOC — Markets Index]]
 - [[07-Projects/Mountain Pass]]

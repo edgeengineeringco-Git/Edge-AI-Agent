@@ -13,7 +13,7 @@ status: seed
 - [[Lanthanide Contraction]] — Controls mineral site preference
 - [[Ce Anomaly]] — Redox indicator
 - [[Eu Anomaly]] — Feldspar fractionation indicator
-- [[Y/Ho Ratio]] — Marine vs. terrestrial fingerprint
+- [[Y-Ho Ratio]] — Marine vs. terrestrial fingerprint
 
 ## Grade & Resource Calculations
 - [[TREO Calculation]] — Total Rare Earth Oxide
