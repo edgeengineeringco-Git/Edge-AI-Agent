@@ -1,7 +1,7 @@
 ---
 title: "MOC — REE Master Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-08
 tags: [moc, index, ree]
 status: evergreen
 ---
@@ -27,6 +27,7 @@ The central hub for the Rare Earth Element knowledge vault. This note bridges al
 
 ## 🏗️ Projects
 → [[MOC — Projects Index]] — Active mines and exploration projects worldwide
+→ [[MOC — Australia Deposits]] — Australian REE deposit types & projects
 
 ## 🧠 Concepts
 → [[MOC — Concepts Index]] — Geochemical principles, anomalies, calculations

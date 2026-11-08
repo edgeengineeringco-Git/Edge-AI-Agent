@@ -161,7 +161,7 @@ The agent creates the note, links it, updates MOCs, and commits. You pull the up
 ### Option 3: Write Directly in Obsidian
 1. Create a new note in the right folder
 2. Copy frontmatter from an existing note
-3. Add `[[WikiLinks]]` to connect
+3. Add `WikiLinks` to connect
 4. Git commit + push when done
 5. The agent sees your changes and can build on them
 
