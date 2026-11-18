@@ -1,0 +1,41 @@
+[
+  {
+    "type": "title",
+    "headline": "Real-Time Soil Specification via Portable XRF",
+    "subtitle": "Civil Engineering | EDGE Engineers",
+    "sector": "Civil Engineering"
+  },
+  {
+    "type": "content",
+    "headline": "The Problem with Lab-Bound Sampling",
+    "bullets": [
+      "Most ground investigations still ship samples to labs and wait days for results",
+      "Every day of delay idles plant, stalls redesigns, and compounds risk",
+      "Excavation-class and material-handling decisions stall without on-site data"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "The EDGE Solution: XRF On-Site",
+    "bullets": [
+      "Portable XRF delivers real-time elemental analysis of soils in minutes, not days",
+      "No sample prep \u2014 simultaneous multi-element results at the rig",
+      "Data feeds your geotechnical model live, with audit-ready records from day one"
+    ]
+  },
+  {
+    "type": "content",
+    "headline": "Measurable Project Value",
+    "bullets": [
+      "Faster excavation-class and material-handling decisions",
+      "Lower laboratory dependency and logistics overhead",
+      "Live contamination screening without mobilising a second crew"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Ready to specify soils in real time?",
+    "url": "www.edgeengineers.net",
+    "subtitle": "ESA Incubatee | MaynoothWorks, Co. Kildare"
+  }
+]
