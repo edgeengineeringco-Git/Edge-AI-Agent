@@ -1,7 +1,7 @@
 ---
 title: "MOC — Sources Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-22
 tags: [moc, index, sources]
 status: seed
 ---

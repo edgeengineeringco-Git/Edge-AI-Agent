@@ -1,7 +1,7 @@
 ---
 title: "MOC — Concepts Index"
 date_created: 2026-07-29
-date_modified: 2026-07-29
+date_modified: 2026-11-22
 tags: [moc, index, concepts]
 status: seed
 ---
@@ -13,7 +13,7 @@ status: seed
 - [[Lanthanide Contraction]] — Controls mineral site preference
 - [[Ce Anomaly]] — Redox indicator
 - [[Eu Anomaly]] — Feldspar fractionation indicator
-- [[Y/Ho Ratio]] — Marine vs. terrestrial fingerprint
+- [[Y-Ho Ratio]] — Marine vs. terrestrial fingerprint
 
 ## Grade & Resource Calculations
 - [[TREO Calculation]] — Total Rare Earth Oxide
@@ -31,6 +31,14 @@ status: seed
 ## Magnetic & Physical
 - [[Magnetic Susceptibility]] — Exploration tool
 - [[Curie Temperature]] — Magnet design parameter
+
+## Applications
+- [[NdFeB Magnets]] — Permanent-magnet base
+- [[SmCo Magnets]] — High-temperature magnets
+- [[Fiber Optics]] — Er-doped amplifiers
+- [[MRI Applications]] — Gd contrast agents
+- [[Aluminum Alloys]] — Sc-strengthened alloys
+- [[Fiber Lasers]] — Yb-doped gain medium
 
 ## Related
 - [[MOC — REE Master Index]]
